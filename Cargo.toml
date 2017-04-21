@@ -1,0 +1,10 @@
+[package]
+name = "libespm"
+version = "0.1.0"
+authors = ["Oliver Hamlet <oliver.hamlet@gmail.com>"]
+
+[dependencies]
+byteorder = "1.0.0"
+encoding = "0.2.33"
+memmap = "0.5.2"
+nom = "^2.2"
