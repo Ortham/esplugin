@@ -1,8 +1,10 @@
 sudo: false
 language: rust
 
+cache: cargo
+
 install:
-  - cargo install rustfmt
+  - cargo install rustfmt || true
 
 before_script:
   - cd tests
