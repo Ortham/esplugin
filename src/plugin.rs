@@ -52,7 +52,7 @@ pub enum ParsingError {
     IOError(Error),
     NoFilename,
     ContentError(IError),
-    DecodeError(Cow<'static, str>)
+    DecodeError(Cow<'static, str>),
 }
 
 #[derive(Debug)]
@@ -95,13 +95,15 @@ impl Plugin {
                 self.data = self.parse_mmapped_file(filename, load_header_only)?;
 
                 Ok(())
-            },
+            }
         }
     }
 
-    fn parse_whole_file(&self, filename: String, load_header_only: bool) -> Result<PluginData, ParsingError> {
-        let mut f = File::open(self.path.clone())
-            .map_err(|e| ParsingError::IOError(e))?;
+    fn parse_whole_file(&self,
+                        filename: String,
+                        load_header_only: bool)
+                        -> Result<PluginData, ParsingError> {
+        let mut f = File::open(self.path.clone()).map_err(|e| ParsingError::IOError(e))?;
 
         let mut reader = BufReader::new(f);
 
@@ -114,7 +116,10 @@ impl Plugin {
             .map_err(ParsingError::ContentError)
     }
 
-    fn parse_mmapped_file(&self, filename: String, load_header_only: bool) -> Result<PluginData, ParsingError> {
+    fn parse_mmapped_file(&self,
+                          filename: String,
+                          load_header_only: bool)
+                          -> Result<PluginData, ParsingError> {
         let mmap_view = Mmap::open_path(self.path.as_path(), Protection::Read)
             .map_err(ParsingError::IOError)?
             .into_view();
@@ -129,7 +134,8 @@ impl Plugin {
     }
 
     pub fn filename(&self) -> Option<String> {
-        self.path.file_name()
+        self.path
+            .file_name()
             .and_then(|filename| filename.to_str())
             .map(|filename| filename.trim_right_matches(".ghost").to_string())
     }
@@ -150,7 +156,7 @@ impl Plugin {
                         None => false,
                     }
                 }
-                _ => false
+                _ => false,
             }
         }
     }
@@ -179,7 +185,7 @@ impl Plugin {
 
                 return WINDOWS_1252.decode(data, DecoderTrap::Strict)
                     .map(|d| Option::Some(d))
-                    .map_err(|e| ParsingError::DecodeError(e))
+                    .map_err(|e| ParsingError::DecodeError(e));
             }
         }
 
@@ -194,9 +200,9 @@ impl Plugin {
 
         for subrecord in &self.data.header_record.subrecords {
             if subrecord.subrecord_type == "HEDR" {
-                let data = &subrecord.data[count_offset..count_offset+4];
+                let data = &subrecord.data[count_offset..count_offset + 4];
                 let mut cursor = Cursor::new(data);
-                return cursor.read_u32::<LittleEndian>().ok()
+                return cursor.read_u32::<LittleEndian>().ok();
             }
         }
 
@@ -204,31 +210,33 @@ impl Plugin {
     }
 }
 
-fn masters(header_record: &Record) -> Result<Vec<& str>, str::Utf8Error> {
-    header_record.subrecords.iter()
+fn masters(header_record: &Record) -> Result<Vec<&str>, str::Utf8Error> {
+    header_record.subrecords
+        .iter()
         .filter(|s| s.subrecord_type == "MAST")
-        .map(|s| {
-            str::from_utf8(&s.data[0..(s.data.len()-1)])
-        }).collect::<Result<Vec<&str>, str::Utf8Error>>()
+        .map(|s| str::from_utf8(&s.data[0..(s.data.len() - 1)]))
+        .collect::<Result<Vec<&str>, str::Utf8Error>>()
 }
 
 fn parse_form_ids<'a>(input: &'a [u8],
-                  game_id: GameId,
-                  filename: &str,
-                  header_record: &Record) -> IResult<&'a [u8], HashSet<FormId>> {
+                      game_id: GameId,
+                      filename: &str,
+                      header_record: &Record)
+                      -> IResult<&'a [u8], HashSet<FormId>> {
     let masters = masters(&header_record);
 
     if masters.is_err() {
-        return IResult::Error(ErrorKind::Custom(masters.unwrap_err().valid_up_to() as u32))
+        return IResult::Error(ErrorKind::Custom(masters.unwrap_err().valid_up_to() as u32));
     }
     let masters = masters.unwrap();
 
     if game_id == GameId::Morrowind {
-        let (input1, record_form_ids) = try_parse!(input, many0!(apply!(Record::parse_form_id, game_id)));
+        let (input1, record_form_ids) =
+            try_parse!(input, many0!(apply!(Record::parse_form_id, game_id)));
 
-        let form_ids: HashSet<FormId> = record_form_ids.into_iter().map(|form_id| {
-            FormId::new(filename, &masters, form_id)
-        }).collect();
+        let form_ids: HashSet<FormId> = record_form_ids.into_iter()
+            .map(|form_id| FormId::new(filename, &masters, form_id))
+            .collect();
 
         IResult::Done(input1, form_ids)
     } else {
@@ -236,32 +244,38 @@ fn parse_form_ids<'a>(input: &'a [u8],
 
         let mut form_ids: HashSet<FormId> = HashSet::new();
         for group in groups {
-            form_ids.extend(group.form_ids.into_iter().map(|form_id| {
-                FormId::new(filename, &masters, form_id)
-            }));
+            form_ids.extend(group.form_ids
+                .into_iter()
+                .map(|form_id| FormId::new(filename, &masters, form_id)));
         }
 
         IResult::Done(input1, form_ids)
     }
 }
 
-fn parse_plugin<'a>(input: &'a [u8], game_id: GameId, filename: &String, load_header_only: bool)
-    -> IResult<&'a [u8], PluginData> {
+fn parse_plugin<'a>(input: &'a [u8],
+                    game_id: GameId,
+                    filename: &String,
+                    load_header_only: bool)
+                    -> IResult<&'a [u8], PluginData> {
     let (input1, header_record) = try_parse!(input, apply!(Record::parse, game_id, false));
 
     if load_header_only {
-        return IResult::Done(input1, PluginData {
-            header_record: header_record,
-            form_ids: HashSet::new(),
-        })
+        return IResult::Done(input1,
+                             PluginData {
+                                 header_record: header_record,
+                                 form_ids: HashSet::new(),
+                             });
     }
 
-    let (input2, form_ids) = try_parse!(input1, apply!(parse_form_ids, game_id, filename, &header_record));
+    let (input2, form_ids) =
+        try_parse!(input1, apply!(parse_form_ids, game_id, filename, &header_record));
 
-    IResult::Done(input2, PluginData {
-        header_record: header_record,
-        form_ids: form_ids,
-    })
+    IResult::Done(input2,
+                  PluginData {
+                      header_record: header_record,
+                      form_ids: form_ids,
+                  })
 }
 
 #[cfg(test)]
@@ -284,7 +298,8 @@ mod tests {
 
     #[test]
     fn parse_should_succeed_for_skyrim_plugin() {
-        let mut plugin = Plugin::new(GameId::Skyrim, Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"));
+        let mut plugin = Plugin::new(GameId::Skyrim,
+                                     Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"));
 
         assert!(plugin.parse(false).is_ok());
         let masters = plugin.masters().unwrap();
@@ -301,7 +316,8 @@ mod tests {
 
     #[test]
     fn parse_should_succeed_for_skyrim_plugin_header_only() {
-        let mut plugin = Plugin::new(GameId::Skyrim, Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"));
+        let mut plugin = Plugin::new(GameId::Skyrim,
+                                     Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"));
 
         assert!(plugin.parse(true).is_ok());
 
@@ -316,7 +332,9 @@ mod tests {
 
     #[test]
     fn is_valid_should_return_true_for_a_valid_plugin() {
-        let is_valid = Plugin::is_valid(GameId::Skyrim, Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"), true);
+        let is_valid = Plugin::is_valid(GameId::Skyrim,
+                                        Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"),
+                                        true);
 
         assert!(is_valid);
     }
@@ -348,12 +366,15 @@ mod tests {
 
     #[test]
     fn is_master_should_be_true_for_master_file() {
-        let mut plugin = Plugin::new(GameId::Skyrim, Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"));
+        let mut plugin = Plugin::new(GameId::Skyrim,
+                                     Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"));
 
         assert!(plugin.parse(true).is_ok());
         assert!(plugin.is_master_file());
 
-        let mut plugin = Plugin::new(GameId::Morrowind, Path::new("tests/testing-plugins/Morrowind/Data Files/Blank.esm"));
+        let mut plugin = Plugin::new(GameId::Morrowind,
+                                     Path::new("tests/testing-plugins/Morrowind/Data \
+                                                Files/Blank.esm"));
 
         assert!(plugin.parse(true).is_ok());
         assert!(plugin.is_master_file());
@@ -361,12 +382,15 @@ mod tests {
 
     #[test]
     fn is_master_should_be_false_for_non_master_file() {
-        let mut plugin = Plugin::new(GameId::Skyrim, Path::new("tests/testing-plugins/Skyrim/Data/Blank.esp"));
+        let mut plugin = Plugin::new(GameId::Skyrim,
+                                     Path::new("tests/testing-plugins/Skyrim/Data/Blank.esp"));
 
         assert!(plugin.parse(true).is_ok());
         assert!(!plugin.is_master_file());
 
-        let mut plugin = Plugin::new(GameId::Morrowind, Path::new("tests/testing-plugins/Morrowind/Data Files/Blank.esp"));
+        let mut plugin = Plugin::new(GameId::Morrowind,
+                                     Path::new("tests/testing-plugins/Morrowind/Data \
+                                                Files/Blank.esp"));
 
         assert!(plugin.parse(true).is_ok());
         assert!(!plugin.is_master_file());
@@ -374,12 +398,15 @@ mod tests {
 
     #[test]
     fn masters_should_be_empty_for_blank_esm() {
-        let mut plugin = Plugin::new(GameId::Skyrim, Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"));
+        let mut plugin = Plugin::new(GameId::Skyrim,
+                                     Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"));
 
         assert!(plugin.parse(true).is_ok());
         assert_eq!(0, plugin.masters().unwrap().len());
 
-        let mut plugin = Plugin::new(GameId::Morrowind, Path::new("tests/testing-plugins/Morrowind/Data Files/Blank.esm"));
+        let mut plugin = Plugin::new(GameId::Morrowind,
+                                     Path::new("tests/testing-plugins/Morrowind/Data \
+                                                Files/Blank.esm"));
 
         assert!(plugin.parse(true).is_ok());
         assert_eq!(0, plugin.masters().unwrap().len());
@@ -387,7 +414,9 @@ mod tests {
 
     #[test]
     fn masters_should_not_be_empty_for_master_dependent_plugin() {
-        let mut plugin = Plugin::new(GameId::Skyrim, Path::new("tests/testing-plugins/Skyrim/Data/Blank - Master Dependent.esm"));
+        let mut plugin = Plugin::new(GameId::Skyrim,
+                                     Path::new("tests/testing-plugins/Skyrim/Data/Blank - \
+                                                Master Dependent.esm"));
 
         assert!(plugin.parse(true).is_ok());
 
@@ -395,7 +424,9 @@ mod tests {
         assert_eq!(1, masters.len());
         assert_eq!("Blank.esm", masters[0]);
 
-        let mut plugin = Plugin::new(GameId::Morrowind, Path::new("tests/testing-plugins/Morrowind/Data Files/Blank - Master Dependent.esm"));
+        let mut plugin = Plugin::new(GameId::Morrowind,
+                                     Path::new("tests/testing-plugins/Morrowind/Data \
+                                                Files/Blank - Master Dependent.esm"));
 
         assert!(plugin.parse(true).is_ok());
 
@@ -406,17 +437,21 @@ mod tests {
 
     #[test]
     fn description_should_return_plugin_description_field_content() {
-        let mut plugin = Plugin::new(GameId::Skyrim, Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"));
+        let mut plugin = Plugin::new(GameId::Skyrim,
+                                     Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"));
 
         assert!(plugin.parse(true).is_ok());
         assert_eq!("v5.0", plugin.description().unwrap().unwrap());
 
-        let mut plugin = Plugin::new(GameId::Skyrim, Path::new("tests/testing-plugins/Skyrim/Data/Blank.esp"));
+        let mut plugin = Plugin::new(GameId::Skyrim,
+                                     Path::new("tests/testing-plugins/Skyrim/Data/Blank.esp"));
 
         assert!(plugin.parse(true).is_ok());
         assert_eq!("€ƒŠ", plugin.description().unwrap().unwrap());
 
-        let mut plugin = Plugin::new(GameId::Skyrim, Path::new("tests/testing-plugins/Skyrim/Data/Blank - Master Dependent.esm"));
+        let mut plugin = Plugin::new(GameId::Skyrim,
+                                     Path::new("tests/testing-plugins/Skyrim/Data/Blank - \
+                                                Master Dependent.esm"));
 
         assert!(plugin.parse(true).is_ok());
         assert_eq!("", plugin.description().unwrap().unwrap());
@@ -424,7 +459,8 @@ mod tests {
 
     #[test]
     fn record_and_group_count_should_be_non_zero() {
-        let mut plugin = Plugin::new(GameId::Skyrim, Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"));
+        let mut plugin = Plugin::new(GameId::Skyrim,
+                                     Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"));
 
         assert!(plugin.record_and_group_count().is_none());
         assert!(plugin.parse(true).is_ok());

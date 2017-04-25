@@ -54,7 +54,7 @@ mod tests {
     }
 
     #[test]
-    fn should_store_master_at_index_of_first_byte_of_raw_value_as_plugin_name() {
+    fn should_store_master_at_mod_index_as_plugin_name() {
         let form_id = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
 
         assert_eq!(MASTERS[0], form_id.plugin_name);
@@ -65,7 +65,7 @@ mod tests {
     }
 
     #[test]
-    fn should_store_parent_plugin_name_for_first_byte_of_raw_value_greater_than_last_index_of_masters() {
+    fn should_store_parent_plugin_name_for_mod_index_greater_than_last_index_of_masters() {
         let form_id = FormId::new(PARENT_PLUGIN_NAME, NO_MASTERS, 0x01);
 
         assert_eq!(PARENT_PLUGIN_NAME, form_id.plugin_name);

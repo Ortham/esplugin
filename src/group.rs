@@ -30,7 +30,7 @@ const GROUP_TYPE: &'static str = "GRUP";
 const GROUP_TYPE_LENGTH: u8 = 4;
 
 pub struct Group {
-    pub form_ids: HashSet<u32>
+    pub form_ids: HashSet<u32>,
 }
 
 impl Group {
@@ -52,7 +52,9 @@ named_args!(group_header(game_id: GameId) <u32>,
         group_size: le_u32 >>
         take!(get_header_length_to_skip(game_id)) >>
 
-        (group_size - (GROUP_TYPE_LENGTH + mem::size_of::<u32>() as u8 + get_header_length_to_skip(game_id)) as u32)
+        (group_size - (GROUP_TYPE_LENGTH
+            + mem::size_of::<u32>() as u8
+            + get_header_length_to_skip(game_id)) as u32)
     )
 );
 
@@ -98,7 +100,9 @@ mod tests {
 
     #[test]
     fn new_should_store_formids_for_all_records_in_a_group() {
-        let data = &include_bytes!("../tests/testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")[0x56..];
+        let data =
+            &include_bytes!("../tests/testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")
+                 [0x56..];
 
         let group = Group::new(data, GameId::Skyrim).to_result().unwrap();
 
@@ -111,7 +115,8 @@ mod tests {
 
     #[test]
     fn new_should_store_formids_for_all_records_in_subgroups() {
-        let data = &include_bytes!("../tests/testing-plugins/Skyrim/Data/Blank.esm")[0x1004C..0x10114];
+        let data = &include_bytes!("../tests/testing-plugins/Skyrim/Data/Blank.esm")[0x1004C..
+                    0x10114];
 
         let group = Group::new(data, GameId::Skyrim).to_result().unwrap();
 

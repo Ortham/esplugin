@@ -36,7 +36,10 @@ pub struct Subrecord {
 }
 
 impl Subrecord {
-    pub fn new(input: &[u8], game_id: GameId, data_length_override: u32) -> IResult<&[u8], Subrecord> {
+    pub fn new(input: &[u8],
+               game_id: GameId,
+               data_length_override: u32)
+               -> IResult<&[u8], Subrecord> {
         if game_id == GameId::Morrowind {
             morrowind_subrecord(input)
         } else if data_length_override != 0 {
@@ -90,12 +93,15 @@ named_args!(presized_subrecord(data_length: u32) <Subrecord>,
 mod tests {
     use super::*;
 
-    const TES3_DATA_SUBRECORD: &'static [u8] = &[0x44, 0x41, 0x54, 0x41, 0x08, 0x00, 0x00, 0x00, 0x6D, 0x63, 0x61, 0x72, 0x6F, 0x66, 0x61, 0x6E];
-    const TES4_CNAM_SUBRECORD: &'static [u8] = &[0x43, 0x4E, 0x41, 0x4D, 0x0A, 0x00, 0x6D, 0x63, 0x61, 0x72, 0x6F, 0x66, 0x61, 0x6E, 0x6F, 0x00];
+    const TES3_DATA_SUBRECORD: &'static [u8] = &[0x44, 0x41, 0x54, 0x41, 0x08, 0x00, 0x00, 0x00,
+                                                 0x6D, 0x63, 0x61, 0x72, 0x6F, 0x66, 0x61, 0x6E];
+    const TES4_CNAM_SUBRECORD: &'static [u8] = &[0x43, 0x4E, 0x41, 0x4D, 0x0A, 0x00, 0x6D, 0x63,
+                                                 0x61, 0x72, 0x6F, 0x66, 0x61, 0x6E, 0x6F, 0x00];
 
     #[test]
     fn parse_should_parse_a_morrowind_subrecord_correctly() {
-        let subrecord = Subrecord::new(TES3_DATA_SUBRECORD, GameId::Morrowind, 0).to_result().unwrap();
+        let subrecord =
+            Subrecord::new(TES3_DATA_SUBRECORD, GameId::Morrowind, 0).to_result().unwrap();
 
         assert_eq!("DATA", subrecord.subrecord_type);
         assert_eq!(vec![0x6D, 0x63, 0x61, 0x72, 0x6F, 0x66, 0x61, 0x6E], subrecord.data);
@@ -103,7 +109,8 @@ mod tests {
 
     #[test]
     fn parse_should_ignore_data_length_override_for_morrowind_subrecords() {
-        let subrecord = Subrecord::new(TES3_DATA_SUBRECORD, GameId::Morrowind, 5).to_result().unwrap();
+        let subrecord =
+            Subrecord::new(TES3_DATA_SUBRECORD, GameId::Morrowind, 5).to_result().unwrap();
 
         assert_eq!("DATA", subrecord.subrecord_type);
         assert_eq!(vec![0x6D, 0x63, 0x61, 0x72, 0x6F, 0x66, 0x61, 0x6E], subrecord.data);
@@ -114,12 +121,15 @@ mod tests {
         let subrecord = Subrecord::new(TES4_CNAM_SUBRECORD, GameId::Skyrim, 0).to_result().unwrap();
 
         assert_eq!("CNAM", subrecord.subrecord_type);
-        assert_eq!(vec![0x6D, 0x63, 0x61, 0x72, 0x6F, 0x66, 0x61, 0x6E, 0x6F, 0x00], subrecord.data);
+
+        let expected_data = vec![0x6D, 0x63, 0x61, 0x72, 0x6F, 0x66, 0x61, 0x6E, 0x6F, 0x00];
+        assert_eq!(expected_data, subrecord.data);
     }
 
     #[test]
     fn parse_should_use_data_length_override_if_non_zero_and_game_id_is_not_morrowind() {
-        let subrecord = Subrecord::new(TES4_CNAM_SUBRECORD, GameId::Oblivion, 4).to_result().unwrap();
+        let subrecord =
+            Subrecord::new(TES4_CNAM_SUBRECORD, GameId::Oblivion, 4).to_result().unwrap();
 
         assert_eq!("CNAM", subrecord.subrecord_type);
         assert_eq!(vec![0x6D, 0x63, 0x61, 0x72], subrecord.data);
@@ -129,17 +139,20 @@ mod tests {
         assert_eq!("CNAM", subrecord.subrecord_type);
         assert_eq!(vec![0x6D, 0x63, 0x61, 0x72], subrecord.data);
 
-        let subrecord = Subrecord::new(TES4_CNAM_SUBRECORD, GameId::Fallout3, 4).to_result().unwrap();
+        let subrecord =
+            Subrecord::new(TES4_CNAM_SUBRECORD, GameId::Fallout3, 4).to_result().unwrap();
 
         assert_eq!("CNAM", subrecord.subrecord_type);
         assert_eq!(vec![0x6D, 0x63, 0x61, 0x72], subrecord.data);
 
-        let subrecord = Subrecord::new(TES4_CNAM_SUBRECORD, GameId::FalloutNV, 4).to_result().unwrap();
+        let subrecord =
+            Subrecord::new(TES4_CNAM_SUBRECORD, GameId::FalloutNV, 4).to_result().unwrap();
 
         assert_eq!("CNAM", subrecord.subrecord_type);
         assert_eq!(vec![0x6D, 0x63, 0x61, 0x72], subrecord.data);
 
-        let subrecord = Subrecord::new(TES4_CNAM_SUBRECORD, GameId::Fallout4, 4).to_result().unwrap();
+        let subrecord =
+            Subrecord::new(TES4_CNAM_SUBRECORD, GameId::Fallout4, 4).to_result().unwrap();
 
         assert_eq!("CNAM", subrecord.subrecord_type);
         assert_eq!(vec![0x6D, 0x63, 0x61, 0x72], subrecord.data);
