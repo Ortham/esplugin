@@ -103,7 +103,7 @@ impl Plugin {
                         filename: String,
                         load_header_only: bool)
                         -> Result<PluginData, ParsingError> {
-        let mut f = File::open(self.path.clone()).map_err(|e| ParsingError::IOError(e))?;
+        let f = File::open(self.path.clone()).map_err(|e| ParsingError::IOError(e))?;
 
         let mut reader = BufReader::new(f);
 
