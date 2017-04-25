@@ -131,7 +131,9 @@ mod tests {
             &include_bytes!("../tests/testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")
                  [..0x56];
 
-        let record = Record::parse(data, GameId::Skyrim, false).to_result().unwrap();
+        let record = Record::parse(data, GameId::Skyrim, false)
+            .to_result()
+            .unwrap();
 
         assert_eq!(0x1, record.header.flags);
         assert_eq!(0, record.header.form_id);
@@ -149,7 +151,9 @@ mod tests {
         let data = &include_bytes!("../tests/testing-plugins/Morrowind/Data Files/Blank.esm")
                         [..0x144];
 
-        let record = Record::parse(data, GameId::Morrowind, false).to_result().unwrap();
+        let record = Record::parse(data, GameId::Morrowind, false)
+            .to_result()
+            .unwrap();
 
         assert_eq!(0, record.header.flags);
         assert_eq!(0, record.header.form_id);
@@ -163,7 +167,9 @@ mod tests {
         let data = &include_bytes!("../tests/testing-plugins/Morrowind/Data Files/Blank.esm")
                         [..0x144];
 
-        let record = Record::parse(data, GameId::Morrowind, true).to_result().unwrap();
+        let record = Record::parse(data, GameId::Morrowind, true)
+            .to_result()
+            .unwrap();
 
         assert_eq!(0, record.header.flags);
         assert_eq!(0, record.header.form_id);
@@ -174,7 +180,9 @@ mod tests {
     fn parse_should_read_large_subrecords_correctly() {
         let data = &include_bytes!("../tests/testing-plugins/Skyrim/Data/Blank.esm")[..0x1004C];
 
-        let record = Record::parse(data, GameId::Skyrim, false).to_result().unwrap();
+        let record = Record::parse(data, GameId::Skyrim, false)
+            .to_result()
+            .unwrap();
 
         assert_eq!(0x1, record.header.flags);
         assert_eq!(0, record.header.form_id);
@@ -192,20 +200,26 @@ mod tests {
             &include_bytes!("../tests/testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")
                  [..0x56];
 
-        let form_id = Record::parse_form_id(data, GameId::Skyrim).to_result().unwrap();
+        let form_id = Record::parse_form_id(data, GameId::Skyrim)
+            .to_result()
+            .unwrap();
 
         assert_eq!(0, form_id);
 
         let data = &include_bytes!("../tests/testing-plugins/Morrowind/Data Files/Blank.esm")
                         [..0x144];
 
-        let form_id = Record::parse_form_id(data, GameId::Morrowind).to_result().unwrap();
+        let form_id = Record::parse_form_id(data, GameId::Morrowind)
+            .to_result()
+            .unwrap();
 
         assert_eq!(0, form_id);
 
         let data = &include_bytes!("../tests/testing-plugins/Skyrim/Data/Blank.esp")[0x53..0xEF];
 
-        let form_id = Record::parse_form_id(data, GameId::Skyrim).to_result().unwrap();
+        let form_id = Record::parse_form_id(data, GameId::Skyrim)
+            .to_result()
+            .unwrap();
 
         assert_eq!(0xCEC, form_id);
     }

@@ -36,8 +36,14 @@ fn parse_should_succeed_for_skyrim_plugin() {
     assert_eq!("ONAM",
                plugin.data.header_record.subrecords[3].subrecord_type);
 
-    assert!(plugin.data.form_ids.contains(&FormId::new("Blank.esm", &masters, 0xCF9)));
-    assert!(plugin.data.form_ids.contains(&FormId::new("Blank.esm", &masters, 0xCF0)));
+    assert!(plugin
+                .data
+                .form_ids
+                .contains(&FormId::new("Blank.esm", &masters, 0xCF9)));
+    assert!(plugin
+                .data
+                .form_ids
+                .contains(&FormId::new("Blank.esm", &masters, 0xCF0)));
 }
 
 #[test]
@@ -60,8 +66,14 @@ fn parse_mmapped_file_should_succeed() {
     assert_eq!("ONAM",
                plugin.data.header_record.subrecords[3].subrecord_type);
 
-    assert!(plugin.data.form_ids.contains(&FormId::new("Blank.esm", &masters, 0xCF9)));
-    assert!(plugin.data.form_ids.contains(&FormId::new("Blank.esm", &masters, 0xCF0)));
+    assert!(plugin
+                .data
+                .form_ids
+                .contains(&FormId::new("Blank.esm", &masters, 0xCF9)));
+    assert!(plugin
+                .data
+                .form_ids
+                .contains(&FormId::new("Blank.esm", &masters, 0xCF0)));
 }
 
 #[test]

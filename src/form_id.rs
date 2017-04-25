@@ -29,7 +29,10 @@ impl FormId {
 
         FormId {
             object_index: raw_form_id & 0xFFFFFF,
-            plugin_name: masters.get(mod_index).unwrap_or(&parent_plugin_name).to_string(),
+            plugin_name: masters
+                .get(mod_index)
+                .unwrap_or(&parent_plugin_name)
+                .to_string(),
         }
     }
 }

@@ -90,9 +90,9 @@ impl Plugin {
         match self.filename() {
             None => Err(ParsingError::NoFilename),
             Some(filename) => {
-                self.data =
-                    parse_plugin(&input, self.game_id, &filename, load_header_only).to_full_result()
-                        .map_err(ParsingError::ContentError)?;
+                self.data = parse_plugin(&input, self.game_id, &filename, load_header_only)
+                    .to_full_result()
+                    .map_err(ParsingError::ContentError)?;
 
                 Ok(())
             }
@@ -100,12 +100,14 @@ impl Plugin {
     }
 
     pub fn parse_file(&mut self, load_header_only: bool) -> Result<(), ParsingError> {
-        let f = File::open(self.path.clone()).map_err(|e| ParsingError::IOError(e))?;
+        let f = File::open(self.path.clone())
+            .map_err(|e| ParsingError::IOError(e))?;
 
         let mut reader = BufReader::new(f);
 
         let mut content: Vec<u8> = Vec::new();
-        reader.read_to_end(&mut content)
+        reader
+            .read_to_end(&mut content)
             .map_err(|e| ParsingError::IOError(e))?;
 
         self.parse(&content, load_header_only)
@@ -141,7 +143,9 @@ impl Plugin {
             match self.path.extension() {
                 Some(x) if x == "esm" => true,
                 Some(x) if x == "ghost" => {
-                    match self.path.file_stem().and_then(|file_stem| file_stem.to_str()) {
+                    match self.path
+                              .file_stem()
+                              .and_then(|file_stem| file_stem.to_str()) {
                         Some(file_stem) => file_stem.ends_with(".esm"),
                         None => false,
                     }
@@ -173,9 +177,10 @@ impl Plugin {
             if subrecord.subrecord_type == target_subrecord_type {
                 let data = &subrecord.data[description_offset..(subrecord.data.len() - 1)];
 
-                return WINDOWS_1252.decode(data, DecoderTrap::Strict)
-                    .map(|d| Option::Some(d))
-                    .map_err(|e| ParsingError::DecodeError(e));
+                return WINDOWS_1252
+                           .decode(data, DecoderTrap::Strict)
+                           .map(|d| Option::Some(d))
+                           .map_err(|e| ParsingError::DecodeError(e));
             }
         }
 
@@ -201,7 +206,8 @@ impl Plugin {
 }
 
 fn masters(header_record: &Record) -> Result<Vec<&str>, str::Utf8Error> {
-    header_record.subrecords
+    header_record
+        .subrecords
         .iter()
         .filter(|s| s.subrecord_type == "MAST")
         .map(|s| str::from_utf8(&s.data[0..(s.data.len() - 1)]))
@@ -221,10 +227,12 @@ fn parse_form_ids<'a>(input: &'a [u8],
     let masters = masters.unwrap();
 
     if game_id == GameId::Morrowind {
-        let (input1, record_form_ids) = try_parse!(input,
+        let (input1, record_form_ids) =
+            try_parse!(input,
                                                    many0!(apply!(Record::parse_form_id, game_id)));
 
-        let form_ids: HashSet<FormId> = record_form_ids.into_iter()
+        let form_ids: HashSet<FormId> = record_form_ids
+            .into_iter()
             .map(|form_id| FormId::new(filename, &masters, form_id))
             .collect();
 
@@ -234,9 +242,10 @@ fn parse_form_ids<'a>(input: &'a [u8],
 
         let mut form_ids: HashSet<FormId> = HashSet::new();
         for group in groups {
-            form_ids.extend(group.form_ids
-                .into_iter()
-                .map(|form_id| FormId::new(filename, &masters, form_id)));
+            form_ids.extend(group
+                                .form_ids
+                                .into_iter()
+                                .map(|form_id| FormId::new(filename, &masters, form_id)));
         }
 
         IResult::Done(input1, form_ids)
@@ -258,7 +267,8 @@ fn parse_plugin<'a>(input: &'a [u8],
                              });
     }
 
-    let (input2, form_ids) = try_parse!(input1,
+    let (input2, form_ids) =
+        try_parse!(input1,
                                         apply!(parse_form_ids, game_id, filename, &header_record));
 
     IResult::Done(input2,
