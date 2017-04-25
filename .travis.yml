@@ -1,6 +1,9 @@
 sudo: false
 language: rust
 
+install:
+  - cargo install rustfmt
+
 before_script:
   - mkdir tests
   - cd tests
@@ -8,3 +11,7 @@ before_script:
   - tar -xf 1.2.0.tar.gz
   - mv testing-plugins-1.2.0 testing-plugins
   - cd -
+
+script:
+  - cargo fmt -- --write-mode=diff
+  - cargo test
