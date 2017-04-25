@@ -1,0 +1,10 @@
+sudo: false
+language: rust
+
+before_script:
+  - mkdir tests
+  - cd tests
+  - wget https://github.com/WrinklyNinja/testing-plugins/archive/1.2.0.tar.gz
+  - tar -xf 1.2.0.tar.gz
+  - mv testing-plugins-1.2.0 testing-plugins
+  - cd -
