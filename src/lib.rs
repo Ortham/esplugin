@@ -19,6 +19,7 @@
 
 extern crate byteorder;
 extern crate encoding;
+extern crate flate2;
 extern crate memmap;
 #[macro_use]
 extern crate nom;

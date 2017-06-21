@@ -33,6 +33,12 @@ pub struct RecordHeader {
     size_of_subrecords: u32,
 }
 
+impl RecordHeader {
+    fn are_subrecords_compressed(&self) -> bool {
+        (self.flags & 0x00040000) != 0
+    }
+}
+
 #[derive(Debug)]
 pub struct Record {
     pub header: RecordHeader,
@@ -89,7 +95,11 @@ fn record(input: &[u8], game_id: GameId, skip_subrecords: bool) -> IResult<&[u8]
 
     let subrecords: Vec<Subrecord>;
     if !skip_subrecords {
-        subrecords = try_parse!(subrecords_data, apply!(parse_subrecords, game_id)).1;
+        subrecords = try_parse!(subrecords_data, apply!(
+            parse_subrecords,
+            game_id,
+            header.are_subrecords_compressed()
+        )).1;
     } else {
         subrecords = Vec::new();
     }
@@ -103,14 +113,18 @@ fn record(input: &[u8], game_id: GameId, skip_subrecords: bool) -> IResult<&[u8]
     )
 }
 
-fn parse_subrecords(input: &[u8], game_id: GameId) -> IResult<&[u8], Vec<Subrecord>> {
+fn parse_subrecords(
+    input: &[u8],
+    game_id: GameId,
+    are_compressed: bool,
+) -> IResult<&[u8], Vec<Subrecord>> {
     let mut input1: &[u8] = input;
     let mut subrecords: Vec<Subrecord> = Vec::new();
     let mut large_subrecord_size: u32 = 0;
 
     while input1.len() > 0 {
         let (input2, subrecord) = try_parse!(input1,
-            apply!(Subrecord::new, game_id, large_subrecord_size));
+            apply!(Subrecord::new, game_id, large_subrecord_size, are_compressed));
         input1 = input2;
         if subrecord.subrecord_type == "XXXX" {
             large_subrecord_size = try_parse!(&subrecord.data, le_u32).1;
@@ -196,6 +210,36 @@ mod tests {
         assert_eq!("CNAM", record.subrecords[1].subrecord_type);
         assert_eq!("SNAM", record.subrecords[2].subrecord_type);
         assert_eq!("ONAM", record.subrecords[3].subrecord_type);
+    }
+
+    #[test]
+    fn parse_should_read_compressed_subrecords_correctly() {
+        const DATA: &'static [u8] = &[
+            0x42, 0x50, 0x54, 0x44,  //type
+            0x23, 0x00, 0x00, 0x00,  //size
+            0x00, 0x00, 0x04, 0x00,  //flags
+            0xEC, 0x0C, 0x00, 0x00,  //id
+            0x00, 0x00, 0x00, 0x00,  //revision
+            0x2B, 0x00,  //version
+            0x00, 0x00,  //unknown
+            0x42, 0x50, 0x54, 0x4E,  //field type
+            0x1D, 0x00,  //field size
+            0x19, 0x00, 0x00, 0x00,  //decompressed field size
+            0x75, 0xc5, 0x21, 0x0d, 0x00, 0x00, 0x08, 0x05, 0xd1, 0x6c,  //field data (compressed)
+            0x6c, 0xdc, 0x57, 0x48, 0x3c, 0xfd, 0x5b, 0x5c, 0x02, 0xd4,  //field data (compressed)
+            0x6b, 0x32, 0xb5, 0xdc, 0xa3  //field data (compressed)
+        ];
+
+        let record = Record::parse(DATA, GameId::Skyrim, false)
+            .to_result()
+            .unwrap();
+
+        assert_eq!(0xCEC, record.header.form_id);
+        assert_eq!(0x00040000, record.header.flags);
+        assert_eq!(1, record.subrecords.len());
+
+        let decompressed_data = record.subrecords[0].decompress_data().unwrap();
+        assert_eq!("DEFLATE_DEFLATE_DEFLATE_DEFLATE".as_bytes(), decompressed_data.as_slice());
     }
 
     #[test]
