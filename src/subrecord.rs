@@ -36,10 +36,11 @@ pub struct Subrecord {
 }
 
 impl Subrecord {
-    pub fn new(input: &[u8],
-               game_id: GameId,
-               data_length_override: u32)
-               -> IResult<&[u8], Subrecord> {
+    pub fn new(
+        input: &[u8],
+        game_id: GameId,
+        data_length_override: u32,
+    ) -> IResult<&[u8], Subrecord> {
         if game_id == GameId::Morrowind {
             morrowind_subrecord(input)
         } else if data_length_override != 0 {
@@ -93,10 +94,42 @@ named_args!(presized_subrecord(data_length: u32) <Subrecord>,
 mod tests {
     use super::*;
 
-    const TES3_DATA_SUBRECORD: &'static [u8] = &[0x44, 0x41, 0x54, 0x41, 0x08, 0x00, 0x00, 0x00,
-                                                 0x6D, 0x63, 0x61, 0x72, 0x6F, 0x66, 0x61, 0x6E];
-    const TES4_CNAM_SUBRECORD: &'static [u8] = &[0x43, 0x4E, 0x41, 0x4D, 0x0A, 0x00, 0x6D, 0x63,
-                                                 0x61, 0x72, 0x6F, 0x66, 0x61, 0x6E, 0x6F, 0x00];
+    const TES3_DATA_SUBRECORD: &'static [u8] = &[
+        0x44,
+        0x41,
+        0x54,
+        0x41,
+        0x08,
+        0x00,
+        0x00,
+        0x00,
+        0x6D,
+        0x63,
+        0x61,
+        0x72,
+        0x6F,
+        0x66,
+        0x61,
+        0x6E,
+    ];
+    const TES4_CNAM_SUBRECORD: &'static [u8] = &[
+        0x43,
+        0x4E,
+        0x41,
+        0x4D,
+        0x0A,
+        0x00,
+        0x6D,
+        0x63,
+        0x61,
+        0x72,
+        0x6F,
+        0x66,
+        0x61,
+        0x6E,
+        0x6F,
+        0x00,
+    ];
 
     #[test]
     fn parse_should_parse_a_morrowind_subrecord_correctly() {

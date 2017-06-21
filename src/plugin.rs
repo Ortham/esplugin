@@ -100,22 +100,24 @@ impl Plugin {
     }
 
     pub fn parse_file(&mut self, load_header_only: bool) -> Result<(), ParsingError> {
-        let f = File::open(self.path.clone())
-            .map_err(|e| ParsingError::IOError(e))?;
+        let f = File::open(self.path.clone()).map_err(
+            |e| ParsingError::IOError(e),
+        )?;
 
         let mut reader = BufReader::new(f);
 
         let mut content: Vec<u8> = Vec::new();
-        reader
-            .read_to_end(&mut content)
-            .map_err(|e| ParsingError::IOError(e))?;
+        reader.read_to_end(&mut content).map_err(
+            |e| ParsingError::IOError(e),
+        )?;
 
         self.parse(&content, load_header_only)
     }
 
-    pub unsafe fn parse_mmapped_file(&mut self,
-                                     load_header_only: bool)
-                                     -> Result<(), ParsingError> {
+    pub unsafe fn parse_mmapped_file(
+        &mut self,
+        load_header_only: bool,
+    ) -> Result<(), ParsingError> {
         let mmap_view = Mmap::open_path(self.path.as_path(), Protection::Read)
             .map_err(ParsingError::IOError)?
             .into_view();
@@ -143,9 +145,9 @@ impl Plugin {
             match self.path.extension() {
                 Some(x) if x == "esm" => true,
                 Some(x) if x == "ghost" => {
-                    match self.path
-                              .file_stem()
-                              .and_then(|file_stem| file_stem.to_str()) {
+                    match self.path.file_stem().and_then(
+                        |file_stem| file_stem.to_str(),
+                    ) {
                         Some(file_stem) => file_stem.ends_with(".esm"),
                         None => false,
                     }
@@ -178,9 +180,9 @@ impl Plugin {
                 let data = &subrecord.data[description_offset..(subrecord.data.len() - 1)];
 
                 return WINDOWS_1252
-                           .decode(data, DecoderTrap::Strict)
-                           .map(|d| Option::Some(d))
-                           .map_err(|e| ParsingError::DecodeError(e));
+                    .decode(data, DecoderTrap::Strict)
+                    .map(|d| Option::Some(d))
+                    .map_err(|e| ParsingError::DecodeError(e));
             }
         }
 
@@ -214,11 +216,12 @@ fn masters(header_record: &Record) -> Result<Vec<&str>, str::Utf8Error> {
         .collect::<Result<Vec<&str>, str::Utf8Error>>()
 }
 
-fn parse_form_ids<'a>(input: &'a [u8],
-                      game_id: GameId,
-                      filename: &str,
-                      header_record: &Record)
-                      -> IResult<&'a [u8], HashSet<FormId>> {
+fn parse_form_ids<'a>(
+    input: &'a [u8],
+    game_id: GameId,
+    filename: &str,
+    header_record: &Record,
+) -> IResult<&'a [u8], HashSet<FormId>> {
     let masters = masters(&header_record);
 
     if masters.is_err() {
@@ -228,8 +231,7 @@ fn parse_form_ids<'a>(input: &'a [u8],
 
     if game_id == GameId::Morrowind {
         let (input1, record_form_ids) =
-            try_parse!(input,
-                                                   many0!(apply!(Record::parse_form_id, game_id)));
+            try_parse!(input, many0!(apply!(Record::parse_form_id, game_id)));
 
         let form_ids: HashSet<FormId> = record_form_ids
             .into_iter()
@@ -242,38 +244,43 @@ fn parse_form_ids<'a>(input: &'a [u8],
 
         let mut form_ids: HashSet<FormId> = HashSet::new();
         for group in groups {
-            form_ids.extend(group
-                                .form_ids
-                                .into_iter()
-                                .map(|form_id| FormId::new(filename, &masters, form_id)));
+            form_ids.extend(group.form_ids.into_iter().map(|form_id| {
+                FormId::new(filename, &masters, form_id)
+            }));
         }
 
         IResult::Done(input1, form_ids)
     }
 }
 
-fn parse_plugin<'a>(input: &'a [u8],
-                    game_id: GameId,
-                    filename: &String,
-                    load_header_only: bool)
-                    -> IResult<&'a [u8], PluginData> {
+fn parse_plugin<'a>(
+    input: &'a [u8],
+    game_id: GameId,
+    filename: &String,
+    load_header_only: bool,
+) -> IResult<&'a [u8], PluginData> {
     let (input1, header_record) = try_parse!(input, apply!(Record::parse, game_id, false));
 
     if load_header_only {
-        return IResult::Done(input1,
-                             PluginData {
-                                 header_record: header_record,
-                                 form_ids: HashSet::new(),
-                             });
+        return IResult::Done(
+            input1,
+            PluginData {
+                header_record: header_record,
+                form_ids: HashSet::new(),
+            },
+        );
     }
 
-    let (input2, form_ids) =
-        try_parse!(input1,
-                                        apply!(parse_form_ids, game_id, filename, &header_record));
+    let (input2, form_ids) = try_parse!(
+        input1,
+        apply!(parse_form_ids, game_id, filename, &header_record)
+    );
 
-    IResult::Done(input2,
-                  PluginData {
-                      header_record: header_record,
-                      form_ids: form_ids,
-                  })
+    IResult::Done(
+        input2,
+        PluginData {
+            header_record: header_record,
+            form_ids: form_ids,
+        },
+    )
 }

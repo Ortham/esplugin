@@ -17,7 +17,7 @@
  * along with libespm. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#[derive(Clone,Copy,PartialEq,Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum GameId {
     Oblivion,
     Skyrim,

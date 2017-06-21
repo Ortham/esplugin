@@ -17,7 +17,7 @@
  * along with libespm. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#[derive(Debug,PartialEq,Eq,Hash)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct FormId {
     pub object_index: u32,
     pub plugin_name: String,
