@@ -2,6 +2,7 @@ Libespm
 =======
 
 [![Build Status](https://travis-ci.org/WrinklyNinja/libespm.svg?branch=rust-rewrite)](https://travis-ci.org/WrinklyNinja/libespm)
+[![Coveralls branch](https://img.shields.io/coveralls/WrinklyNinja/libespm/rust-rewrite.svg)](https://coveralls.io/github/WrinklyNinja/libespm)
 
 A free software library for reading Elder Scrolls Plugin (`.esp`) and Elder Scrolls Master (`.esm`) files. It can currently parse plugins for the following games:
 
