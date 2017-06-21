@@ -26,10 +26,7 @@ extern crate nom;
 
 pub use form_id::FormId;
 pub use game_id::GameId;
-pub use group::Group;
 pub use plugin::Plugin;
-pub use record::Record;
-pub use subrecord::Subrecord;
 
 mod form_id;
 mod game_id;
