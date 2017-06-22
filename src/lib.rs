@@ -20,14 +20,18 @@
 extern crate byteorder;
 extern crate encoding;
 extern crate flate2;
+extern crate libc;
 extern crate memmap;
 #[macro_use]
 extern crate nom;
 
-pub use form_id::FormId;
-pub use game_id::GameId;
+pub use form_id::*;
+pub use game_id::*;
 pub use plugin::Plugin;
+pub use ffi::espm_string_free;
+pub use ffi::constants::*;
 
+mod ffi;
 mod form_id;
 mod game_id;
 mod group;

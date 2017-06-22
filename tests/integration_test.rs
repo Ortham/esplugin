@@ -1,8 +1,8 @@
-extern crate libespm;
+extern crate espm;
 
 use std::path::Path;
 
-use libespm::{FormId, GameId, Plugin};
+use espm::{FormId, GameId, Plugin};
 
 #[test]
 fn parse_should_error_if_plugin_does_not_exist() {

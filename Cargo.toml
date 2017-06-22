@@ -7,5 +7,10 @@ authors = ["Oliver Hamlet <oliver.hamlet@gmail.com>"]
 byteorder = "1.0.0"
 encoding = "0.2.33"
 flate2 = "0.2"
+libc = "*"
 memmap = "0.5.2"
 nom = "^2.2"
+
+[lib]
+name = "espm"
+crate-type = ["lib", "cdylib"]
