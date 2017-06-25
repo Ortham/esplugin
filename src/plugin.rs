@@ -24,14 +24,18 @@ use std::fs::File;
 use std::io::BufReader;
 use std::io::Error;
 use std::io::Read;
+use std::mem;
 use std::path::Path;
 use std::path::PathBuf;
+use std::ptr;
 use std::str;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use encoding::{Encoding, DecoderTrap};
 use encoding::all::WINDOWS_1252;
+
+use libc::c_char;
 
 use nom::ErrorKind;
 use nom::IError;
@@ -44,6 +48,8 @@ use form_id::FormId;
 use game_id::GameId;
 use group::Group;
 use record::Record;
+use ffi::constants::*;
+use ffi::helpers::*;
 
 #[derive(Debug)]
 pub enum ParsingError {
@@ -134,7 +140,7 @@ impl Plugin {
             .map(|filename| filename.trim_right_matches(".ghost").to_string())
     }
 
-    pub fn masters(&self) -> Result<Vec<&str>, str::Utf8Error> {
+    pub fn masters(&self) -> Result<Vec<String>, ParsingError> {
         masters(&self.data.header_record)
     }
 
@@ -207,13 +213,18 @@ impl Plugin {
     }
 }
 
-fn masters(header_record: &Record) -> Result<Vec<&str>, str::Utf8Error> {
+fn masters(header_record: &Record) -> Result<Vec<String>, ParsingError> {
     header_record
         .subrecords
         .iter()
         .filter(|s| s.subrecord_type == "MAST")
-        .map(|s| str::from_utf8(&s.data[0..(s.data.len() - 1)]))
-        .collect::<Result<Vec<&str>, str::Utf8Error>>()
+        .map(|s| &s.data[0..(s.data.len() - 1)])
+        .map(|d| {
+            WINDOWS_1252.decode(d, DecoderTrap::Strict).map_err(|e| {
+                ParsingError::DecodeError(e)
+            })
+        })
+        .collect::<Result<Vec<String>, ParsingError>>()
 }
 
 fn parse_form_ids<'a>(
@@ -222,12 +233,10 @@ fn parse_form_ids<'a>(
     filename: &str,
     header_record: &Record,
 ) -> IResult<&'a [u8], HashSet<FormId>> {
-    let masters = masters(&header_record);
-
-    if masters.is_err() {
-        return IResult::Error(ErrorKind::Custom(masters.unwrap_err().valid_up_to() as u32));
-    }
-    let masters = masters.unwrap();
+    let masters = match masters(&header_record) {
+        Ok(x) => x,
+        Err(_) => return IResult::Error(ErrorKind::Custom(ESPM_ERROR_NOT_UTF8)),
+    };
 
     if game_id == GameId::Morrowind {
         let (input1, record_form_ids) =
@@ -283,4 +292,199 @@ fn parse_plugin<'a>(
             form_ids: form_ids,
         },
     )
+}
+
+#[no_mangle]
+pub extern "C" fn espm_plugin_new(
+    plugin_ptr_ptr: *mut *const Plugin,
+    game_id: u32,
+    path: *const c_char,
+) -> u32 {
+    let rust_path = match to_str(path) {
+        Ok(x) => Path::new(x),
+        Err(x) => return x,
+    };
+
+    let mapped_game_id = match map_game_id(game_id) {
+        Ok(x) => x,
+        Err(x) => return x,
+    };
+
+    let plugin = Plugin::new(mapped_game_id, &rust_path);
+    unsafe {
+        *plugin_ptr_ptr = Box::into_raw(Box::new(plugin));
+    };
+
+    ESPM_OK
+}
+
+#[no_mangle]
+pub extern "C" fn espm_plugin_free(plugin_ptr: *mut Plugin) {
+    if !plugin_ptr.is_null() {
+        unsafe {
+            Box::from_raw(plugin_ptr);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn espm_plugin_parse(plugin_ptr: *mut Plugin, load_header_only: bool) -> u32 {
+    if plugin_ptr.is_null() {
+        ESPM_ERROR_NULL_POINTER
+    } else {
+        unsafe {
+            let plugin = &mut *plugin_ptr;
+            match plugin.parse_mmapped_file(load_header_only) {
+                Ok(_) => ESPM_OK,
+                Err(_) => ESPM_ERROR_PARSE_ERROR,
+            }
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn espm_plugin_filename(
+    plugin_ptr: *const Plugin,
+    filename: *mut *mut c_char,
+) -> u32 {
+    if filename.is_null() || plugin_ptr.is_null() {
+        ESPM_ERROR_NULL_POINTER
+    } else {
+        let plugin = unsafe { &*plugin_ptr };
+
+        let c_string = match path_to_c_string(&plugin.path) {
+            Ok(x) => x,
+            Err(x) => return x,
+        };
+
+        unsafe {
+            *filename = c_string;
+        }
+
+        ESPM_OK
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn espm_plugin_masters(
+    plugin_ptr: *const Plugin,
+    plugin_masters: *mut *mut *mut c_char,
+    plugin_masters_size: *mut u8,
+) -> u32 {
+    if plugin_masters.is_null() || plugin_ptr.is_null() {
+        ESPM_ERROR_NULL_POINTER
+    } else {
+        let plugin = unsafe { &*plugin_ptr };
+
+        let masters_vec = match masters(&plugin.data.header_record) {
+            Ok(x) => x.iter().map(|m| to_c_string(m)).collect(),
+            Err(_) => return ESPM_ERROR_NOT_UTF8,
+        };
+
+        let mut c_string_vec: Vec<*mut c_char> = match masters_vec {
+            Ok(x) => x,
+            Err(x) => return x,
+        };
+
+        c_string_vec.shrink_to_fit();
+
+        unsafe {
+            *plugin_masters = c_string_vec.as_mut_ptr();
+            *plugin_masters_size = c_string_vec.len() as u8;
+
+            mem::forget(c_string_vec);
+        }
+
+        ESPM_OK
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn espm_plugin_is_master(plugin_ptr: *const Plugin, is_master: *mut bool) -> u32 {
+    if plugin_ptr.is_null() || is_master.is_null() {
+        ESPM_ERROR_NULL_POINTER
+    } else {
+        unsafe {
+            let plugin = &*plugin_ptr;
+
+            *is_master = plugin.is_master_file();
+        }
+
+        ESPM_OK
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn espm_plugin_is_valid(
+    game_id: u32,
+    path: *const c_char,
+    load_header_only: bool,
+    is_valid: *mut bool,
+) -> u32 {
+    if path.is_null() || is_valid.is_null() {
+        ESPM_ERROR_NULL_POINTER
+    } else {
+        let rust_path = match to_str(path) {
+            Ok(x) => Path::new(x),
+            Err(x) => return x,
+        };
+
+        let mapped_game_id = match map_game_id(game_id) {
+            Ok(x) => x,
+            Err(x) => return x,
+        };
+
+        unsafe {
+            *is_valid = Plugin::is_valid(mapped_game_id, rust_path, load_header_only);
+        }
+
+        ESPM_OK
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn espm_plugin_description(
+    plugin_ptr: *const Plugin,
+    description: *mut *const c_char,
+) -> u32 {
+    if description.is_null() || plugin_ptr.is_null() {
+        ESPM_ERROR_NULL_POINTER
+    } else {
+        let plugin = unsafe { &*plugin_ptr };
+
+        let description_option = match plugin.description() {
+            Ok(x) => x.map(|d| to_c_string(&d)),
+            Err(_) => return ESPM_ERROR_NOT_UTF8,
+        };
+
+        let c_string = match description_option {
+            None => ptr::null(),
+            Some(Ok(x)) => x,
+            Some(Err(x)) => return x,
+        };
+
+        unsafe {
+            *description = c_string;
+        }
+
+        ESPM_OK
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn espm_plugin_record_and_group_count(
+    plugin_ptr: *const Plugin,
+    count: *mut u32,
+) -> u32 {
+    if plugin_ptr.is_null() || count.is_null() {
+        ESPM_ERROR_NULL_POINTER
+    } else {
+        unsafe {
+            let plugin = &*plugin_ptr;
+
+            *count = plugin.record_and_group_count().unwrap_or(0);
+        }
+
+        ESPM_OK
+    }
 }

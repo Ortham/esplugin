@@ -17,6 +17,8 @@
  * along with libespm. If not, see <http://www.gnu.org/licenses/>.
  */
 
+use std::string::ToString;
+
 use libc::{c_char, uint32_t};
 
 use ffi::helpers::*;
@@ -30,14 +32,18 @@ pub struct FormId {
 }
 
 impl FormId {
-    pub fn new(parent_plugin_name: &str, masters: &[&str], raw_form_id: u32) -> FormId {
+    pub fn new<T: AsRef<str> + ToString>(
+        parent_plugin_name: &str,
+        masters: &[T],
+        raw_form_id: u32,
+    ) -> FormId {
         let mod_index = (raw_form_id >> 24) as usize;
 
         FormId {
             object_index: raw_form_id & 0xFFFFFF,
             plugin_name: masters
                 .get(mod_index)
-                .unwrap_or(&parent_plugin_name)
+                .map_or(parent_plugin_name, |m| m.as_ref())
                 .to_string(),
         }
     }
@@ -48,7 +54,7 @@ pub extern "C" fn espm_formid_new(
     formid_ptr_ptr: *mut *const FormId,
     parent_plugin_name: *const c_char,
     masters: *const *const c_char,
-    masters_count: uint32_t,
+    masters_count: u8,
     raw_form_id: uint32_t,
 ) -> u32 {
     let rust_name = match to_str(parent_plugin_name) {

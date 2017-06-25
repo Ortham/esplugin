@@ -27,8 +27,9 @@ extern crate nom;
 
 pub use form_id::*;
 pub use game_id::*;
-pub use plugin::Plugin;
+pub use plugin::*;
 pub use ffi::espm_string_free;
+pub use ffi::espm_string_array_free;
 pub use ffi::constants::*;
 
 mod ffi;
