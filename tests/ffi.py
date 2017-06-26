@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import ctypes
-from ctypes import c_char_p, c_uint, c_bool, Structure, POINTER, pointer, byref
+from ctypes import c_char_p, c_uint, c_char, c_bool, c_size_t, Structure, POINTER, pointer, byref
 import os.path
 import sys
 import unittest
@@ -91,9 +91,20 @@ def set_function_types(lib):
         POINTER(c_uint)
     )
 
+    lib.espm_plugin_form_ids.restype = c_uint
+    lib.espm_plugin_form_ids.argtypes = (
+        POINTER(Plugin),
+        POINTER(POINTER(FormId)),
+        POINTER(c_size_t)
+    )
+
 class FormId(Structure):
     _fields_ = [
         ('object_index', c_uint),
+        # These are the sizes of the Rust String internally.
+        ('plugin_name_ptr', c_char_p),
+        ('plugin_name_len', c_size_t),
+        ('plugin_name_capacity', c_size_t),
     ]
 
 class Plugin(Structure):
@@ -268,6 +279,25 @@ class PluginTest(unittest.TestCase):
         ret = lib.espm_plugin_record_and_group_count(self.plugin, byref(count))
         self.assertEqual(self.OK, ret)
         self.assertNotEqual(0, count.value)
+
+    def test_getting_a_plugins_formids(self):
+        ret = lib.espm_plugin_new(
+            byref(self.plugin),
+            get_constant(lib, 'ESPM_GAME_SKYRIM'),
+            'tests/testing-plugins/Skyrim/Data/Blank.esm'.encode('utf-8'))
+        self.assertEqual(self.OK, ret)
+
+        ret = lib.espm_plugin_parse(self.plugin, False)
+        self.assertEqual(self.OK, ret)
+
+        form_ids = pointer(FormId())
+        form_ids_size = c_size_t()
+        ret = lib.espm_plugin_form_ids(self.plugin, byref(form_ids), byref(form_ids_size))
+        self.assertEqual(self.OK, ret)
+
+        self.assertEqual(10, form_ids_size.value)
+        self.assertEqual(0xCF9, form_ids[0].object_index)
+        self.assertEqual(0xCF0, form_ids[1].object_index)
 
 
 lib = load_library(os.path.join('target', 'debug'))
