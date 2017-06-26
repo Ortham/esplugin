@@ -2,8 +2,6 @@ use std::ffi::CString;
 
 use libc::c_char;
 
-use game_id::GameId;
-
 #[no_mangle]
 pub extern "C" fn espm_string_free(string: *mut c_char) {
     if !string.is_null() {

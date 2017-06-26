@@ -1,5 +1,4 @@
 use std::ffi::{CStr, CString};
-use std::path::PathBuf;
 use libc::c_char;
 
 use game_id::GameId;

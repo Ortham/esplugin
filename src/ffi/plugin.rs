@@ -4,7 +4,6 @@ use std::ptr;
 use libc::c_char;
 
 use form_id::FormId;
-use game_id::GameId;
 use plugin::Plugin;
 use ffi::constants::*;
 use ffi::helpers::*;

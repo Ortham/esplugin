@@ -23,18 +23,14 @@ use std::fs::File;
 use std::io::BufReader;
 use std::io::Error;
 use std::io::Read;
-use std::mem;
 use std::path::Path;
 use std::path::PathBuf;
-use std::ptr;
 use std::str;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use encoding::{Encoding, DecoderTrap};
 use encoding::all::WINDOWS_1252;
-
-use libc::c_char;
 
 use nom::ErrorKind;
 use nom::IError;
