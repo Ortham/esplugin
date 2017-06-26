@@ -491,3 +491,27 @@ pub extern "C" fn espm_plugin_record_and_group_count(
         ESPM_OK
     }
 }
+
+#[no_mangle]
+pub extern "C" fn espm_plugin_form_ids(
+    plugin_ptr: *const Plugin,
+    form_ids: *mut *const FormId,
+    form_ids_size: *mut usize,
+) -> u32 {
+    if plugin_ptr.is_null() || form_ids.is_null() {
+        ESPM_ERROR_NULL_POINTER
+    } else {
+        let plugin = unsafe {
+            &*plugin_ptr
+        };
+
+        let plugin_form_ids = plugin.form_ids();
+
+        unsafe {
+            *form_ids = plugin_form_ids.as_ptr();
+            *form_ids_size = plugin_form_ids.len();
+        }
+
+        ESPM_OK
+    }
+}
