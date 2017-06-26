@@ -18,7 +18,6 @@
  */
 
 use std::borrow::Cow;
-use std::collections::HashSet;
 use std::io::Cursor;
 use std::fs::File;
 use std::io::BufReader;
@@ -63,15 +62,15 @@ pub enum ParsingError {
 
 #[derive(Debug)]
 pub struct PluginData {
-    pub header_record: Record,
-    pub form_ids: HashSet<FormId>,
+    header_record: Record,
+    form_ids: Vec<FormId>,
 }
 
 impl PluginData {
     pub fn new() -> PluginData {
         PluginData {
             header_record: Record::new(),
-            form_ids: HashSet::new(),
+            form_ids: Vec::new(),
         }
     }
 }
@@ -80,7 +79,7 @@ impl PluginData {
 pub struct Plugin {
     game_id: GameId,
     path: PathBuf,
-    pub data: PluginData,
+    data: PluginData,
 }
 
 impl Plugin {
@@ -211,6 +210,10 @@ impl Plugin {
 
         Option::None
     }
+
+    pub fn form_ids(&self) -> &Vec<FormId> {
+        return &self.data.form_ids;
+    }
 }
 
 fn masters(header_record: &Record) -> Result<Vec<String>, ParsingError> {
@@ -232,7 +235,7 @@ fn parse_form_ids<'a>(
     game_id: GameId,
     filename: &str,
     header_record: &Record,
-) -> IResult<&'a [u8], HashSet<FormId>> {
+) -> IResult<&'a [u8], Vec<FormId>> {
     let masters = match masters(&header_record) {
         Ok(x) => x,
         Err(_) => return IResult::Error(ErrorKind::Custom(ESPM_ERROR_NOT_UTF8)),
@@ -242,7 +245,7 @@ fn parse_form_ids<'a>(
         let (input1, record_form_ids) =
             try_parse!(input, many0!(apply!(Record::parse_form_id, game_id)));
 
-        let form_ids: HashSet<FormId> = record_form_ids
+        let form_ids: Vec<FormId> = record_form_ids
             .into_iter()
             .map(|form_id| FormId::new(filename, &masters, form_id))
             .collect();
@@ -251,7 +254,7 @@ fn parse_form_ids<'a>(
     } else {
         let (input1, groups) = try_parse!(input, many0!(apply!(Group::new, game_id)));
 
-        let mut form_ids: HashSet<FormId> = HashSet::new();
+        let mut form_ids: Vec<FormId> = Vec::new();
         for group in groups {
             form_ids.extend(group.form_ids.into_iter().map(|form_id| {
                 FormId::new(filename, &masters, form_id)
@@ -275,7 +278,7 @@ fn parse_plugin<'a>(
             input1,
             PluginData {
                 header_record: header_record,
-                form_ids: HashSet::new(),
+                form_ids: Vec::new(),
             },
         );
     }
@@ -376,7 +379,7 @@ pub extern "C" fn espm_plugin_masters(
     } else {
         let plugin = unsafe { &*plugin_ptr };
 
-        let masters_vec = match masters(&plugin.data.header_record) {
+        let masters_vec = match plugin.masters() {
             Ok(x) => x.iter().map(|m| to_c_string(m)).collect(),
             Err(_) => return ESPM_ERROR_NOT_UTF8,
         };

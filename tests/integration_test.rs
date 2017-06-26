@@ -27,31 +27,14 @@ fn parse_should_succeed_for_skyrim_plugin() {
 
     assert!(plugin.parse_file(false).is_ok());
     let masters = plugin.masters().unwrap();
+    let form_ids = plugin.form_ids();
 
-    assert_eq!(4, plugin.data.header_record.subrecords.len());
-    assert_eq!(
-        "HEDR",
-        plugin.data.header_record.subrecords[0].subrecord_type
-    );
-    assert_eq!(
-        "CNAM",
-        plugin.data.header_record.subrecords[1].subrecord_type
-    );
-    assert_eq!(
-        "SNAM",
-        plugin.data.header_record.subrecords[2].subrecord_type
-    );
-    assert_eq!(
-        "ONAM",
-        plugin.data.header_record.subrecords[3].subrecord_type
-    );
-
-    assert!(plugin.data.form_ids.contains(&FormId::new(
+    assert!(form_ids.contains(&FormId::new(
         "Blank.esm",
         &masters,
         0xCF9,
     )));
-    assert!(plugin.data.form_ids.contains(&FormId::new(
+    assert!(form_ids.contains(&FormId::new(
         "Blank.esm",
         &masters,
         0xCF0,
@@ -69,31 +52,14 @@ fn parse_mmapped_file_should_succeed() {
         assert!(plugin.parse_mmapped_file(false).is_ok());
     }
     let masters = plugin.masters().unwrap();
+    let form_ids = plugin.form_ids();
 
-    assert_eq!(4, plugin.data.header_record.subrecords.len());
-    assert_eq!(
-        "HEDR",
-        plugin.data.header_record.subrecords[0].subrecord_type
-    );
-    assert_eq!(
-        "CNAM",
-        plugin.data.header_record.subrecords[1].subrecord_type
-    );
-    assert_eq!(
-        "SNAM",
-        plugin.data.header_record.subrecords[2].subrecord_type
-    );
-    assert_eq!(
-        "ONAM",
-        plugin.data.header_record.subrecords[3].subrecord_type
-    );
-
-    assert!(plugin.data.form_ids.contains(&FormId::new(
+    assert!(form_ids.contains(&FormId::new(
         "Blank.esm",
         &masters,
         0xCF9,
     )));
-    assert!(plugin.data.form_ids.contains(&FormId::new(
+    assert!(form_ids.contains(&FormId::new(
         "Blank.esm",
         &masters,
         0xCF0,
@@ -109,25 +75,7 @@ fn parse_should_succeed_for_skyrim_plugin_header_only() {
 
     assert!(plugin.parse_file(true).is_ok());
 
-    assert_eq!(4, plugin.data.header_record.subrecords.len());
-    assert_eq!(
-        "HEDR",
-        plugin.data.header_record.subrecords[0].subrecord_type
-    );
-    assert_eq!(
-        "CNAM",
-        plugin.data.header_record.subrecords[1].subrecord_type
-    );
-    assert_eq!(
-        "SNAM",
-        plugin.data.header_record.subrecords[2].subrecord_type
-    );
-    assert_eq!(
-        "ONAM",
-        plugin.data.header_record.subrecords[3].subrecord_type
-    );
-
-    assert_eq!(0, plugin.data.form_ids.len());
+    assert_eq!(0, plugin.form_ids().len());
 }
 
 #[test]
