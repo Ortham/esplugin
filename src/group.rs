@@ -17,7 +17,6 @@
  * along with libespm. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::collections::HashSet;
 use std::mem;
 
 use nom::IResult;
@@ -30,7 +29,7 @@ const GROUP_TYPE: &'static str = "GRUP";
 const GROUP_TYPE_LENGTH: u8 = 4;
 
 pub struct Group {
-    pub form_ids: HashSet<u32>,
+    pub form_ids: Vec<u32>,
 }
 
 impl Group {
@@ -58,10 +57,10 @@ named_args!(group_header(game_id: GameId) <u32>,
     )
 );
 
-fn parse_records(input: &[u8], game_id: GameId) -> IResult<&[u8], HashSet<u32>> {
+fn parse_records(input: &[u8], game_id: GameId) -> IResult<&[u8], Vec<u32>> {
     let mut input1: &[u8] = input;
 
-    let mut form_ids: HashSet<u32> = HashSet::new();
+    let mut form_ids: Vec<u32> = Vec::new();
 
     while input1.len() > 0 {
         let (input2, next_type) = try_parse!(input1, peek!(take_str!(GROUP_TYPE_LENGTH)));
@@ -75,7 +74,7 @@ fn parse_records(input: &[u8], game_id: GameId) -> IResult<&[u8], HashSet<u32>> 
         } else {
             let (input2, form_id) = try_parse!(input1, apply!(Record::parse_form_id, game_id));
             input1 = input2;
-            form_ids.insert(form_id);
+            form_ids.push(form_id);
         }
     }
 
