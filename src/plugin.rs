@@ -495,23 +495,40 @@ pub extern "C" fn espm_plugin_record_and_group_count(
 #[no_mangle]
 pub extern "C" fn espm_plugin_form_ids(
     plugin_ptr: *const Plugin,
-    form_ids: *mut *const FormId,
+    form_ids: *mut *mut *const FormId,
     form_ids_size: *mut usize,
 ) -> u32 {
     if plugin_ptr.is_null() || form_ids.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
-        let plugin = unsafe {
-            &*plugin_ptr
-        };
+        let plugin = unsafe { &*plugin_ptr };
 
-        let plugin_form_ids = plugin.form_ids();
+        let mut plugin_form_ids: Vec<*const FormId> = plugin
+            .form_ids()
+            .iter()
+            .map(|f| f as *const FormId)
+            .collect();
+
+        plugin_form_ids.shrink_to_fit();
 
         unsafe {
-            *form_ids = plugin_form_ids.as_ptr();
+            *form_ids = plugin_form_ids.as_mut_ptr();
             *form_ids_size = plugin_form_ids.len();
+
+            mem::forget(plugin_form_ids);
         }
 
         ESPM_OK
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn espm_plugin_form_ids_free(form_ids: *mut *const FormId, form_ids_size: usize) {
+    if form_ids.is_null() || form_ids_size == 0 {
+        return;
+    }
+
+    unsafe {
+        Vec::from_raw_parts(form_ids, form_ids_size, form_ids_size);
     }
 }

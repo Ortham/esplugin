@@ -94,17 +94,17 @@ def set_function_types(lib):
     lib.espm_plugin_form_ids.restype = c_uint
     lib.espm_plugin_form_ids.argtypes = (
         POINTER(Plugin),
-        POINTER(POINTER(FormId)),
+        POINTER(POINTER(POINTER(FormId))),
         POINTER(c_size_t)
+    )
+    lib.espm_plugin_form_ids_free.argtypes = (
+        POINTER(POINTER(FormId)),
+        c_size_t
     )
 
 class FormId(Structure):
     _fields_ = [
         ('object_index', c_uint),
-        # These are the sizes of the Rust String internally.
-        ('plugin_name_ptr', c_char_p),
-        ('plugin_name_len', c_size_t),
-        ('plugin_name_capacity', c_size_t),
     ]
 
 class Plugin(Structure):
@@ -165,12 +165,15 @@ class PluginTest(unittest.TestCase):
         self.masters = pointer(c_char_p())
         self.masters_size = c_uint(0)
         self.description = c_char_p()
+        self.form_ids = pointer(pointer(FormId()))
+        self.form_ids_size = c_size_t(0)
 
     def tearDown(self):
         lib.espm_plugin_free(self.plugin)
         lib.espm_string_free(self.filename)
         lib.espm_string_array_free(self.masters, self.masters_size)
         lib.espm_string_free(self.description)
+        lib.espm_plugin_form_ids_free(self.form_ids, self.form_ids_size)
 
     def test_creating_a_new_plugin_object(self):
         ret = lib.espm_plugin_new(
@@ -290,14 +293,14 @@ class PluginTest(unittest.TestCase):
         ret = lib.espm_plugin_parse(self.plugin, False)
         self.assertEqual(self.OK, ret)
 
-        form_ids = pointer(FormId())
+        form_ids = pointer(pointer(FormId()))
         form_ids_size = c_size_t()
         ret = lib.espm_plugin_form_ids(self.plugin, byref(form_ids), byref(form_ids_size))
         self.assertEqual(self.OK, ret)
 
         self.assertEqual(10, form_ids_size.value)
-        self.assertEqual(0xCF9, form_ids[0].object_index)
-        self.assertEqual(0xCF0, form_ids[1].object_index)
+        self.assertEqual(0xCF9, form_ids[0][0].object_index)
+        self.assertEqual(0xCF0, form_ids[1][0].object_index)
 
 
 lib = load_library(os.path.join('target', 'debug'))

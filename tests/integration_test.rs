@@ -29,16 +29,12 @@ fn parse_should_succeed_for_skyrim_plugin() {
     let masters = plugin.masters().unwrap();
     let form_ids = plugin.form_ids();
 
-    assert!(form_ids.contains(&FormId::new(
-        "Blank.esm",
-        &masters,
-        0xCF9,
-    )));
-    assert!(form_ids.contains(&FormId::new(
-        "Blank.esm",
-        &masters,
-        0xCF0,
-    )));
+    assert!(form_ids.contains(
+        &FormId::new("Blank.esm", &masters, 0xCF9),
+    ));
+    assert!(form_ids.contains(
+        &FormId::new("Blank.esm", &masters, 0xCF0),
+    ));
 }
 
 #[test]
@@ -54,16 +50,12 @@ fn parse_mmapped_file_should_succeed() {
     let masters = plugin.masters().unwrap();
     let form_ids = plugin.form_ids();
 
-    assert!(form_ids.contains(&FormId::new(
-        "Blank.esm",
-        &masters,
-        0xCF9,
-    )));
-    assert!(form_ids.contains(&FormId::new(
-        "Blank.esm",
-        &masters,
-        0xCF0,
-    )));
+    assert!(form_ids.contains(
+        &FormId::new("Blank.esm", &masters, 0xCF9),
+    ));
+    assert!(form_ids.contains(
+        &FormId::new("Blank.esm", &masters, 0xCF0),
+    ));
 }
 
 #[test]
