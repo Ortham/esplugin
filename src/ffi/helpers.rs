@@ -4,21 +4,21 @@ use libc::c_char;
 use game_id::GameId;
 use ffi::constants::*;
 
-pub fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32> {
+pub unsafe fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32> {
     if c_string.is_null() {
         return Err(ESPM_ERROR_NULL_POINTER);
     }
 
-    let rust_c_string = unsafe { CStr::from_ptr(c_string) };
+    let rust_c_string = CStr::from_ptr(c_string);
 
     Ok(rust_c_string.to_str().map_err(|e| ESPM_ERROR_NOT_UTF8)?)
 }
 
-pub fn to_str_vec<'a>(array: *const *const c_char, array_size: isize) -> Result<Vec<&'a str>, u32> {
+pub unsafe fn to_str_vec<'a>(array: *const *const c_char, array_size: isize) -> Result<Vec<&'a str>, u32> {
     let mut vec: Vec<&str> = Vec::new();
 
     for i in 0..array_size {
-        let string = unsafe { to_str(*array.offset(i))? };
+        let string = to_str(*array.offset(i))?;
         vec.push(string);
     }
 

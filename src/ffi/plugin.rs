@@ -9,7 +9,7 @@ use ffi::constants::*;
 use ffi::helpers::*;
 
 #[no_mangle]
-pub extern "C" fn espm_plugin_new(
+pub unsafe extern "C" fn espm_plugin_new(
     plugin_ptr_ptr: *mut *const Plugin,
     game_id: u32,
     path: *const c_char,
@@ -25,46 +25,40 @@ pub extern "C" fn espm_plugin_new(
     };
 
     let plugin = Plugin::new(mapped_game_id, &rust_path);
-    unsafe {
-        *plugin_ptr_ptr = Box::into_raw(Box::new(plugin));
-    };
+    *plugin_ptr_ptr = Box::into_raw(Box::new(plugin));
 
     ESPM_OK
 }
 
 #[no_mangle]
-pub extern "C" fn espm_plugin_free(plugin_ptr: *mut Plugin) {
+pub unsafe extern "C" fn espm_plugin_free(plugin_ptr: *mut Plugin) {
     if !plugin_ptr.is_null() {
-        unsafe {
-            Box::from_raw(plugin_ptr);
-        }
+        Box::from_raw(plugin_ptr);
     }
 }
 
 #[no_mangle]
-pub extern "C" fn espm_plugin_parse(plugin_ptr: *mut Plugin, load_header_only: bool) -> u32 {
+pub unsafe extern "C" fn espm_plugin_parse(plugin_ptr: *mut Plugin, load_header_only: bool) -> u32 {
     if plugin_ptr.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
-        unsafe {
-            let plugin = &mut *plugin_ptr;
-            match plugin.parse_mmapped_file(load_header_only) {
-                Ok(_) => ESPM_OK,
-                Err(_) => ESPM_ERROR_PARSE_ERROR,
-            }
+        let plugin = &mut *plugin_ptr;
+        match plugin.parse_mmapped_file(load_header_only) {
+            Ok(_) => ESPM_OK,
+            Err(_) => ESPM_ERROR_PARSE_ERROR,
         }
     }
 }
 
 #[no_mangle]
-pub extern "C" fn espm_plugin_filename(
+pub unsafe extern "C" fn espm_plugin_filename(
     plugin_ptr: *const Plugin,
     filename: *mut *const c_char,
 ) -> u32 {
     if filename.is_null() || plugin_ptr.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
-        let plugin = unsafe { &*plugin_ptr };
+        let plugin = &*plugin_ptr;
 
         let c_string = match plugin.filename().map(|s| to_c_string(&s)) {
             None => ptr::null(),
@@ -72,16 +66,14 @@ pub extern "C" fn espm_plugin_filename(
             Some(Err(x)) => return x,
         };
 
-        unsafe {
-            *filename = c_string;
-        }
+        *filename = c_string;
 
         ESPM_OK
     }
 }
 
 #[no_mangle]
-pub extern "C" fn espm_plugin_masters(
+pub unsafe extern "C" fn espm_plugin_masters(
     plugin_ptr: *const Plugin,
     plugin_masters: *mut *mut *mut c_char,
     plugin_masters_size: *mut u8,
@@ -89,7 +81,7 @@ pub extern "C" fn espm_plugin_masters(
     if plugin_masters.is_null() || plugin_ptr.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
-        let plugin = unsafe { &*plugin_ptr };
+        let plugin = &*plugin_ptr;
 
         let masters_vec = match plugin.masters() {
             Ok(x) => x.iter().map(|m| to_c_string(m)).collect(),
@@ -103,34 +95,30 @@ pub extern "C" fn espm_plugin_masters(
 
         c_string_vec.shrink_to_fit();
 
-        unsafe {
-            *plugin_masters = c_string_vec.as_mut_ptr();
-            *plugin_masters_size = c_string_vec.len() as u8;
+        *plugin_masters = c_string_vec.as_mut_ptr();
+        *plugin_masters_size = c_string_vec.len() as u8;
 
-            mem::forget(c_string_vec);
-        }
+        mem::forget(c_string_vec);
 
         ESPM_OK
     }
 }
 
 #[no_mangle]
-pub extern "C" fn espm_plugin_is_master(plugin_ptr: *const Plugin, is_master: *mut bool) -> u32 {
+pub unsafe extern "C" fn espm_plugin_is_master(plugin_ptr: *const Plugin, is_master: *mut bool) -> u32 {
     if plugin_ptr.is_null() || is_master.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
-        unsafe {
-            let plugin = &*plugin_ptr;
+        let plugin = &*plugin_ptr;
 
-            *is_master = plugin.is_master_file();
-        }
+        *is_master = plugin.is_master_file();
 
         ESPM_OK
     }
 }
 
 #[no_mangle]
-pub extern "C" fn espm_plugin_is_valid(
+pub unsafe extern "C" fn espm_plugin_is_valid(
     game_id: u32,
     path: *const c_char,
     load_header_only: bool,
@@ -149,23 +137,21 @@ pub extern "C" fn espm_plugin_is_valid(
             Err(x) => return x,
         };
 
-        unsafe {
-            *is_valid = Plugin::is_valid(mapped_game_id, rust_path, load_header_only);
-        }
+        *is_valid = Plugin::is_valid(mapped_game_id, rust_path, load_header_only);
 
         ESPM_OK
     }
 }
 
 #[no_mangle]
-pub extern "C" fn espm_plugin_description(
+pub unsafe extern "C" fn espm_plugin_description(
     plugin_ptr: *const Plugin,
     description: *mut *const c_char,
 ) -> u32 {
     if description.is_null() || plugin_ptr.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
-        let plugin = unsafe { &*plugin_ptr };
+        let plugin = &*plugin_ptr;
 
         let description_option = match plugin.description() {
             Ok(x) => x.map(|d| to_c_string(&d)),
@@ -178,34 +164,30 @@ pub extern "C" fn espm_plugin_description(
             Some(Err(x)) => return x,
         };
 
-        unsafe {
-            *description = c_string;
-        }
+        *description = c_string;
 
         ESPM_OK
     }
 }
 
 #[no_mangle]
-pub extern "C" fn espm_plugin_record_and_group_count(
+pub unsafe extern "C" fn espm_plugin_record_and_group_count(
     plugin_ptr: *const Plugin,
     count: *mut u32,
 ) -> u32 {
     if plugin_ptr.is_null() || count.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
-        unsafe {
-            let plugin = &*plugin_ptr;
+        let plugin = &*plugin_ptr;
 
-            *count = plugin.record_and_group_count().unwrap_or(0);
-        }
+        *count = plugin.record_and_group_count().unwrap_or(0);
 
         ESPM_OK
     }
 }
 
 #[no_mangle]
-pub extern "C" fn espm_plugin_form_ids(
+pub unsafe extern "C" fn espm_plugin_form_ids(
     plugin_ptr: *const Plugin,
     form_ids: *mut *mut *const FormId,
     form_ids_size: *mut usize,
@@ -213,7 +195,7 @@ pub extern "C" fn espm_plugin_form_ids(
     if plugin_ptr.is_null() || form_ids.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
-        let plugin = unsafe { &*plugin_ptr };
+        let plugin = &*plugin_ptr;
 
         let mut plugin_form_ids: Vec<*const FormId> = plugin
             .form_ids()
@@ -223,24 +205,20 @@ pub extern "C" fn espm_plugin_form_ids(
 
         plugin_form_ids.shrink_to_fit();
 
-        unsafe {
-            *form_ids = plugin_form_ids.as_mut_ptr();
-            *form_ids_size = plugin_form_ids.len();
+        *form_ids = plugin_form_ids.as_mut_ptr();
+        *form_ids_size = plugin_form_ids.len();
 
-            mem::forget(plugin_form_ids);
-        }
+        mem::forget(plugin_form_ids);
 
         ESPM_OK
     }
 }
 
 #[no_mangle]
-pub extern "C" fn espm_plugin_form_ids_free(form_ids: *mut *const FormId, form_ids_size: usize) {
+pub unsafe extern "C" fn espm_plugin_form_ids_free(form_ids: *mut *const FormId, form_ids_size: usize) {
     if form_ids.is_null() || form_ids_size == 0 {
         return;
     }
 
-    unsafe {
-        Vec::from_raw_parts(form_ids, form_ids_size, form_ids_size);
-    }
+    Vec::from_raw_parts(form_ids, form_ids_size, form_ids_size);
 }
