@@ -25,7 +25,7 @@ use subrecord::Subrecord;
 
 const RECORD_TYPE_LENGTH: u8 = 4;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct RecordHeader {
     pub record_type: String,
     pub flags: u32,
@@ -39,25 +39,13 @@ impl RecordHeader {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Record {
     pub header: RecordHeader,
     pub subrecords: Vec<Subrecord>,
 }
 
 impl Record {
-    pub fn new() -> Record {
-        Record {
-            header: RecordHeader {
-                record_type: String::new(),
-                flags: 0,
-                form_id: 0,
-                size_of_subrecords: 0,
-            },
-            subrecords: Vec::new(),
-        }
-    }
-
     pub fn parse(input: &[u8], game_id: GameId, skip_subrecords: bool) -> IResult<&[u8], Record> {
         record(input, game_id, skip_subrecords)
     }
@@ -93,16 +81,15 @@ fn record(input: &[u8], game_id: GameId, skip_subrecords: bool) -> IResult<&[u8]
     let (input1, header) = try_parse!(input, apply!(record_header, game_id));
     let (input2, subrecords_data) = try_parse!(input1, take!(header.size_of_subrecords));
 
-    let subrecords: Vec<Subrecord>;
-    if !skip_subrecords {
-        subrecords = try_parse!(subrecords_data, apply!(
+    let subrecords: Vec<Subrecord> = if !skip_subrecords {
+        try_parse!(subrecords_data, apply!(
             parse_subrecords,
             game_id,
             header.are_subrecords_compressed()
-        )).1;
+        )).1
     } else {
-        subrecords = Vec::new();
-    }
+        Vec::new()
+    };
 
     IResult::Done(
         input2,
@@ -122,7 +109,7 @@ fn parse_subrecords(
     let mut subrecords: Vec<Subrecord> = Vec::new();
     let mut large_subrecord_size: u32 = 0;
 
-    while input1.len() > 0 {
+    while !input1.is_empty() {
         let (input2, subrecord) = try_parse!(input1,
             apply!(Subrecord::new, game_id, large_subrecord_size, are_compressed));
         input1 = input2;

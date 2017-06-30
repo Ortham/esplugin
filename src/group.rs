@@ -62,7 +62,7 @@ fn parse_records(input: &[u8], game_id: GameId) -> IResult<&[u8], Vec<u32>> {
 
     let mut form_ids: Vec<u32> = Vec::new();
 
-    while input1.len() > 0 {
+    while !input1.is_empty() {
         let (input2, next_type) = try_parse!(input1, peek!(take_str!(GROUP_TYPE_LENGTH)));
         assert_eq!(input1, input2);
 

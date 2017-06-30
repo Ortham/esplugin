@@ -24,7 +24,7 @@ pub unsafe extern "C" fn espm_plugin_new(
         Err(x) => return x,
     };
 
-    let plugin = Plugin::new(mapped_game_id, &rust_path);
+    let plugin = Plugin::new(mapped_game_id, rust_path);
     *plugin_ptr_ptr = Box::into_raw(Box::new(plugin));
 
     ESPM_OK

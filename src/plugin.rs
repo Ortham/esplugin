@@ -54,19 +54,10 @@ pub enum ParsingError {
     DecodeError(Cow<'static, str>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct PluginData {
     header_record: Record,
     form_ids: Vec<FormId>,
-}
-
-impl PluginData {
-    pub fn new() -> PluginData {
-        PluginData {
-            header_record: Record::new(),
-            form_ids: Vec::new(),
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -81,7 +72,7 @@ impl Plugin {
         Plugin {
             game_id: game_id,
             path: filepath.to_path_buf(),
-            data: PluginData::new(),
+            data: PluginData::default(),
         }
     }
 
@@ -89,7 +80,7 @@ impl Plugin {
         match self.filename() {
             None => Err(ParsingError::NoFilename),
             Some(filename) => {
-                self.data = parse_plugin(&input, self.game_id, &filename, load_header_only)
+                self.data = parse_plugin(input, self.game_id, &filename, load_header_only)
                     .to_full_result()
                     .map_err(ParsingError::ContentError)?;
 
@@ -99,16 +90,12 @@ impl Plugin {
     }
 
     pub fn parse_file(&mut self, load_header_only: bool) -> Result<(), ParsingError> {
-        let f = File::open(self.path.clone()).map_err(
-            |e| ParsingError::IOError(e),
-        )?;
+        let f = File::open(self.path.clone()).map_err(ParsingError::IOError)?;
 
         let mut reader = BufReader::new(f);
 
         let mut content: Vec<u8> = Vec::new();
-        reader.read_to_end(&mut content).map_err(
-            |e| ParsingError::IOError(e),
-        )?;
+        reader.read_to_end(&mut content).map_err(ParsingError::IOError)?;
 
         self.parse(&content, load_header_only)
     }
@@ -166,13 +153,11 @@ impl Plugin {
     }
 
     pub fn description(&self) -> Result<Option<String>, ParsingError> {
-        let mut target_subrecord_type: &str = "SNAM";
-        let mut description_offset: usize = 0;
-
-        if self.game_id == GameId::Morrowind {
-            target_subrecord_type = "HEDR";
-            description_offset = 40;
-        }
+        let (target_subrecord_type, description_offset) = if self.game_id == GameId::Morrowind {
+            ("HEDR", 40)
+        } else {
+            ("SNAM", 0)
+        };
 
         for subrecord in &self.data.header_record.subrecords {
             if subrecord.subrecord_type == target_subrecord_type {
@@ -180,8 +165,8 @@ impl Plugin {
 
                 return WINDOWS_1252
                     .decode(data, DecoderTrap::Strict)
-                    .map(|d| Option::Some(d))
-                    .map_err(|e| ParsingError::DecodeError(e));
+                    .map(Option::Some)
+                    .map_err(ParsingError::DecodeError);
             }
         }
 
@@ -189,10 +174,7 @@ impl Plugin {
     }
 
     pub fn record_and_group_count(&self) -> Option<u32> {
-        let mut count_offset = 4;
-        if self.game_id == GameId::Morrowind {
-            count_offset = 296;
-        }
+        let count_offset = if self.game_id == GameId::Morrowind { 296 } else { 4 };
 
         for subrecord in &self.data.header_record.subrecords {
             if subrecord.subrecord_type == "HEDR" {
@@ -206,7 +188,7 @@ impl Plugin {
     }
 
     pub fn form_ids(&self) -> &Vec<FormId> {
-        return &self.data.form_ids;
+        &self.data.form_ids
     }
 }
 
@@ -217,9 +199,7 @@ fn masters(header_record: &Record) -> Result<Vec<String>, ParsingError> {
         .filter(|s| s.subrecord_type == "MAST")
         .map(|s| &s.data[0..(s.data.len() - 1)])
         .map(|d| {
-            WINDOWS_1252.decode(d, DecoderTrap::Strict).map_err(|e| {
-                ParsingError::DecodeError(e)
-            })
+            WINDOWS_1252.decode(d, DecoderTrap::Strict).map_err(ParsingError::DecodeError)
         })
         .collect::<Result<Vec<String>, ParsingError>>()
 }
@@ -230,7 +210,7 @@ fn parse_form_ids<'a>(
     filename: &str,
     header_record: &Record,
 ) -> IResult<&'a [u8], Vec<FormId>> {
-    let masters = match masters(&header_record) {
+    let masters = match masters(header_record) {
         Ok(x) => x,
         Err(_) => return IResult::Error(ErrorKind::Custom(::ffi::constants::ESPM_ERROR_NOT_UTF8)),
     };
@@ -262,7 +242,7 @@ fn parse_form_ids<'a>(
 fn parse_plugin<'a>(
     input: &'a [u8],
     game_id: GameId,
-    filename: &String,
+    filename: &str,
     load_header_only: bool,
 ) -> IResult<&'a [u8], PluginData> {
     let (input1, header_record) = try_parse!(input, apply!(Record::parse, game_id, false));

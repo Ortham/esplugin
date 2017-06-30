@@ -10,7 +10,11 @@ flate2 = "0.2"
 libc = "*"
 memmap = "0.5.2"
 nom = "^2.2"
+clippy = {version = "*", optional = true}
 
 [lib]
 name = "espm"
 crate-type = ["lib", "cdylib"]
+
+[features]
+default = []

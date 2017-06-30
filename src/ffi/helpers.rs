@@ -26,7 +26,7 @@ pub unsafe fn to_str_vec<'a>(array: *const *const c_char, array_size: isize) -> 
 }
 
 pub fn to_c_string(string: &str) -> Result<*mut c_char, u32> {
-    let c_string_name = CString::new(string.clone()).map_err(|e| {
+    let c_string_name = CString::new(string.to_string()).map_err(|e| {
         ESPM_ERROR_STRING_CONTAINS_NUL
     })?;
 
