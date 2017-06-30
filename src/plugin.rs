@@ -95,7 +95,9 @@ impl Plugin {
         let mut reader = BufReader::new(f);
 
         let mut content: Vec<u8> = Vec::new();
-        reader.read_to_end(&mut content).map_err(ParsingError::IOError)?;
+        reader.read_to_end(&mut content).map_err(
+            ParsingError::IOError,
+        )?;
 
         self.parse(&content, load_header_only)
     }
@@ -174,7 +176,11 @@ impl Plugin {
     }
 
     pub fn record_and_group_count(&self) -> Option<u32> {
-        let count_offset = if self.game_id == GameId::Morrowind { 296 } else { 4 };
+        let count_offset = if self.game_id == GameId::Morrowind {
+            296
+        } else {
+            4
+        };
 
         for subrecord in &self.data.header_record.subrecords {
             if subrecord.subrecord_type == "HEDR" {
@@ -199,7 +205,9 @@ fn masters(header_record: &Record) -> Result<Vec<String>, ParsingError> {
         .filter(|s| s.subrecord_type == "MAST")
         .map(|s| &s.data[0..(s.data.len() - 1)])
         .map(|d| {
-            WINDOWS_1252.decode(d, DecoderTrap::Strict).map_err(ParsingError::DecodeError)
+            WINDOWS_1252.decode(d, DecoderTrap::Strict).map_err(
+                ParsingError::DecodeError,
+            )
         })
         .collect::<Result<Vec<String>, ParsingError>>()
 }

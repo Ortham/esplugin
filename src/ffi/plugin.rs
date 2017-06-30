@@ -105,7 +105,10 @@ pub unsafe extern "C" fn espm_plugin_masters(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_plugin_is_master(plugin_ptr: *const Plugin, is_master: *mut bool) -> u32 {
+pub unsafe extern "C" fn espm_plugin_is_master(
+    plugin_ptr: *const Plugin,
+    is_master: *mut bool,
+) -> u32 {
     if plugin_ptr.is_null() || is_master.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
@@ -215,7 +218,10 @@ pub unsafe extern "C" fn espm_plugin_form_ids(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_plugin_form_ids_free(form_ids: *mut *const FormId, form_ids_size: usize) {
+pub unsafe extern "C" fn espm_plugin_form_ids_free(
+    form_ids: *mut *const FormId,
+    form_ids_size: usize,
+) {
     if form_ids.is_null() || form_ids_size == 0 {
         return;
     }
