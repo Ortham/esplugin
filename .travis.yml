@@ -32,4 +32,4 @@ script:
   - python tests/ffi.py
 
 after_success:
-  - cargo coveralls
+  - cargo coveralls --exclude-pattern=src/ffi/
