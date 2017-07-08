@@ -30,6 +30,4 @@ script:
   - cargo fmt -- --write-mode=diff
   - cargo test
   - python tests/ffi.py
-
-after_success:
   - cargo coveralls --exclude-pattern=src/ffi/
