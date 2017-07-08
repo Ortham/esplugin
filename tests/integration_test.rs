@@ -100,10 +100,10 @@ fn filename_should_return_filename_in_given_path() {
 }
 
 #[test]
-fn filename_should_trim_dot_ghost_extension() {
+fn filename_should_not_trim_dot_ghost_extension() {
     let plugin = Plugin::new(GameId::Skyrim, Path::new("Blank.esp.ghost"));
 
-    assert_eq!("Blank.esp", plugin.filename().unwrap());
+    assert_eq!("Blank.esp.ghost", plugin.filename().unwrap());
 }
 
 #[test]

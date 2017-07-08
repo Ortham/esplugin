@@ -120,7 +120,7 @@ impl Plugin {
         self.path
             .file_name()
             .and_then(|filename| filename.to_str())
-            .map(|filename| filename.trim_right_matches(".ghost").to_string())
+            .map(|filename| filename.to_string())
     }
 
     pub fn masters(&self) -> Result<Vec<String>, ParsingError> {
