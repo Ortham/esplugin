@@ -10,7 +10,7 @@ use ffi::helpers::*;
 
 #[no_mangle]
 pub unsafe extern "C" fn espm_plugin_new(
-    plugin_ptr_ptr: *mut *const Plugin,
+    plugin_ptr_ptr: *mut *mut Plugin,
     game_id: uint32_t,
     path: *const c_char,
 ) -> uint32_t {
@@ -56,15 +56,15 @@ pub unsafe extern "C" fn espm_plugin_parse(
 #[no_mangle]
 pub unsafe extern "C" fn espm_plugin_filename(
     plugin_ptr: *const Plugin,
-    filename: *mut *const c_char,
+    filename: *mut *mut c_char,
 ) -> uint32_t {
     if filename.is_null() || plugin_ptr.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
         let plugin = &*plugin_ptr;
 
-        let c_string = match plugin.filename().map(|s| to_c_string(&s)) {
-            None => ptr::null(),
+        let c_string: *mut c_char = match plugin.filename().map(|s| to_c_string(&s)) {
+            None => ptr::null_mut(),
             Some(Ok(x)) => x,
             Some(Err(x)) => return x,
         };
