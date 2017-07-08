@@ -39,6 +39,7 @@ use nom::IResult;
 use memmap::Mmap;
 use memmap::Protection;
 
+use ffi;
 use form_id::FormId;
 use game_id::GameId;
 use group::Group;
@@ -55,7 +56,7 @@ pub enum ParsingError {
 }
 
 #[derive(Debug, Default)]
-pub struct PluginData {
+struct PluginData {
     header_record: Record,
     form_ids: Vec<FormId>,
 }
@@ -220,7 +221,7 @@ fn parse_form_ids<'a>(
 ) -> IResult<&'a [u8], Vec<FormId>> {
     let masters = match masters(header_record) {
         Ok(x) => x,
-        Err(_) => return IResult::Error(ErrorKind::Custom(::ffi::constants::ESPM_ERROR_NOT_UTF8)),
+        Err(_) => return IResult::Error(ErrorKind::Custom(ffi::ESPM_ERROR_NOT_UTF8)),
     };
 
     if game_id == GameId::Morrowind {
