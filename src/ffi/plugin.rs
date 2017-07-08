@@ -1,7 +1,7 @@
 use std::mem;
 use std::path::Path;
 use std::ptr;
-use libc::c_char;
+use libc::{c_char, size_t, uint8_t, uint32_t};
 
 use form_id::FormId;
 use plugin::Plugin;
@@ -11,9 +11,9 @@ use ffi::helpers::*;
 #[no_mangle]
 pub unsafe extern "C" fn espm_plugin_new(
     plugin_ptr_ptr: *mut *const Plugin,
-    game_id: u32,
+    game_id: uint32_t,
     path: *const c_char,
-) -> u32 {
+) -> uint32_t {
     let rust_path = match to_str(path) {
         Ok(x) => Path::new(x),
         Err(x) => return x,
@@ -38,7 +38,10 @@ pub unsafe extern "C" fn espm_plugin_free(plugin_ptr: *mut Plugin) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_plugin_parse(plugin_ptr: *mut Plugin, load_header_only: bool) -> u32 {
+pub unsafe extern "C" fn espm_plugin_parse(
+    plugin_ptr: *mut Plugin,
+    load_header_only: bool,
+) -> uint32_t {
     if plugin_ptr.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
@@ -54,7 +57,7 @@ pub unsafe extern "C" fn espm_plugin_parse(plugin_ptr: *mut Plugin, load_header_
 pub unsafe extern "C" fn espm_plugin_filename(
     plugin_ptr: *const Plugin,
     filename: *mut *const c_char,
-) -> u32 {
+) -> uint32_t {
     if filename.is_null() || plugin_ptr.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
@@ -76,8 +79,8 @@ pub unsafe extern "C" fn espm_plugin_filename(
 pub unsafe extern "C" fn espm_plugin_masters(
     plugin_ptr: *const Plugin,
     plugin_masters: *mut *mut *mut c_char,
-    plugin_masters_size: *mut u8,
-) -> u32 {
+    plugin_masters_size: *mut uint8_t,
+) -> uint32_t {
     if plugin_masters.is_null() || plugin_ptr.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
@@ -108,7 +111,7 @@ pub unsafe extern "C" fn espm_plugin_masters(
 pub unsafe extern "C" fn espm_plugin_is_master(
     plugin_ptr: *const Plugin,
     is_master: *mut bool,
-) -> u32 {
+) -> uint32_t {
     if plugin_ptr.is_null() || is_master.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
@@ -122,11 +125,11 @@ pub unsafe extern "C" fn espm_plugin_is_master(
 
 #[no_mangle]
 pub unsafe extern "C" fn espm_plugin_is_valid(
-    game_id: u32,
+    game_id: uint32_t,
     path: *const c_char,
     load_header_only: bool,
     is_valid: *mut bool,
-) -> u32 {
+) -> uint32_t {
     if path.is_null() || is_valid.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
@@ -150,7 +153,7 @@ pub unsafe extern "C" fn espm_plugin_is_valid(
 pub unsafe extern "C" fn espm_plugin_description(
     plugin_ptr: *const Plugin,
     description: *mut *const c_char,
-) -> u32 {
+) -> uint32_t {
     if description.is_null() || plugin_ptr.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
@@ -176,8 +179,8 @@ pub unsafe extern "C" fn espm_plugin_description(
 #[no_mangle]
 pub unsafe extern "C" fn espm_plugin_record_and_group_count(
     plugin_ptr: *const Plugin,
-    count: *mut u32,
-) -> u32 {
+    count: *mut uint32_t,
+) -> uint32_t {
     if plugin_ptr.is_null() || count.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
@@ -193,8 +196,8 @@ pub unsafe extern "C" fn espm_plugin_record_and_group_count(
 pub unsafe extern "C" fn espm_plugin_form_ids(
     plugin_ptr: *const Plugin,
     form_ids: *mut *mut *const FormId,
-    form_ids_size: *mut usize,
-) -> u32 {
+    form_ids_size: *mut size_t,
+) -> uint32_t {
     if plugin_ptr.is_null() || form_ids.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
@@ -220,7 +223,7 @@ pub unsafe extern "C" fn espm_plugin_form_ids(
 #[no_mangle]
 pub unsafe extern "C" fn espm_plugin_form_ids_free(
     form_ids: *mut *const FormId,
-    form_ids_size: usize,
+    form_ids_size: size_t,
 ) {
     if form_ids.is_null() || form_ids_size == 0 {
         return;

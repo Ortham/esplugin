@@ -15,4 +15,6 @@ A free software library for reading Elder Scrolls Plugin (`.esp`) and Elder Scro
 
 Libespm focuses on providing a useful API to [libloadorder](https://github.com/WrinklyNinja/libloadorder) and [LOOT](https://github.com/loot/loot), rather than a general-purpose plugin parser.
 
-**This branch holds a rewrite of libespm in Rust, done as a learning exercise, so it's a bit rough.**
+Libespm v1 and v2 were header-only C++ libraries with Boost dependencies.
+Libespm v3 is a Rust rewrite that produces a Rust library and a shared library
+with a C FFI.

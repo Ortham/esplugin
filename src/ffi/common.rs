@@ -1,6 +1,6 @@
 use std::ffi::CString;
 
-use libc::c_char;
+use libc::{c_char, size_t};
 
 #[no_mangle]
 pub unsafe extern "C" fn espm_string_free(string: *mut c_char) {
@@ -10,7 +10,7 @@ pub unsafe extern "C" fn espm_string_free(string: *mut c_char) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_string_array_free(array: *mut *mut c_char, size: usize) {
+pub unsafe extern "C" fn espm_string_array_free(array: *mut *mut c_char, size: size_t) {
     if array.is_null() || size == 0 {
         return;
     }
