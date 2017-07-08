@@ -2,6 +2,7 @@
 name = "libespm"
 version = "0.1.0"
 authors = ["Oliver Hamlet <oliver.hamlet@gmail.com>"]
+build = "build.rs"
 
 [dependencies]
 byteorder = "1.0.0"
@@ -18,3 +19,6 @@ crate-type = ["lib", "cdylib"]
 
 [features]
 default = []
+
+[build-dependencies]
+cbindgen = "0.1.13"

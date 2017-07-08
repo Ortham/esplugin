@@ -1,0 +1,20 @@
+language = "C"
+trailer = """
+extern uint32_t ESPM_OK;
+extern uint32_t ESPM_OK;
+extern uint32_t ESPM_ERROR_NULL_POINTER;
+extern uint32_t ESPM_ERROR_NOT_UTF8;
+extern uint32_t ESPM_ERROR_STRING_CONTAINS_NUL;
+extern uint32_t ESPM_ERROR_INVALID_GAME_ID;
+extern uint32_t ESPM_ERROR_PARSE_ERROR;
+
+extern uint32_t ESPM_GAME_OBLIVION;
+extern uint32_t ESPM_GAME_SKYRIM;
+extern uint32_t ESPM_GAME_FALLOUT3;
+extern uint32_t ESPM_GAME_FALLOUTNV;
+extern uint32_t ESPM_GAME_MORROWIND;
+extern uint32_t ESPM_GAME_FALLOUT4;
+"""
+
+[parse]
+parse_deps = false

@@ -30,4 +30,8 @@ script:
   - cargo fmt -- --write-mode=diff
   - cargo test
   - python tests/ffi.py
+  # cargo coveralls and cbindgen don't seem to get on, so remove the custom
+  # build script before running coverage.
+  - rm build.rs
+  - sed -i 's/build = "build.rs"//' Cargo.toml
   - cargo coveralls --exclude-pattern=src/ffi/
