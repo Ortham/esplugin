@@ -5,6 +5,12 @@ use std::fs;
 use std::path::PathBuf;
 
 fn main() {
+    // Don't run cbindgen if it's not cargo being run
+    // (i.e. not for cargo coveralls)
+    if !env::var("CARGO").unwrap().ends_with("cargo") {
+        return;
+    }
+
     let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
 
     fs::create_dir_all("include").expect("could not create include directory");
