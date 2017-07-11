@@ -11,17 +11,18 @@ fn main() {
         return;
     }
 
-    let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+    let crate_dir =
+        env::var("CARGO_MANIFEST_DIR").expect("could not get value of CARGO_MANIFEST_DIR env var");
 
     fs::create_dir_all("include").expect("could not create include directory");
 
-    cbindgen::generate(&crate_dir).unwrap().write_to_file(
-        "include/libespm.h",
-    );
+    cbindgen::generate(&crate_dir)
+        .expect("could not generate C header file")
+        .write_to_file("include/libespm.h");
 
     let mut config = cbindgen::Config::from_root_or_default(PathBuf::from(&crate_dir).as_path());
     config.language = cbindgen::Language::Cxx;
     cbindgen::generate_with_config(&crate_dir, &config)
-        .unwrap()
+        .expect("could not generate C++ header file")
         .write_to_file("include/libespm.hpp");
 }
