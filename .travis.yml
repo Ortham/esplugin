@@ -28,6 +28,6 @@ before_script:
 
 script:
   - cargo fmt -- --write-mode=diff
-  - cargo test
+  - cargo test --features "compressed-fields ffi-headers"
   - python tests/ffi.py
   - cargo coveralls --exclude-pattern=src/ffi/

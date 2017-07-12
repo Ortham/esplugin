@@ -21,11 +21,13 @@
 
 extern crate byteorder;
 extern crate encoding;
-extern crate flate2;
 extern crate libc;
 extern crate memmap;
 #[macro_use]
 extern crate nom;
+
+#[cfg(feature = "compressed-fields")]
+extern crate flate2;
 
 pub use form_id::*;
 pub use game_id::*;

@@ -200,6 +200,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "compressed-fields")]
     fn parse_should_read_compressed_subrecords_correctly() {
         const DATA: &'static [u8] = &[
             0x42, 0x50, 0x54, 0x44,  //type

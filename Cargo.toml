@@ -7,11 +7,11 @@ build = "build.rs"
 [dependencies]
 byteorder = "1.0.0"
 encoding = "0.2.33"
-flate2 = "0.2"
 libc = "*"
 memmap = "0.5.2"
 nom = "^2.2"
 clippy = {version = "*", optional = true}
+flate2 = { version = "0.2", optional = true }
 
 [lib]
 name = "espm"
@@ -19,6 +19,9 @@ crate-type = ["lib", "cdylib"]
 
 [features]
 default = []
+#
+compressed-fields = ["flate2"]
+ffi-headers = ["cbindgen"]
 
 [build-dependencies]
-cbindgen = "0.1.14"
+cbindgen = { version = "0.1.14", optional = true }

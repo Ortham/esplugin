@@ -19,10 +19,13 @@
 
 extern crate nom;
 
+#[cfg(feature = "compressed-fields")]
 use std::io;
+#[cfg(feature = "compressed-fields")]
 use std::io::Read;
 use std::str;
 
+#[cfg(feature = "compressed-fields")]
 use flate2::read::DeflateDecoder;
 
 use nom::le_u16;
@@ -56,6 +59,7 @@ impl Subrecord {
         }
     }
 
+    #[cfg(feature = "compressed-fields")]
     pub fn decompress_data(&self) -> Result<Vec<u8>, io::Error> {
         if !self.is_compressed {
             return Ok(self.data.clone());
@@ -223,6 +227,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "compressed-fields")]
     fn decompress_data_should_read_a_compressed_subrecord_correctly() {
         const DATA: &'static [u8] = &[
             0x42, 0x50, 0x54, 0x4E,  //field type
@@ -244,6 +249,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "compressed-fields")]
     fn decompress_data_should_error_if_the_compressed_data_is_invalid() {
         const DATA: &'static [u8] = &[
             0x42, 0x50, 0x54, 0x4E,  //field type
