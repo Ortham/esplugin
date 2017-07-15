@@ -20,8 +20,8 @@
 use std::borrow::Cow;
 use std::io::Cursor;
 use std::fs::File;
+use std::io;
 use std::io::BufReader;
-use std::io::Error;
 use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
@@ -46,13 +46,35 @@ use group::Group;
 use record::Record;
 
 #[derive(Debug)]
-pub enum ParsingError {
-    NonUTF8FilePath,
-    NonUTF8StringData,
-    IOError(Error),
+pub enum Error {
+    NonUtf8FilePath,
+    NonUtf8StringData,
+    IoError(io::Error),
     NoFilename,
-    ContentError(IError),
+    ParsingIncomplete,
+    ParsingError,
     DecodeError(Cow<'static, str>),
+}
+
+impl From<IError> for Error {
+    fn from(error: IError) -> Self {
+        match error {
+            IError::Error(_) => Error::ParsingError,
+            _ => Error::ParsingIncomplete,
+        }
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(error: io::Error) -> Self {
+        Error::IoError(error)
+    }
+}
+
+impl From<Cow<'static, str>> for Error {
+    fn from(error: Cow<'static, str>) -> Self {
+        Error::DecodeError(error)
+    }
 }
 
 #[derive(Debug, Default)]
@@ -77,38 +99,31 @@ impl Plugin {
         }
     }
 
-    pub fn parse(&mut self, input: &[u8], load_header_only: bool) -> Result<(), ParsingError> {
+    pub fn parse(&mut self, input: &[u8], load_header_only: bool) -> Result<(), Error> {
         match self.filename() {
-            None => Err(ParsingError::NoFilename),
+            None => Err(Error::NoFilename),
             Some(filename) => {
                 self.data = parse_plugin(input, self.game_id, &filename, load_header_only)
-                    .to_full_result()
-                    .map_err(ParsingError::ContentError)?;
+                    .to_full_result()?;
 
                 Ok(())
             }
         }
     }
 
-    pub fn parse_file(&mut self, load_header_only: bool) -> Result<(), ParsingError> {
-        let f = File::open(self.path.clone()).map_err(ParsingError::IOError)?;
+    pub fn parse_file(&mut self, load_header_only: bool) -> Result<(), Error> {
+        let f = File::open(self.path.clone())?;
 
         let mut reader = BufReader::new(f);
 
         let mut content: Vec<u8> = Vec::new();
-        reader.read_to_end(&mut content).map_err(
-            ParsingError::IOError,
-        )?;
+        reader.read_to_end(&mut content)?;
 
         self.parse(&content, load_header_only)
     }
 
-    pub unsafe fn parse_mmapped_file(
-        &mut self,
-        load_header_only: bool,
-    ) -> Result<(), ParsingError> {
-        let mmap_view = Mmap::open_path(self.path.as_path(), Protection::Read)
-            .map_err(ParsingError::IOError)?
+    pub unsafe fn parse_mmapped_file(&mut self, load_header_only: bool) -> Result<(), Error> {
+        let mmap_view = Mmap::open_path(self.path.as_path(), Protection::Read)?
             .into_view();
 
         let mmap_slice = mmap_view.as_slice();
@@ -123,7 +138,7 @@ impl Plugin {
             .map(|filename| filename.to_string())
     }
 
-    pub fn masters(&self) -> Result<Vec<String>, ParsingError> {
+    pub fn masters(&self) -> Result<Vec<String>, Error> {
         masters(&self.data.header_record)
     }
 
@@ -155,7 +170,7 @@ impl Plugin {
         }
     }
 
-    pub fn description(&self) -> Result<Option<String>, ParsingError> {
+    pub fn description(&self) -> Result<Option<String>, Error> {
         let (target_subrecord_type, description_offset) = if self.game_id == GameId::Morrowind {
             ("HEDR", 40)
         } else {
@@ -169,7 +184,7 @@ impl Plugin {
                 return WINDOWS_1252
                     .decode(data, DecoderTrap::Strict)
                     .map(Option::Some)
-                    .map_err(ParsingError::DecodeError);
+                    .map_err(Error::DecodeError);
             }
         }
 
@@ -199,7 +214,7 @@ impl Plugin {
     }
 }
 
-fn masters(header_record: &Record) -> Result<Vec<String>, ParsingError> {
+fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
     header_record
         .subrecords
         .iter()
@@ -207,10 +222,10 @@ fn masters(header_record: &Record) -> Result<Vec<String>, ParsingError> {
         .map(|s| &s.data[0..(s.data.len() - 1)])
         .map(|d| {
             WINDOWS_1252.decode(d, DecoderTrap::Strict).map_err(
-                ParsingError::DecodeError,
+                Error::DecodeError,
             )
         })
-        .collect::<Result<Vec<String>, ParsingError>>()
+        .collect::<Result<Vec<String>, Error>>()
 }
 
 fn parse_form_ids<'a>(
