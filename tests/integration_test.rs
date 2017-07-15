@@ -89,6 +89,13 @@ fn is_valid_should_return_false_for_an_invalid_plugin() {
 }
 
 #[test]
+fn game_id_should_return_the_plugins_associated_game_id() {
+    let plugin = Plugin::new(GameId::Skyrim, &Path::new("Data/Blank.esm"));
+
+    assert_eq!(&GameId::Skyrim, plugin.game_id());
+}
+
+#[test]
 fn path_should_return_the_full_plugin_path() {
     let path = Path::new("Data/Blank.esm");
     let plugin = Plugin::new(GameId::Skyrim, path);

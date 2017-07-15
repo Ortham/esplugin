@@ -131,6 +131,10 @@ impl Plugin {
         self.parse(mmap_slice, load_header_only)
     }
 
+    pub fn game_id(&self) -> &GameId {
+        &self.game_id
+    }
+
     pub fn path(&self) -> &Path {
         &self.path
     }
