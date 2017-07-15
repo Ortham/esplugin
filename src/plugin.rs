@@ -131,6 +131,10 @@ impl Plugin {
         self.parse(mmap_slice, load_header_only)
     }
 
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
     pub fn filename(&self) -> Option<String> {
         self.path
             .file_name()
