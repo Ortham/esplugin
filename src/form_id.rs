@@ -19,7 +19,7 @@
 
 use std::string::ToString;
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FormId {
     pub object_index: u32,
     pub plugin_name: String,

@@ -77,13 +77,13 @@ impl From<Cow<'static, str>> for Error {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 struct PluginData {
     header_record: Record,
     form_ids: Vec<FormId>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Plugin {
     game_id: GameId,
     path: PathBuf,

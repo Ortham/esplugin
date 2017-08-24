@@ -25,7 +25,7 @@ use subrecord::Subrecord;
 
 const RECORD_TYPE_LENGTH: u8 = 4;
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct RecordHeader {
     pub record_type: String,
     pub flags: u32,
@@ -39,7 +39,7 @@ impl RecordHeader {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Record {
     pub header: RecordHeader,
     pub subrecords: Vec<Subrecord>,
