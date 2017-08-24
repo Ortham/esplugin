@@ -20,7 +20,7 @@ mod ffi_headers {
         let mut config =
             cbindgen::Config::from_root_or_default(PathBuf::from(&crate_dir).as_path());
         config.language = cbindgen::Language::Cxx;
-        cbindgen::generate_with_config(&crate_dir, &config)
+        cbindgen::generate_with_config(&crate_dir, config)
             .expect("could not generate C++ header file")
             .write_to_file("include/libespm.hpp");
     }
