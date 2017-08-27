@@ -5,7 +5,7 @@ authors = ["Oliver Hamlet <oliver.hamlet@gmail.com>"]
 build = "build.rs"
 
 [dependencies]
-libespm = { path = "../libespm" }
+libespm = { path = ".." }
 libc = "*"
 
 [lib]
