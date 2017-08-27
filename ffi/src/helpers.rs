@@ -1,8 +1,8 @@
 use std::ffi::{CStr, CString};
 use libc::c_char;
 
-use game_id::GameId;
-use ffi::constants::*;
+use espm::GameId;
+use constants::*;
 
 pub unsafe fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32> {
     if c_string.is_null() {
@@ -37,7 +37,6 @@ pub fn to_c_string(string: &str) -> Result<*mut c_char, u32> {
 }
 
 pub fn map_game_id(game_id: u32) -> Result<GameId, u32> {
-    use game_id::*;
     match game_id {
         x if x == ESPM_GAME_OBLIVION => Ok(GameId::Oblivion),
         x if x == ESPM_GAME_SKYRIM => Ok(GameId::Skyrim),

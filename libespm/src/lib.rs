@@ -21,7 +21,6 @@
 
 extern crate byteorder;
 extern crate encoding;
-extern crate libc;
 extern crate memmap;
 #[macro_use]
 extern crate nom;
@@ -32,9 +31,7 @@ extern crate flate2;
 pub use form_id::*;
 pub use game_id::*;
 pub use plugin::*;
-pub use ffi::*;
 
-mod ffi;
 mod form_id;
 mod game_id;
 mod group;

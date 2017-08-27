@@ -20,14 +20,15 @@ install:
   - cargo install cargo-travis || true
 
 before_script:
-  - cd tests
   - wget https://github.com/WrinklyNinja/testing-plugins/archive/1.2.0.tar.gz
   - tar -xf 1.2.0.tar.gz
   - mv testing-plugins-1.2.0 testing-plugins
-  - cd -
 
 script:
-  - cargo fmt -- --write-mode=diff
-  - cargo test --features "compressed-fields ffi-headers"
-  - python tests/ffi.py
-  - cargo coveralls --exclude-pattern=src/ffi/
+  - cargo fmt --all -- --write-mode=diff
+  - cargo test --all --all-features
+  - cargo coveralls -p libespm
+  # Need to rebuild the FFI wrapper so that its binary is given a filename
+  # without a hash.
+  - cargo build -p libespm-ffi
+  - python ffi/tests/ffi.py

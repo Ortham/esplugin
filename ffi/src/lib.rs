@@ -1,3 +1,6 @@
+extern crate libc;
+extern crate espm;
+
 pub use self::common::*;
 pub use self::constants::*;
 pub use self::form_id::*;

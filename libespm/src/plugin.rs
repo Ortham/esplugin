@@ -39,7 +39,6 @@ use nom::IResult;
 use memmap::Mmap;
 use memmap::Protection;
 
-use ffi;
 use form_id::FormId;
 use game_id::GameId;
 use group::Group;
@@ -244,7 +243,7 @@ fn parse_form_ids<'a>(
 ) -> IResult<&'a [u8], Vec<FormId>> {
     let masters = match masters(header_record) {
         Ok(x) => x,
-        Err(_) => return IResult::Error(ErrorKind::Custom(ffi::ESPM_ERROR_NOT_UTF8)),
+        Err(_) => return IResult::Error(ErrorKind::Custom(1)),
     };
 
     if game_id == GameId::Morrowind {

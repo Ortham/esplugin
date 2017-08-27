@@ -186,7 +186,7 @@ class PluginTest(unittest.TestCase):
         ret = lib.espm_plugin_new(
             byref(self.plugin),
             get_constant(lib, 'ESPM_GAME_SKYRIM'),
-            'tests/testing-plugins/Skyrim/Data/Blank.esm'.encode('utf-8'))
+            'testing-plugins/Skyrim/Data/Blank.esm'.encode('utf-8'))
         self.assertEqual(self.OK, ret)
 
         ret = lib.espm_plugin_parse(self.plugin, True)
@@ -207,7 +207,7 @@ class PluginTest(unittest.TestCase):
         ret = lib.espm_plugin_new(
             byref(self.plugin),
             get_constant(lib, 'ESPM_GAME_SKYRIM'),
-            'tests/testing-plugins/Skyrim/Data/Blank - Master Dependent.esm'.encode('utf-8'))
+            'testing-plugins/Skyrim/Data/Blank - Master Dependent.esm'.encode('utf-8'))
         self.assertEqual(self.OK, ret)
 
         ret = lib.espm_plugin_parse(self.plugin, True)
@@ -222,7 +222,7 @@ class PluginTest(unittest.TestCase):
         ret = lib.espm_plugin_new(
             byref(self.plugin),
             get_constant(lib, 'ESPM_GAME_SKYRIM'),
-            'tests/testing-plugins/Skyrim/Data/Blank.esm'.encode('utf-8'))
+            'testing-plugins/Skyrim/Data/Blank.esm'.encode('utf-8'))
         self.assertEqual(self.OK, ret)
 
         ret = lib.espm_plugin_parse(self.plugin, True)
@@ -239,7 +239,7 @@ class PluginTest(unittest.TestCase):
         is_valid = c_bool()
         ret = lib.espm_plugin_is_valid(
             get_constant(lib, 'ESPM_GAME_SKYRIM'),
-            'tests/testing-plugins/Skyrim/Data/Blank.esm'.encode('utf-8'),
+            'testing-plugins/Skyrim/Data/Blank.esm'.encode('utf-8'),
             True,
             byref(is_valid))
         self.assertEqual(self.OK, ret)
@@ -257,7 +257,7 @@ class PluginTest(unittest.TestCase):
         ret = lib.espm_plugin_new(
             byref(self.plugin),
             get_constant(lib, 'ESPM_GAME_SKYRIM'),
-            'tests/testing-plugins/Skyrim/Data/Blank.esm'.encode('utf-8'))
+            'testing-plugins/Skyrim/Data/Blank.esm'.encode('utf-8'))
         self.assertEqual(self.OK, ret)
 
         ret = lib.espm_plugin_parse(self.plugin, True)
@@ -272,7 +272,7 @@ class PluginTest(unittest.TestCase):
         ret = lib.espm_plugin_new(
             byref(self.plugin),
             get_constant(lib, 'ESPM_GAME_SKYRIM'),
-            'tests/testing-plugins/Skyrim/Data/Blank.esm'.encode('utf-8'))
+            'testing-plugins/Skyrim/Data/Blank.esm'.encode('utf-8'))
         self.assertEqual(self.OK, ret)
 
         ret = lib.espm_plugin_parse(self.plugin, True)
@@ -287,7 +287,7 @@ class PluginTest(unittest.TestCase):
         ret = lib.espm_plugin_new(
             byref(self.plugin),
             get_constant(lib, 'ESPM_GAME_SKYRIM'),
-            'tests/testing-plugins/Skyrim/Data/Blank.esm'.encode('utf-8'))
+            'testing-plugins/Skyrim/Data/Blank.esm'.encode('utf-8'))
         self.assertEqual(self.OK, ret)
 
         ret = lib.espm_plugin_parse(self.plugin, False)

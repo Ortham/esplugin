@@ -22,7 +22,7 @@ fn parse_should_error_if_plugin_is_not_valid() {
 fn parse_should_succeed_for_skyrim_plugin() {
     let mut plugin = Plugin::new(
         GameId::Skyrim,
-        Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"),
+        Path::new("../testing-plugins/Skyrim/Data/Blank.esm"),
     );
 
     assert!(plugin.parse_file(false).is_ok());
@@ -41,7 +41,7 @@ fn parse_should_succeed_for_skyrim_plugin() {
 fn parse_mmapped_file_should_succeed() {
     let mut plugin = Plugin::new(
         GameId::Skyrim,
-        Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"),
+        Path::new("../testing-plugins/Skyrim/Data/Blank.esm"),
     );
 
     unsafe {
@@ -62,7 +62,7 @@ fn parse_mmapped_file_should_succeed() {
 fn parse_should_succeed_for_skyrim_plugin_header_only() {
     let mut plugin = Plugin::new(
         GameId::Skyrim,
-        Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"),
+        Path::new("../testing-plugins/Skyrim/Data/Blank.esm"),
     );
 
     assert!(plugin.parse_file(true).is_ok());
@@ -74,7 +74,7 @@ fn parse_should_succeed_for_skyrim_plugin_header_only() {
 fn is_valid_should_return_true_for_a_valid_plugin() {
     let is_valid = Plugin::is_valid(
         GameId::Skyrim,
-        Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"),
+        Path::new("../testing-plugins/Skyrim/Data/Blank.esm"),
         true,
     );
 
@@ -125,7 +125,7 @@ fn filename_should_not_trim_dot_ghost_extension() {
 fn is_master_should_be_true_for_master_file() {
     let mut plugin = Plugin::new(
         GameId::Skyrim,
-        Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"),
+        Path::new("../testing-plugins/Skyrim/Data/Blank.esm"),
     );
 
     assert!(plugin.parse_file(true).is_ok());
@@ -134,7 +134,7 @@ fn is_master_should_be_true_for_master_file() {
     let mut plugin = Plugin::new(
         GameId::Morrowind,
         Path::new(
-            "tests/testing-plugins/Morrowind/Data \
+            "../testing-plugins/Morrowind/Data \
                                             Files/Blank.esm",
         ),
     );
@@ -147,7 +147,7 @@ fn is_master_should_be_true_for_master_file() {
 fn is_master_should_be_false_for_non_master_file() {
     let mut plugin = Plugin::new(
         GameId::Skyrim,
-        Path::new("tests/testing-plugins/Skyrim/Data/Blank.esp"),
+        Path::new("../testing-plugins/Skyrim/Data/Blank.esp"),
     );
 
     assert!(plugin.parse_file(true).is_ok());
@@ -156,7 +156,7 @@ fn is_master_should_be_false_for_non_master_file() {
     let mut plugin = Plugin::new(
         GameId::Morrowind,
         Path::new(
-            "tests/testing-plugins/Morrowind/Data \
+            "../testing-plugins/Morrowind/Data \
                                             Files/Blank.esp",
         ),
     );
@@ -169,7 +169,7 @@ fn is_master_should_be_false_for_non_master_file() {
 fn masters_should_be_empty_for_blank_esm() {
     let mut plugin = Plugin::new(
         GameId::Skyrim,
-        Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"),
+        Path::new("../testing-plugins/Skyrim/Data/Blank.esm"),
     );
 
     assert!(plugin.parse_file(true).is_ok());
@@ -178,7 +178,7 @@ fn masters_should_be_empty_for_blank_esm() {
     let mut plugin = Plugin::new(
         GameId::Morrowind,
         Path::new(
-            "tests/testing-plugins/Morrowind/Data \
+            "../testing-plugins/Morrowind/Data \
                                             Files/Blank.esm",
         ),
     );
@@ -192,7 +192,7 @@ fn masters_should_not_be_empty_for_master_dependent_plugin() {
     let mut plugin = Plugin::new(
         GameId::Skyrim,
         Path::new(
-            "tests/testing-plugins/Skyrim/Data/Blank - \
+            "../testing-plugins/Skyrim/Data/Blank - \
                                             Master Dependent.esm",
         ),
     );
@@ -206,7 +206,7 @@ fn masters_should_not_be_empty_for_master_dependent_plugin() {
     let mut plugin = Plugin::new(
         GameId::Morrowind,
         Path::new(
-            "tests/testing-plugins/Morrowind/Data \
+            "../testing-plugins/Morrowind/Data \
                                             Files/Blank - Master Dependent.esm",
         ),
     );
@@ -222,7 +222,7 @@ fn masters_should_not_be_empty_for_master_dependent_plugin() {
 fn description_should_return_plugin_description_field_content() {
     let mut plugin = Plugin::new(
         GameId::Skyrim,
-        Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"),
+        Path::new("../testing-plugins/Skyrim/Data/Blank.esm"),
     );
 
     assert!(plugin.parse_file(true).is_ok());
@@ -230,7 +230,7 @@ fn description_should_return_plugin_description_field_content() {
 
     let mut plugin = Plugin::new(
         GameId::Skyrim,
-        Path::new("tests/testing-plugins/Skyrim/Data/Blank.esp"),
+        Path::new("../testing-plugins/Skyrim/Data/Blank.esp"),
     );
 
     assert!(plugin.parse_file(true).is_ok());
@@ -239,7 +239,7 @@ fn description_should_return_plugin_description_field_content() {
     let mut plugin = Plugin::new(
         GameId::Skyrim,
         Path::new(
-            "tests/testing-plugins/Skyrim/Data/Blank - \
+            "../testing-plugins/Skyrim/Data/Blank - \
                                             Master Dependent.esm",
         ),
     );
@@ -252,7 +252,7 @@ fn description_should_return_plugin_description_field_content() {
 fn record_and_group_count_should_be_non_zero() {
     let mut plugin = Plugin::new(
         GameId::Skyrim,
-        Path::new("tests/testing-plugins/Skyrim/Data/Blank.esm"),
+        Path::new("../testing-plugins/Skyrim/Data/Blank.esm"),
     );
 
     assert!(plugin.record_and_group_count().is_none());

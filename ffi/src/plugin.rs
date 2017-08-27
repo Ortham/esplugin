@@ -3,10 +3,10 @@ use std::path::Path;
 use std::ptr;
 use libc::{c_char, size_t, uint8_t, uint32_t};
 
-use form_id::FormId;
-use plugin::Plugin;
-use ffi::constants::*;
-use ffi::helpers::*;
+use espm::FormId;
+use espm::Plugin;
+use constants::*;
+use helpers::*;
 
 #[no_mangle]
 pub unsafe extern "C" fn espm_plugin_new(

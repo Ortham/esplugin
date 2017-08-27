@@ -100,7 +100,7 @@ mod tests {
     #[test]
     fn new_should_store_formids_for_all_records_in_a_group() {
         let data = &include_bytes!(
-            "../tests/testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")
+            "../../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")
             [0x56..];
 
         let group = Group::new(data, GameId::Skyrim).to_result().unwrap();
@@ -114,8 +114,7 @@ mod tests {
 
     #[test]
     fn new_should_store_formids_for_all_records_in_subgroups() {
-        let data = &include_bytes!("../tests/testing-plugins/Skyrim/Data/Blank.esm")[0x1004C..
-                                                                                         0x10114];
+        let data = &include_bytes!("../../testing-plugins/Skyrim/Data/Blank.esm")[0x1004C..0x10114];
 
         let group = Group::new(data, GameId::Skyrim).to_result().unwrap();
 

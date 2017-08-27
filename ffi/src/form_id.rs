@@ -1,9 +1,9 @@
 
 use libc::{c_char, uint8_t, uint32_t};
 
-use form_id::FormId;
-use ffi::helpers::*;
-use ffi::constants::*;
+use espm::FormId;
+use helpers::*;
+use constants::*;
 
 #[no_mangle]
 pub unsafe extern "C" fn espm_formid_new(

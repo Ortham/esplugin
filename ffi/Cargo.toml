@@ -1,0 +1,20 @@
+[package]
+name = "libespm-ffi"
+version = "0.1.0"
+authors = ["Oliver Hamlet <oliver.hamlet@gmail.com>"]
+build = "build.rs"
+
+[dependencies]
+libespm = { path = "../libespm" }
+libc = "*"
+
+[lib]
+name = "espm"
+crate-type = ["cdylib"]
+
+[features]
+default = []
+ffi-headers = ["cbindgen"]
+
+[build-dependencies]
+cbindgen = { version = "0.1.14", optional = true }

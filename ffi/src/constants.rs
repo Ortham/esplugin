@@ -1,4 +1,4 @@
-use game_id::GameId;
+use espm::GameId;
 
 use libc::uint32_t;
 
