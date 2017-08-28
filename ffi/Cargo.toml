@@ -9,7 +9,7 @@ libespm = { path = ".." }
 libc = "*"
 
 [lib]
-name = "espm"
+name = "espm_ffi"
 crate-type = ["cdylib"]
 
 [features]

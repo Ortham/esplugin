@@ -10,7 +10,7 @@ def load_library(path):
     prefix = {u'win32' : u''}.get(sys.platform, u'lib')
     extension = {u'darwin': u'.dylib', u'win32': u'.dll'}.get(sys.platform, u'.so')
 
-    lib_path = os.path.join(path, prefix + u'espm' + extension)
+    lib_path = os.path.join(path, prefix + u'espm_ffi' + extension)
     return ctypes.cdll.LoadLibrary(lib_path)
 
 def get_constant(lib, name):
