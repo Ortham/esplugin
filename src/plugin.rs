@@ -46,8 +46,6 @@ use record::Record;
 
 #[derive(Debug)]
 pub enum Error {
-    NonUtf8FilePath,
-    NonUtf8StringData,
     IoError(io::Error),
     NoFilename,
     ParsingIncomplete,
