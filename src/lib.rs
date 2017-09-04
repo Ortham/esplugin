@@ -28,10 +28,12 @@ extern crate nom;
 #[cfg(feature = "compressed-fields")]
 extern crate flate2;
 
+pub use error::Error;
 pub use form_id::*;
 pub use game_id::*;
 pub use plugin::*;
 
+mod error;
 mod form_id;
 mod game_id;
 mod group;

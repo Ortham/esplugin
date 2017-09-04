@@ -17,10 +17,8 @@
  * along with libespm. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::borrow::Cow;
 use std::io::Cursor;
 use std::fs::File;
-use std::io;
 use std::io::BufReader;
 use std::io::Read;
 use std::path::Path;
@@ -33,46 +31,16 @@ use encoding::{Encoding, DecoderTrap};
 use encoding::all::WINDOWS_1252;
 
 use nom::ErrorKind;
-use nom::IError;
 use nom::IResult;
 
 use memmap::Mmap;
 use memmap::Protection;
 
+use error::Error;
 use form_id::FormId;
 use game_id::GameId;
 use group::Group;
 use record::Record;
-
-#[derive(Debug)]
-pub enum Error {
-    IoError(io::Error),
-    NoFilename,
-    ParsingIncomplete,
-    ParsingError,
-    DecodeError(Cow<'static, str>),
-}
-
-impl From<IError> for Error {
-    fn from(error: IError) -> Self {
-        match error {
-            IError::Error(_) => Error::ParsingError,
-            _ => Error::ParsingIncomplete,
-        }
-    }
-}
-
-impl From<io::Error> for Error {
-    fn from(error: io::Error) -> Self {
-        Error::IoError(error)
-    }
-}
-
-impl From<Cow<'static, str>> for Error {
-    fn from(error: Cow<'static, str>) -> Self {
-        Error::DecodeError(error)
-    }
-}
 
 #[derive(Clone, Debug, Default)]
 struct PluginData {
