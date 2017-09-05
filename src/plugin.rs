@@ -118,22 +118,38 @@ impl Plugin {
         masters(&self.data.header_record)
     }
 
+    fn has_extension(&self, extension: &str) -> bool {
+        match self.path.extension() {
+            Some(x) if eq(x.to_string_lossy().deref(), extension) => true,
+            Some(x) if eq(x.to_string_lossy().deref(), "ghost") => {
+                let dot_extension = ".".to_owned() + extension;
+                let file_stem = self.path
+                    .file_stem()
+                    .and_then(|file_stem| file_stem.to_str())
+                    .map(|f| f.to_lowercase());
+
+                match file_stem {
+                    Some(file_stem) => file_stem.ends_with(&dot_extension),
+                    None => false,
+                }
+            }
+            _ => false,
+        }
+    }
+
     pub fn is_master_file(&self) -> bool {
         if self.game_id != GameId::Morrowind {
             self.data.header_record.header.flags & 0x1 != 0
         } else {
-            match self.path.extension() {
-                Some(x) if eq(x.to_string_lossy().deref(), "esm") => true,
-                Some(x) if eq(x.to_string_lossy().deref(), "ghost") => {
-                    match self.path.file_stem().and_then(
-                        |file_stem| file_stem.to_str(),
-                    ) {
-                        Some(file_stem) => file_stem.to_lowercase().ends_with(".esm"),
-                        None => false,
-                    }
-                }
-                _ => false,
-            }
+            self.has_extension("esm")
+        }
+    }
+
+    pub fn is_light_master_file(&self) -> bool {
+        if self.game_id != GameId::Fallout4 {
+            false
+        } else {
+            self.has_extension("esl")
         }
     }
 
@@ -451,6 +467,60 @@ mod tests {
 
         assert!(plugin.parse_file(true).is_ok());
         assert!(!plugin.is_master_file());
+    }
+
+    #[test]
+    fn is_light_master_file_should_be_false_for_all_plugins_for_games_apart_from_fallout4() {
+        let plugin = Plugin::new(GameId::Oblivion, Path::new("Blank.esp"));
+        assert!(!plugin.is_light_master_file());
+        let plugin = Plugin::new(GameId::Oblivion, Path::new("Blank.esm"));
+        assert!(!plugin.is_light_master_file());
+        let plugin = Plugin::new(GameId::Oblivion, Path::new("Blank.esl"));
+        assert!(!plugin.is_light_master_file());
+
+        let plugin = Plugin::new(GameId::Skyrim, Path::new("Blank.esp"));
+        assert!(!plugin.is_light_master_file());
+        let plugin = Plugin::new(GameId::Skyrim, Path::new("Blank.esm"));
+        assert!(!plugin.is_light_master_file());
+        let plugin = Plugin::new(GameId::Skyrim, Path::new("Blank.esl"));
+        assert!(!plugin.is_light_master_file());
+
+        let plugin = Plugin::new(GameId::Fallout3, Path::new("Blank.esp"));
+        assert!(!plugin.is_light_master_file());
+        let plugin = Plugin::new(GameId::Fallout3, Path::new("Blank.esm"));
+        assert!(!plugin.is_light_master_file());
+        let plugin = Plugin::new(GameId::Fallout3, Path::new("Blank.esl"));
+        assert!(!plugin.is_light_master_file());
+
+        let plugin = Plugin::new(GameId::FalloutNV, Path::new("Blank.esp"));
+        assert!(!plugin.is_light_master_file());
+        let plugin = Plugin::new(GameId::FalloutNV, Path::new("Blank.esm"));
+        assert!(!plugin.is_light_master_file());
+        let plugin = Plugin::new(GameId::FalloutNV, Path::new("Blank.esl"));
+        assert!(!plugin.is_light_master_file());
+
+        let plugin = Plugin::new(GameId::Morrowind, Path::new("Blank.esp"));
+        assert!(!plugin.is_light_master_file());
+        let plugin = Plugin::new(GameId::Morrowind, Path::new("Blank.esm"));
+        assert!(!plugin.is_light_master_file());
+        let plugin = Plugin::new(GameId::Morrowind, Path::new("Blank.esl"));
+        assert!(!plugin.is_light_master_file());
+    }
+
+    #[test]
+    fn is_light_master_file_should_be_true_for_fallout4_plugins_with_an_esl_file_extension() {
+        let plugin = Plugin::new(GameId::Fallout4, Path::new("Blank.esp"));
+        assert!(!plugin.is_light_master_file());
+        let plugin = Plugin::new(GameId::Fallout4, Path::new("Blank.esm"));
+        assert!(!plugin.is_light_master_file());
+        let plugin = Plugin::new(GameId::Fallout4, Path::new("Blank.esl"));
+        assert!(plugin.is_light_master_file());
+    }
+
+    #[test]
+    fn is_light_master_file_should_be_true_for_a_ghosted_fallout4_esl_file() {
+        let plugin = Plugin::new(GameId::Fallout4, Path::new("Blank.esl.ghost"));
+        assert!(plugin.is_light_master_file());
     }
 
     #[test]
