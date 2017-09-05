@@ -122,7 +122,7 @@ fn filename_should_not_trim_dot_ghost_extension() {
 }
 
 #[test]
-fn is_master_should_be_true_for_master_file() {
+fn is_master_file_should_be_true_for_master_file() {
     let mut plugin = Plugin::new(
         GameId::Skyrim,
         Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
@@ -144,7 +144,24 @@ fn is_master_should_be_true_for_master_file() {
 }
 
 #[test]
-fn is_master_should_be_false_for_non_master_file() {
+fn is_master_file_should_check_morrowind_plugin_extensions_case_insensitively() {
+    let plugin = Plugin::new(
+        GameId::Morrowind,
+        Path::new("testing-plugins/Skyrim/Data/Blank.EsM"),
+    );
+
+    assert!(plugin.is_master_file());
+
+    let plugin = Plugin::new(
+        GameId::Morrowind,
+        Path::new("testing-plugins/Skyrim/Data/Blank.EsM.GHOST"),
+    );
+
+    assert!(plugin.is_master_file());
+}
+
+#[test]
+fn is_master_file_should_be_false_for_non_master_file() {
     let mut plugin = Plugin::new(
         GameId::Skyrim,
         Path::new("testing-plugins/Skyrim/Data/Blank.esp"),

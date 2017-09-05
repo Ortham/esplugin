@@ -9,6 +9,7 @@ encoding = "0.2.33"
 libc = "*"
 memmap = "0.5.2"
 nom = "^2.2"
+unicase = "2.0.0"
 flate2 = { version = "0.2", optional = true }
 
 [lib]

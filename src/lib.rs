@@ -24,6 +24,7 @@ extern crate encoding;
 extern crate memmap;
 #[macro_use]
 extern crate nom;
+extern crate unicase;
 
 #[cfg(feature = "compressed-fields")]
 extern crate flate2;

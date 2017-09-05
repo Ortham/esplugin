@@ -21,6 +21,7 @@ use std::io::Cursor;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::Read;
+use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str;
@@ -35,6 +36,8 @@ use nom::IResult;
 
 use memmap::Mmap;
 use memmap::Protection;
+
+use unicase::eq;
 
 use error::Error;
 use form_id::FormId;
@@ -120,12 +123,12 @@ impl Plugin {
             self.data.header_record.header.flags & 0x1 != 0
         } else {
             match self.path.extension() {
-                Some(x) if x == "esm" => true,
-                Some(x) if x == "ghost" => {
+                Some(x) if eq(x.to_string_lossy().deref(), "esm") => true,
+                Some(x) if eq(x.to_string_lossy().deref(), "ghost") => {
                     match self.path.file_stem().and_then(
                         |file_stem| file_stem.to_str(),
                     ) {
-                        Some(file_stem) => file_stem.ends_with(".esm"),
+                        Some(file_stem) => file_stem.to_lowercase().ends_with(".esm"),
                         None => false,
                     }
                 }
