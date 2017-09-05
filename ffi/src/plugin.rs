@@ -124,6 +124,22 @@ pub unsafe extern "C" fn espm_plugin_is_master(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn espm_plugin_is_light_master(
+    plugin_ptr: *const Plugin,
+    is_light_master: *mut bool,
+) -> uint32_t {
+    if plugin_ptr.is_null() || is_light_master.is_null() {
+        ESPM_ERROR_NULL_POINTER
+    } else {
+        let plugin = &*plugin_ptr;
+
+        *is_light_master = plugin.is_light_master_file();
+
+        ESPM_OK
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn espm_plugin_is_valid(
     game_id: uint32_t,
     path: *const c_char,

@@ -71,6 +71,12 @@ def set_function_types(lib):
         POINTER(c_bool)
     )
 
+    lib.espm_plugin_is_light_master.restype = c_uint
+    lib.espm_plugin_is_light_master.argtypes = (
+        POINTER(Plugin),
+        POINTER(c_bool)
+    )
+
     lib.espm_plugin_is_valid.restype = c_uint
     lib.espm_plugin_is_valid.argtypes = (
         c_uint,
@@ -230,6 +236,17 @@ class PluginTest(unittest.TestCase):
 
         is_master = c_bool()
         ret = lib.espm_plugin_is_master(self.plugin, byref(is_master))
+        self.assertEqual(self.OK, ret)
+        self.assertTrue(is_master.value)
+
+    def test_checking_if_a_plugin_is_a_light_master_file(self):
+        ret = lib.espm_plugin_new(
+            byref(self.plugin),
+            get_constant(lib, 'ESPM_GAME_FALLOUT4'),
+            'testing-plugins/Skyrim/Data/Blank.esl'.encode('utf-8'))
+
+        is_master = c_bool()
+        ret = lib.espm_plugin_is_light_master(self.plugin, byref(is_master))
         self.assertEqual(self.OK, ret)
         self.assertTrue(is_master.value)
 
