@@ -1,4 +1,8 @@
 language = "C"
+header = """
+struct Plugin;
+struct FormId;
+"""
 trailer = """
 extern uint32_t ESPM_OK;
 extern uint32_t ESPM_OK;
