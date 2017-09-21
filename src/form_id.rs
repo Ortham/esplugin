@@ -16,10 +16,12 @@
  * You should have received a copy of the GNU General Public License
  * along with libespm. If not, see <http://www.gnu.org/licenses/>.
  */
-
+use std::cmp::Ordering;
 use std::string::ToString;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+use unicase::{eq, UniCase};
+
+#[derive(Clone, Debug)]
 pub struct FormId {
     pub object_index: u32,
     pub plugin_name: String,
@@ -42,6 +44,30 @@ impl FormId {
         }
     }
 }
+
+impl Ord for FormId {
+    fn cmp(&self, other: &FormId) -> Ordering {
+        if self.object_index != other.object_index {
+            self.object_index.cmp(&other.object_index)
+        } else {
+            UniCase::new(&self.plugin_name).cmp(&UniCase::new(&other.plugin_name))
+        }
+    }
+}
+
+impl PartialOrd for FormId {
+    fn partial_cmp(&self, other: &FormId) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for FormId {
+    fn eq(&self, other: &FormId) -> bool {
+        self.object_index == other.object_index && eq(&self.plugin_name, &other.plugin_name)
+    }
+}
+
+impl Eq for FormId {}
 
 #[cfg(test)]
 mod tests {
@@ -106,5 +132,34 @@ mod tests {
         let form_id2 = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x05000001);
 
         assert_eq!(form_id1, form_id2);
+    }
+
+    #[test]
+    fn form_ids_should_be_equal_if_plugin_names_are_case_insensitively_equal() {
+        let form_id1 = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
+        let form_id2 = FormId::new("PLUGIN0", MASTERS, 0x01);
+
+        assert_eq!(form_id1, form_id2);
+    }
+
+    #[test]
+    fn form_ids_should_be_ordered_according_to_object_index_then_icase_lexicographically() {
+        let form_id1 = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x05000001);
+        let form_id2 = FormId::new("PLUGIN0", MASTERS, 0x05000001);
+
+        assert_eq!(Ordering::Equal, form_id1.cmp(&form_id2));
+        assert_eq!(Ordering::Equal, form_id2.cmp(&form_id1));
+
+        let form_id1 = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
+        let form_id2 = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x02);
+
+        assert_eq!(Ordering::Less, form_id1.cmp(&form_id2));
+        assert_eq!(Ordering::Greater, form_id2.cmp(&form_id1));
+
+        let form_id1 = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x05000001);
+        let form_id2 = FormId::new(OTHER_PLUGIN_NAME, MASTERS, 0x05000001);
+
+        assert_eq!(Ordering::Less, form_id1.cmp(&form_id2));
+        assert_eq!(Ordering::Greater, form_id2.cmp(&form_id1));
     }
 }

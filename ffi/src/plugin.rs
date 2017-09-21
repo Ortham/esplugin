@@ -3,7 +3,6 @@ use std::path::Path;
 use std::ptr;
 use libc::{c_char, size_t, uint8_t, uint32_t};
 
-use espm::FormId;
 use espm::Plugin;
 use constants::*;
 use helpers::*;
@@ -193,57 +192,54 @@ pub unsafe extern "C" fn espm_plugin_description(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_plugin_record_and_group_count(
+pub unsafe extern "C" fn espm_plugin_is_empty(
     plugin_ptr: *const Plugin,
-    count: *mut uint32_t,
+    is_empty: *mut bool,
+) -> uint32_t {
+    if plugin_ptr.is_null() || is_empty.is_null() {
+        ESPM_ERROR_NULL_POINTER
+    } else {
+        let plugin = &*plugin_ptr;
+
+        *is_empty = plugin.record_and_group_count().unwrap_or(0) == 0;
+
+        ESPM_OK
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn espm_plugin_count_override_records(
+    plugin_ptr: *const Plugin,
+    count: *mut size_t,
 ) -> uint32_t {
     if plugin_ptr.is_null() || count.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
         let plugin = &*plugin_ptr;
 
-        *count = plugin.record_and_group_count().unwrap_or(0);
+        *count = plugin.count_override_records();
 
         ESPM_OK
     }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_plugin_form_ids(
+pub unsafe extern "C" fn espm_plugin_do_records_overlap(
     plugin_ptr: *const Plugin,
-    form_ids: *mut *mut *const FormId,
-    form_ids_size: *mut size_t,
+    other_plugin_ptr: *const Plugin,
+    overlap: *mut bool,
 ) -> uint32_t {
-    if plugin_ptr.is_null() || form_ids.is_null() {
+    if plugin_ptr.is_null() || other_plugin_ptr.is_null() || overlap.is_null() {
         ESPM_ERROR_NULL_POINTER
     } else {
         let plugin = &*plugin_ptr;
+        let other_plugin = &*other_plugin_ptr;
 
-        let mut plugin_form_ids: Vec<*const FormId> = plugin
+        *overlap = plugin
             .form_ids()
-            .iter()
-            .map(|f| f as *const FormId)
-            .collect();
-
-        plugin_form_ids.shrink_to_fit();
-
-        *form_ids = plugin_form_ids.as_mut_ptr();
-        *form_ids_size = plugin_form_ids.len();
-
-        mem::forget(plugin_form_ids);
+            .intersection(other_plugin.form_ids())
+            .count() > 0;
 
         ESPM_OK
     }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn espm_plugin_form_ids_free(
-    form_ids: *mut *const FormId,
-    form_ids_size: size_t,
-) {
-    if form_ids.is_null() || form_ids_size == 0 {
-        return;
-    }
-
-    Vec::from_raw_parts(form_ids, form_ids_size, form_ids_size);
 }

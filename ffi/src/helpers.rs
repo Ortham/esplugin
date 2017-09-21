@@ -14,20 +14,6 @@ pub unsafe fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32> {
     Ok(rust_c_string.to_str().map_err(|e| ESPM_ERROR_NOT_UTF8)?)
 }
 
-pub unsafe fn to_str_vec<'a>(
-    array: *const *const c_char,
-    array_size: isize,
-) -> Result<Vec<&'a str>, u32> {
-    let mut vec: Vec<&str> = Vec::new();
-
-    for i in 0..array_size {
-        let string = to_str(*array.offset(i))?;
-        vec.push(string);
-    }
-
-    Ok(vec)
-}
-
 pub fn to_c_string(string: &str) -> Result<*mut c_char, u32> {
     let c_string_name = CString::new(string.to_string()).map_err(|e| {
         ESPM_ERROR_STRING_CONTAINS_NUL

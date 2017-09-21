@@ -91,27 +91,24 @@ def set_function_types(lib):
         POINTER(Plugin),
     )
 
-    lib.espm_plugin_record_and_group_count.restype = c_uint
-    lib.espm_plugin_record_and_group_count.argtypes = (
+    lib.espm_plugin_is_empty.restype = c_uint
+    lib.espm_plugin_is_empty.argtypes = (
         POINTER(Plugin),
-        POINTER(c_uint)
+        POINTER(bool)
     )
 
-    lib.espm_plugin_form_ids.restype = c_uint
-    lib.espm_plugin_form_ids.argtypes = (
+    lib.espm_plugin_count_override_records.restype = c_uint
+    lib.espm_plugin_count_override_records.argtypes = (
         POINTER(Plugin),
-        POINTER(POINTER(POINTER(FormId))),
         POINTER(c_size_t)
     )
-    lib.espm_plugin_form_ids_free.argtypes = (
-        POINTER(POINTER(FormId)),
-        c_size_t
-    )
 
-class FormId(Structure):
-    _fields_ = [
-        ('object_index', c_uint),
-    ]
+    lib.espm_plugin_do_records_overlap.restype = c_uint
+    lib.espm_plugin_do_records_overlap.argtypes = (
+        POINTER(Plugin),
+        POINTER(Plugin),
+        POINTER(c_bool)
+    )
 
 class Plugin(Structure):
     pass
@@ -125,44 +122,6 @@ class GameIdTest(unittest.TestCase):
         self.assertEqual(4, get_constant(lib, "ESPM_GAME_MORROWIND"))
         self.assertEqual(5, get_constant(lib, "ESPM_GAME_FALLOUT4"))
 
-class FormIdTest(unittest.TestCase):
-    def setUp(self):
-        self.OK = get_constant(lib, "ESPM_OK")
-        self.formid = pointer(FormId())
-        self.name = c_char_p()
-
-    def tearDown(self):
-        lib.espm_formid_free(self.formid)
-        lib.espm_string_free(self.name)
-
-    def test_creating_a_new_formid_object(self):
-        masters = (c_char_p * 0)()
-        masters[:] = []
-        ret = lib.espm_formid_new(
-            byref(self.formid),
-            "foo".encode('utf-8'),
-            masters,
-            0,
-            1)
-        self.assertEqual(self.OK, ret)
-        self.assertEqual(1, self.formid[0].object_index)
-
-    def test_getting_a_formid_plugin_name(self):
-        masters = (c_char_p * 0)()
-        masters[:] = []
-        ret = lib.espm_formid_new(
-            byref(self.formid),
-            "foo".encode('utf-8'),
-            masters,
-            0,
-            1)
-        self.assertEqual(self.OK, ret)
-        self.assertEqual(1, self.formid[0].object_index)
-
-        ret = lib.espm_formid_plugin_name(byref(self.name), self.formid)
-        self.assertEqual(self.OK, ret)
-        self.assertEqual(b'foo', self.name.value)
-
 class PluginTest(unittest.TestCase):
     def setUp(self):
         self.OK = get_constant(lib, "ESPM_OK")
@@ -171,15 +130,12 @@ class PluginTest(unittest.TestCase):
         self.masters = pointer(c_char_p())
         self.masters_size = c_uint(0)
         self.description = c_char_p()
-        self.form_ids = pointer(pointer(FormId()))
-        self.form_ids_size = c_size_t(0)
 
     def tearDown(self):
         lib.espm_plugin_free(self.plugin)
         lib.espm_string_free(self.filename)
         lib.espm_string_array_free(self.masters, self.masters_size)
         lib.espm_string_free(self.description)
-        lib.espm_plugin_form_ids_free(self.form_ids, self.form_ids_size)
 
     def test_creating_a_new_plugin_object(self):
         ret = lib.espm_plugin_new(
@@ -285,7 +241,7 @@ class PluginTest(unittest.TestCase):
         self.assertEqual(self.OK, ret)
         self.assertEqual(b'v5.0', self.description.value)
 
-    def test_getting_a_plugin_record_and_group_count(self):
+    def test_checking_if_a_plugin_is_empty(self):
         ret = lib.espm_plugin_new(
             byref(self.plugin),
             get_constant(lib, 'ESPM_GAME_SKYRIM'),
@@ -295,12 +251,12 @@ class PluginTest(unittest.TestCase):
         ret = lib.espm_plugin_parse(self.plugin, True)
         self.assertEqual(self.OK, ret)
 
-        count = c_uint()
-        ret = lib.espm_plugin_record_and_group_count(self.plugin, byref(count))
+        is_empty = c_bool()
+        ret = lib.espm_plugin_is_empty(self.plugin, byref(is_empty))
         self.assertEqual(self.OK, ret)
-        self.assertNotEqual(0, count.value)
+        self.assertFalse(is_empty.value)
 
-    def test_getting_a_plugins_formids(self):
+    def test_counting_a_plugins_overlap_records(self):
         ret = lib.espm_plugin_new(
             byref(self.plugin),
             get_constant(lib, 'ESPM_GAME_SKYRIM'),
@@ -310,14 +266,28 @@ class PluginTest(unittest.TestCase):
         ret = lib.espm_plugin_parse(self.plugin, False)
         self.assertEqual(self.OK, ret)
 
-        form_ids = pointer(pointer(FormId()))
-        form_ids_size = c_size_t()
-        ret = lib.espm_plugin_form_ids(self.plugin, byref(form_ids), byref(form_ids_size))
+        count = c_size_t()
+        ret = lib.espm_plugin_count_override_records(self.plugin, byref(count))
         self.assertEqual(self.OK, ret)
 
-        self.assertEqual(10, form_ids_size.value)
-        self.assertEqual(0xCF9, form_ids[0][0].object_index)
-        self.assertEqual(0xCF0, form_ids[1][0].object_index)
+        self.assertEqual(0, count.value)
+
+    def test_checking_if_two_plugins_overlap(self):
+        ret = lib.espm_plugin_new(
+            byref(self.plugin),
+            get_constant(lib, 'ESPM_GAME_SKYRIM'),
+            'testing-plugins/Skyrim/Data/Blank.esm'.encode('utf-8'))
+        self.assertEqual(self.OK, ret)
+
+        ret = lib.espm_plugin_parse(self.plugin, False)
+        self.assertEqual(self.OK, ret)
+
+        do_overlap = c_bool()
+        ret = lib.espm_plugin_do_records_overlap(self.plugin, self.plugin, byref(do_overlap))
+        self.assertEqual(self.OK, ret)
+
+        self.assertTrue(do_overlap.value)
+
 
 
 lib = load_library(os.path.join('target', 'debug'))

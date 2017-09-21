@@ -17,13 +17,11 @@
  * along with libespm. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::io::Cursor;
+use std::collections::BTreeSet;
 use std::fs::File;
-use std::io::BufReader;
-use std::io::Read;
+use std::io::{BufReader, Cursor, Read};
 use std::ops::Deref;
-use std::path::Path;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str;
 
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -48,7 +46,7 @@ use record::Record;
 #[derive(Clone, Debug, Default)]
 struct PluginData {
     header_record: Record,
-    form_ids: Vec<FormId>,
+    form_ids: BTreeSet<FormId>,
 }
 
 #[derive(Clone, Debug)]
@@ -201,8 +199,19 @@ impl Plugin {
         Option::None
     }
 
-    pub fn form_ids(&self) -> &Vec<FormId> {
+    pub fn form_ids(&self) -> &BTreeSet<FormId> {
         &self.data.form_ids
+    }
+
+    pub fn count_override_records(&self) -> usize {
+        if let Some(n) = self.filename() {
+            self.form_ids()
+                .iter()
+                .filter(|f| !eq(&f.plugin_name, &n))
+                .count()
+        } else {
+            0
+        }
     }
 }
 
@@ -225,7 +234,7 @@ fn parse_form_ids<'a>(
     game_id: GameId,
     filename: &str,
     header_record: &Record,
-) -> IResult<&'a [u8], Vec<FormId>> {
+) -> IResult<&'a [u8], BTreeSet<FormId>> {
     let masters = match masters(header_record) {
         Ok(x) => x,
         Err(_) => return IResult::Error(ErrorKind::Custom(1)),
@@ -235,7 +244,7 @@ fn parse_form_ids<'a>(
         let (input1, record_form_ids) =
             try_parse!(input, many0!(apply!(Record::parse_form_id, game_id)));
 
-        let form_ids: Vec<FormId> = record_form_ids
+        let form_ids: BTreeSet<FormId> = record_form_ids
             .into_iter()
             .map(|form_id| FormId::new(filename, &masters, form_id))
             .collect();
@@ -244,7 +253,7 @@ fn parse_form_ids<'a>(
     } else {
         let (input1, groups) = try_parse!(input, many0!(apply!(Group::new, game_id)));
 
-        let mut form_ids: Vec<FormId> = Vec::new();
+        let mut form_ids: BTreeSet<FormId> = BTreeSet::new();
         for group in groups {
             form_ids.extend(group.form_ids.into_iter().map(|form_id| {
                 FormId::new(filename, &masters, form_id)
@@ -268,7 +277,7 @@ fn parse_plugin<'a>(
             input1,
             PluginData {
                 header_record: header_record,
-                form_ids: Vec::new(),
+                form_ids: BTreeSet::new(),
             },
         );
     }
@@ -616,5 +625,16 @@ mod tests {
         assert!(plugin.record_and_group_count().is_none());
         assert!(plugin.parse_file(true).is_ok());
         assert_ne!(0, plugin.record_and_group_count().unwrap());
+    }
+
+    #[test]
+    fn count_override_records() {
+        let mut plugin = Plugin::new(
+            GameId::Skyrim,
+            Path::new("testing-plugins/Skyrim/Data/Blank - Master Dependent.esm"),
+        );
+
+        assert!(plugin.parse_file(false).is_ok());
+        assert_eq!(4, plugin.count_override_records());
     }
 }
