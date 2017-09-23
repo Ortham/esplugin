@@ -167,7 +167,7 @@ pub unsafe extern "C" fn espm_plugin_is_valid(
 #[no_mangle]
 pub unsafe extern "C" fn espm_plugin_description(
     plugin_ptr: *const Plugin,
-    description: *mut *const c_char,
+    description: *mut *mut c_char,
 ) -> uint32_t {
     if description.is_null() || plugin_ptr.is_null() {
         ESPM_ERROR_NULL_POINTER
@@ -180,7 +180,7 @@ pub unsafe extern "C" fn espm_plugin_description(
         };
 
         let c_string = match description_option {
-            None => ptr::null(),
+            None => ptr::null_mut(),
             Some(Ok(x)) => x,
             Some(Err(x)) => return x,
         };
