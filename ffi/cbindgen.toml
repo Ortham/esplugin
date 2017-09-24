@@ -4,6 +4,10 @@ struct Plugin;
 struct FormId;
 """
 trailer = """
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern uint32_t ESPM_OK;
 extern uint32_t ESPM_OK;
 extern uint32_t ESPM_ERROR_NULL_POINTER;
@@ -18,6 +22,10 @@ extern uint32_t ESPM_GAME_FALLOUT3;
 extern uint32_t ESPM_GAME_FALLOUTNV;
 extern uint32_t ESPM_GAME_MORROWIND;
 extern uint32_t ESPM_GAME_FALLOUT4;
+
+#ifdef __cplusplus
+}
+#endif
 """
 
 [parse]
