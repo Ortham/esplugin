@@ -10,7 +10,7 @@ libc = "*"
 
 [lib]
 name = "espm_ffi"
-crate-type = ["cdylib"]
+crate-type = ["staticlib"]
 
 [features]
 default = []
