@@ -32,3 +32,8 @@ script:
   # without a hash.
   - cargo build -p libespm-ffi
   - python ffi/tests/ffi.py
+  - mkdir ffi/build
+  - cd ffi/build
+  - cmake ..
+  - make
+  - make test
