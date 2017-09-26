@@ -36,7 +36,7 @@ use game_id::GameId;
 
 const SUBRECORD_TYPE_LENGTH: u8 = 4;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
 pub struct Subrecord {
     pub subrecord_type: String,
     pub data: Vec<u8>,

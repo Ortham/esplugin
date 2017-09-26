@@ -43,13 +43,13 @@ use game_id::GameId;
 use group::Group;
 use record::Record;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
 struct PluginData {
     header_record: Record,
     form_ids: BTreeSet<FormId>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Plugin {
     game_id: GameId,
     path: PathBuf,

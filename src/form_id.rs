@@ -17,11 +17,12 @@
  * along with libespm. If not, see <http://www.gnu.org/licenses/>.
  */
 use std::cmp::Ordering;
+use std::hash::{Hash, Hasher};
 use std::string::ToString;
 
 use unicase::{eq, UniCase};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct FormId {
     pub object_index: u32,
     pub plugin_name: String,
@@ -68,6 +69,13 @@ impl PartialEq for FormId {
 }
 
 impl Eq for FormId {}
+
+impl Hash for FormId {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.object_index.hash(state);
+        self.plugin_name.to_lowercase().hash(state);
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -161,5 +169,24 @@ mod tests {
 
         assert_eq!(Ordering::Less, form_id1.cmp(&form_id2));
         assert_eq!(Ordering::Greater, form_id2.cmp(&form_id1));
+    }
+
+    #[test]
+    fn form_ids_with_case_insensitive_equal_plugin_names_should_have_the_same_hash() {
+        let form_id1 = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
+        let form_id2 = FormId::new("PLUGIN0", MASTERS, 0x01);
+
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::Hasher;
+
+        let mut hasher = DefaultHasher::new();
+        form_id1.hash(&mut hasher);
+        let hash1 = hasher.finish();
+
+        let mut hasher = DefaultHasher::new();
+        form_id2.hash(&mut hasher);
+        let hash2 = hasher.finish();
+
+        assert_eq!(hash1, hash2);
     }
 }

@@ -28,6 +28,7 @@ use record::Record;
 const GROUP_TYPE: &'static str = "GRUP";
 const GROUP_TYPE_LENGTH: u8 = 4;
 
+#[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
 pub struct Group {
     pub form_ids: Vec<u32>,
 }
