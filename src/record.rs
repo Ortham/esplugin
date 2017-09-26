@@ -16,7 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with libespm. If not, see <http://www.gnu.org/licenses/>.
  */
+use std::io;
 
+use byteorder::{LittleEndian, ReadBytesExt};
 use nom::IResult;
 use nom::le_u32;
 
@@ -46,6 +48,25 @@ pub struct Record {
 }
 
 impl Record {
+    pub fn read<T: io::Read>(reader: &mut T, game_id: GameId) -> Result<Vec<u8>, io::Error> {
+        let mut content: Vec<u8> = vec![0; 8];
+        reader.read_exact(&mut content)?;
+
+        let size_of_subrecords = {
+            let mut cursor = io::Cursor::new(&content);
+            cursor.set_position(4);
+            cursor.read_u32::<LittleEndian>()?
+        };
+
+        let length_remaining = header_length(game_id) - 8 + size_of_subrecords as usize;
+        let mut remaining = vec![0; length_remaining];
+        reader.read_exact(&mut remaining)?;
+
+        content.append(&mut remaining);
+
+        Ok(content)
+    }
+
     pub fn parse(input: &[u8], game_id: GameId, skip_subrecords: bool) -> IResult<&[u8], Record> {
         record(input, game_id, skip_subrecords)
     }
@@ -55,6 +76,14 @@ impl Record {
         let (input2, _) = try_parse!(input1, take!(header.size_of_subrecords));
 
         IResult::Done(input2, header.form_id)
+    }
+}
+
+fn header_length(game_id: GameId) -> usize {
+    match game_id {
+        GameId::Morrowind => 16,
+        GameId::Oblivion => 20,
+        _ => 24,
     }
 }
 
@@ -127,6 +156,30 @@ fn parse_subrecords(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn read_should_read_a_record_from_the_given_reader() {
+        let data = &include_bytes!(
+            "../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")
+            [..0x56];
+        let mut reader = io::Cursor::new(data);
+
+        let bytes = Record::read(&mut reader, GameId::Skyrim).unwrap();
+
+        let record = Record::parse(&bytes, GameId::Skyrim, false)
+            .to_result()
+            .unwrap();
+
+        assert_eq!(0x1, record.header.flags);
+        assert_eq!(0, record.header.form_id);
+        assert_eq!(5, record.subrecords.len());
+
+        assert_eq!("HEDR", record.subrecords[0].subrecord_type);
+        assert_eq!("CNAM", record.subrecords[1].subrecord_type);
+        assert_eq!("SNAM", record.subrecords[2].subrecord_type);
+        assert_eq!("MAST", record.subrecords[3].subrecord_type);
+        assert_eq!("DATA", record.subrecords[4].subrecord_type);
+    }
 
     #[test]
     fn parse_should_read_tes4_header_correctly() {

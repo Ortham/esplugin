@@ -83,7 +83,11 @@ impl Plugin {
         let mut reader = BufReader::new(f);
 
         let mut content: Vec<u8> = Vec::new();
-        reader.read_to_end(&mut content)?;
+        if load_header_only {
+            content = Record::read(&mut reader, self.game_id)?;
+        } else {
+            reader.read_to_end(&mut content)?;
+        }
 
         self.parse(&content, load_header_only)
     }
