@@ -12,7 +12,7 @@ license = "GPL-3.0"
 
 [dependencies]
 esplugin = { path = ".." }
-libc = "*"
+libc = "0.2"
 
 [lib]
 crate-type = ["staticlib"]
