@@ -1,8 +1,8 @@
 esplugin
 =======
 
-[![Build Status](https://travis-ci.org/WrinklyNinja/esplugin.svg?branch=rust-rewrite)](https://travis-ci.org/WrinklyNinja/esplugin)
-[![Coveralls branch](https://img.shields.io/coveralls/WrinklyNinja/esplugin/rust-rewrite.svg)](https://coveralls.io/github/WrinklyNinja/esplugin)
+[![Build Status](https://travis-ci.org/WrinklyNinja/esplugin.svg?branch=master)](https://travis-ci.org/WrinklyNinja/esplugin)
+[![Coveralls branch](https://img.shields.io/coveralls/WrinklyNinja/esplugin/master.svg)](https://coveralls.io/github/WrinklyNinja/esplugin)
 
 A free software library for reading Elder Scrolls Plugin (`.esp`), Elder Scrolls Master (`.esm`) and Elder Scrolls Light Master (`.esl`) files. It can currently parse plugins for the following games:
 
