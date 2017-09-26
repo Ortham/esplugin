@@ -1,5 +1,5 @@
 [package]
-name = "libespm"
+name = "esplugin"
 version = "0.1.0"
 authors = ["Oliver Hamlet <oliver.hamlet@gmail.com>"]
 
@@ -10,9 +10,6 @@ memmap = "0.5.2"
 nom = "^2.2"
 unicase = "2.0.0"
 flate2 = { version = "0.2", optional = true }
-
-[lib]
-name = "espm"
 
 [features]
 default = []

@@ -1,15 +1,14 @@
 [package]
-name = "libespm-ffi"
+name = "esplugin-ffi"
 version = "0.1.0"
 authors = ["Oliver Hamlet <oliver.hamlet@gmail.com>"]
 build = "build.rs"
 
 [dependencies]
-libespm = { path = ".." }
+esplugin = { path = ".." }
 libc = "*"
 
 [lib]
-name = "espm_ffi"
 crate-type = ["staticlib"]
 
 [features]

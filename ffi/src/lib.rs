@@ -1,5 +1,5 @@
 extern crate libc;
-extern crate espm;
+extern crate esplugin;
 
 pub use self::common::*;
 pub use self::constants::*;

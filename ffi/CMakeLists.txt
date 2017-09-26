@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(libespm-ffi-tests CXX C)
+project(esplugin-ffi-tests CXX C)
 
 include_directories("${CMAKE_SOURCE_DIR}/include")
 
@@ -13,7 +13,7 @@ if (MSVC)
 endif ()
 
 add_executable(ffi_cpp_tests "${CMAKE_SOURCE_DIR}/tests/ffi.cpp")
-target_link_libraries(ffi_cpp_tests "${CMAKE_SOURCE_DIR}/../target/debug/${CMAKE_STATIC_LIBRARY_PREFIX}espm_ffi${CMAKE_STATIC_LIBRARY_SUFFIX}" ${SYSTEM_LIBS})
+target_link_libraries(ffi_cpp_tests "${CMAKE_SOURCE_DIR}/../target/debug/${CMAKE_STATIC_LIBRARY_PREFIX}esplugin_ffi${CMAKE_STATIC_LIBRARY_SUFFIX}" ${SYSTEM_LIBS})
 
 enable_testing()
 add_test(ffi_cpp_tests ffi_cpp_tests)

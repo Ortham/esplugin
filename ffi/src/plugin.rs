@@ -3,12 +3,12 @@ use std::path::Path;
 use std::ptr;
 use libc::{c_char, size_t, uint8_t, uint32_t};
 
-use espm::Plugin;
+use esplugin::Plugin;
 use constants::*;
 use helpers::*;
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_plugin_new(
+pub unsafe extern "C" fn esp_plugin_new(
     plugin_ptr_ptr: *mut *mut Plugin,
     game_id: uint32_t,
     path: *const c_char,
@@ -30,14 +30,14 @@ pub unsafe extern "C" fn espm_plugin_new(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_plugin_free(plugin_ptr: *mut Plugin) {
+pub unsafe extern "C" fn esp_plugin_free(plugin_ptr: *mut Plugin) {
     if !plugin_ptr.is_null() {
         Box::from_raw(plugin_ptr);
     }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_plugin_parse(
+pub unsafe extern "C" fn esp_plugin_parse(
     plugin_ptr: *mut Plugin,
     load_header_only: bool,
 ) -> uint32_t {
@@ -53,7 +53,7 @@ pub unsafe extern "C" fn espm_plugin_parse(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_plugin_filename(
+pub unsafe extern "C" fn esp_plugin_filename(
     plugin_ptr: *const Plugin,
     filename: *mut *mut c_char,
 ) -> uint32_t {
@@ -75,7 +75,7 @@ pub unsafe extern "C" fn espm_plugin_filename(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_plugin_masters(
+pub unsafe extern "C" fn esp_plugin_masters(
     plugin_ptr: *const Plugin,
     plugin_masters: *mut *mut *mut c_char,
     plugin_masters_size: *mut uint8_t,
@@ -107,7 +107,7 @@ pub unsafe extern "C" fn espm_plugin_masters(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_plugin_is_master(
+pub unsafe extern "C" fn esp_plugin_is_master(
     plugin_ptr: *const Plugin,
     is_master: *mut bool,
 ) -> uint32_t {
@@ -123,7 +123,7 @@ pub unsafe extern "C" fn espm_plugin_is_master(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_plugin_is_light_master(
+pub unsafe extern "C" fn esp_plugin_is_light_master(
     plugin_ptr: *const Plugin,
     is_light_master: *mut bool,
 ) -> uint32_t {
@@ -139,7 +139,7 @@ pub unsafe extern "C" fn espm_plugin_is_light_master(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_plugin_is_valid(
+pub unsafe extern "C" fn esp_plugin_is_valid(
     game_id: uint32_t,
     path: *const c_char,
     load_header_only: bool,
@@ -165,7 +165,7 @@ pub unsafe extern "C" fn espm_plugin_is_valid(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_plugin_description(
+pub unsafe extern "C" fn esp_plugin_description(
     plugin_ptr: *const Plugin,
     description: *mut *mut c_char,
 ) -> uint32_t {
@@ -192,7 +192,7 @@ pub unsafe extern "C" fn espm_plugin_description(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_plugin_is_empty(
+pub unsafe extern "C" fn esp_plugin_is_empty(
     plugin_ptr: *const Plugin,
     is_empty: *mut bool,
 ) -> uint32_t {
@@ -208,7 +208,7 @@ pub unsafe extern "C" fn espm_plugin_is_empty(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_plugin_count_override_records(
+pub unsafe extern "C" fn esp_plugin_count_override_records(
     plugin_ptr: *const Plugin,
     count: *mut size_t,
 ) -> uint32_t {
@@ -224,7 +224,7 @@ pub unsafe extern "C" fn espm_plugin_count_override_records(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn espm_plugin_do_records_overlap(
+pub unsafe extern "C" fn esp_plugin_do_records_overlap(
     plugin_ptr: *const Plugin,
     other_plugin_ptr: *const Plugin,
     overlap: *mut bool,

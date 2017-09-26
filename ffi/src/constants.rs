@@ -1,4 +1,4 @@
-use espm::GameId;
+use esplugin::GameId;
 
 use libc::uint32_t;
 
