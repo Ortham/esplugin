@@ -9,6 +9,10 @@ repository = "https://github.com/WrinklyNinja/esplugin.git"
 readme = "../README.md"
 categories = ["games", "parsing"]
 license = "GPL-3.0"
+exclude = [
+    "build",
+    "include",
+]
 
 [dependencies]
 esplugin = { path = ".." }
