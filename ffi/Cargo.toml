@@ -10,8 +10,9 @@ readme = "../README.md"
 categories = ["games", "parsing"]
 license = "GPL-3.0"
 exclude = [
-    "build",
-    "include",
+    "build/*",
+    "include/*",
+    "target/*",
 ]
 
 [dependencies]
