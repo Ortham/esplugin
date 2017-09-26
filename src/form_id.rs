@@ -24,8 +24,8 @@ use unicase::{eq, UniCase};
 
 #[derive(Clone, Debug, Default)]
 pub struct FormId {
-    pub object_index: u32,
-    pub plugin_name: String,
+    object_index: u32,
+    plugin_name: String,
 }
 
 impl FormId {
@@ -43,6 +43,10 @@ impl FormId {
                 .map_or(parent_plugin_name, |m| m.as_ref())
                 .to_string(),
         }
+    }
+
+    pub fn plugin_name(&self) -> &str {
+        &self.plugin_name
     }
 }
 

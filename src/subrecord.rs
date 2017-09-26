@@ -38,9 +38,9 @@ const SUBRECORD_TYPE_LENGTH: u8 = 4;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
 pub struct Subrecord {
-    pub subrecord_type: String,
-    pub data: Vec<u8>,
-    pub is_compressed: bool,
+    subrecord_type: String,
+    data: Vec<u8>,
+    is_compressed: bool,
 }
 
 impl Subrecord {
@@ -70,6 +70,14 @@ impl Subrecord {
         deflater.read_to_end(&mut decompressed_data)?;
 
         Ok(decompressed_data)
+    }
+
+    pub fn subrecord_type(&self) -> &str {
+        &self.subrecord_type
+    }
+
+    pub fn data(&self) -> &[u8] {
+        &self.data
     }
 }
 

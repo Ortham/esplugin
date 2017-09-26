@@ -30,12 +30,16 @@ const GROUP_TYPE_LENGTH: u8 = 4;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
 pub struct Group {
-    pub form_ids: Vec<u32>,
+    form_ids: Vec<u32>,
 }
 
 impl Group {
     pub fn new(input: &[u8], game_id: GameId) -> IResult<&[u8], Group> {
         group(input, game_id)
+    }
+
+    pub fn form_ids(self) -> Vec<u32> {
+        self.form_ids
     }
 }
 

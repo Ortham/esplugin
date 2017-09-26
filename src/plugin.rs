@@ -141,7 +141,7 @@ impl Plugin {
 
     pub fn is_master_file(&self) -> bool {
         if self.game_id != GameId::Morrowind {
-            self.data.header_record.header.flags & 0x1 != 0
+            self.data.header_record.header().flags() & 0x1 != 0
         } else {
             self.has_extension("esm")
         }
@@ -171,9 +171,9 @@ impl Plugin {
             ("SNAM", 0)
         };
 
-        for subrecord in &self.data.header_record.subrecords {
-            if subrecord.subrecord_type == target_subrecord_type {
-                let data = &subrecord.data[description_offset..(subrecord.data.len() - 1)];
+        for subrecord in self.data.header_record.subrecords() {
+            if subrecord.subrecord_type() == target_subrecord_type {
+                let data = &subrecord.data()[description_offset..(subrecord.data().len() - 1)];
 
                 return WINDOWS_1252
                     .decode(data, DecoderTrap::Strict)
@@ -192,9 +192,9 @@ impl Plugin {
             4
         };
 
-        for subrecord in &self.data.header_record.subrecords {
-            if subrecord.subrecord_type == "HEDR" {
-                let data = &subrecord.data[count_offset..count_offset + 4];
+        for subrecord in self.data.header_record.subrecords() {
+            if subrecord.subrecord_type() == "HEDR" {
+                let data = &subrecord.data()[count_offset..count_offset + 4];
                 let mut cursor = Cursor::new(data);
                 return cursor.read_u32::<LittleEndian>().ok();
             }
@@ -211,7 +211,7 @@ impl Plugin {
         if let Some(n) = self.filename() {
             self.form_ids()
                 .iter()
-                .filter(|f| !eq(&f.plugin_name, &n))
+                .filter(|f| !eq(f.plugin_name(), &n))
                 .count()
         } else {
             0
@@ -221,10 +221,10 @@ impl Plugin {
 
 fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
     header_record
-        .subrecords
+        .subrecords()
         .iter()
-        .filter(|s| s.subrecord_type == "MAST")
-        .map(|s| &s.data[0..(s.data.len() - 1)])
+        .filter(|s| s.subrecord_type() == "MAST")
+        .map(|s| &s.data()[0..(s.data().len() - 1)])
         .map(|d| {
             WINDOWS_1252.decode(d, DecoderTrap::Strict).map_err(
                 Error::DecodeError,
@@ -259,7 +259,7 @@ fn parse_form_ids<'a>(
 
         let mut form_ids: BTreeSet<FormId> = BTreeSet::new();
         for group in groups {
-            form_ids.extend(group.form_ids.into_iter().map(|form_id| {
+            form_ids.extend(group.form_ids().into_iter().map(|form_id| {
                 FormId::new(filename, &masters, form_id)
             }));
         }
