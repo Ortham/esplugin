@@ -3,6 +3,12 @@ name = "esplugin-ffi"
 version = "1.0.0"
 authors = ["Oliver Hamlet <oliver.hamlet@gmail.com>"]
 build = "build.rs"
+description = "A wrapper library providing a C FFI for esplugin."
+documentation = "https://docs.rs/esplugin-ffi"
+repository = "https://github.com/WrinklyNinja/esplugin.git"
+readme = "../README.md"
+categories = ["games", "parsing"]
+license = "GPL-3.0"
 
 [dependencies]
 esplugin = { path = ".." }
