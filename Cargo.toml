@@ -2,6 +2,16 @@
 name = "esplugin"
 version = "1.0.0"
 authors = ["Oliver Hamlet <oliver.hamlet@gmail.com>"]
+description = "A free software library for reading Elder Scrolls plugin (.esp/.esm/.esl) files."
+documentation = "https://docs.rs/esplugin"
+repository = "https://github.com/WrinklyNinja/esplugin.git"
+readme = "README.md"
+categories = ["games", "parsing"]
+license = "GPL-3.0"
+
+[badges]
+travis-ci = { repository = "WrinklyNinja/esplugin" }
+coveralls = { repository = "WrinklyNinja/esplugin" }
 
 [dependencies]
 byteorder = "1.0.0"
