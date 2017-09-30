@@ -22,6 +22,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use nom::IResult;
 use nom::le_u32;
 
+use error::Error;
 use game_id::GameId;
 use subrecord::Subrecord;
 
@@ -52,9 +53,17 @@ pub struct Record {
 }
 
 impl Record {
-    pub fn read<T: io::Read>(reader: &mut T, game_id: GameId) -> Result<Vec<u8>, io::Error> {
+    pub fn read_and_validate<T: io::Read>(
+        reader: &mut T,
+        game_id: GameId,
+        expected_type: &[u8],
+    ) -> Result<Vec<u8>, Error> {
         let mut content: Vec<u8> = vec![0; 8];
         reader.read_exact(&mut content)?;
+
+        if &content[0..4] != expected_type {
+            return Err(Error::ParsingError);
+        }
 
         let size_of_subrecords = {
             let mut cursor = io::Cursor::new(&content);
@@ -176,7 +185,7 @@ mod tests {
             [..0x56];
         let mut reader = io::Cursor::new(data);
 
-        let bytes = Record::read(&mut reader, GameId::Skyrim).unwrap();
+        let bytes = Record::read_and_validate(&mut reader, GameId::Skyrim, b"TES4").unwrap();
 
         let record = Record::parse(&bytes, GameId::Skyrim, false)
             .to_result()
@@ -191,6 +200,17 @@ mod tests {
         assert_eq!("SNAM", record.subrecords[2].subrecord_type());
         assert_eq!("MAST", record.subrecords[3].subrecord_type());
         assert_eq!("DATA", record.subrecords[4].subrecord_type());
+    }
+
+    #[test]
+    fn read_and_validate_should_fail_if_the_type_is_unexpected() {
+        let data = &include_bytes!(
+            "../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")
+            [..0x56];
+        let mut reader = io::Cursor::new(data);
+
+        let result = Record::read_and_validate(&mut reader, GameId::Skyrim, b"TES3");
+        assert!(result.is_err());
     }
 
     #[test]

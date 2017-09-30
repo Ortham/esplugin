@@ -78,15 +78,18 @@ impl Plugin {
     }
 
     pub fn parse_file(&mut self, load_header_only: bool) -> Result<(), Error> {
-        let f = File::open(self.path.clone())?;
+        let f = File::open(&self.path)?;
 
         let mut reader = BufReader::new(f);
 
         let mut content: Vec<u8> = Vec::new();
         if load_header_only {
-            content = Record::read(&mut reader, self.game_id)?;
+            content = Record::read_and_validate(&mut reader, self.game_id, self.header_type())?;
         } else {
             reader.read_to_end(&mut content)?;
+            if &content[0..4] != self.header_type() {
+                return Err(Error::ParsingError);
+            }
         }
 
         self.parse(&content, load_header_only)
@@ -98,7 +101,11 @@ impl Plugin {
 
         let mmap_slice = mmap_view.as_slice();
 
-        self.parse(mmap_slice, load_header_only)
+        if &mmap_slice[0..4] != self.header_type() {
+            Err(Error::ParsingError)
+        } else {
+            self.parse(mmap_slice, load_header_only)
+        }
     }
 
     pub fn game_id(&self) -> &GameId {
@@ -217,6 +224,13 @@ impl Plugin {
             0
         }
     }
+
+    fn header_type(&self) -> &'static [u8] {
+        match self.game_id {
+            GameId::Morrowind => b"TES3",
+            _ => b"TES4",
+        }
+    }
 }
 
 fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
@@ -304,22 +318,29 @@ fn parse_plugin<'a>(
 mod tests {
     use super::*;
 
+    fn write_invalid_plugin() {
+        use std::io::Write;
+        let mut file = File::create("testing-plugins/Skyrim/Data/Invalid.esm").unwrap();
+        let bytes = [0; 24];
+        file.write_all(&bytes).unwrap();
+    }
+
     #[test]
-    fn parse_should_error_if_plugin_does_not_exist() {
+    fn parse_file_should_error_if_plugin_does_not_exist() {
         let mut plugin = Plugin::new(GameId::Skyrim, Path::new("Blank.esm"));
 
         assert!(plugin.parse_file(false).is_err());
     }
 
     #[test]
-    fn parse_should_error_if_plugin_is_not_valid() {
+    fn parse_file_should_error_if_plugin_is_not_valid() {
         let mut plugin = Plugin::new(GameId::Skyrim, Path::new("README.md"));
 
         assert!(plugin.parse_file(false).is_err());
     }
 
     #[test]
-    fn parse_should_succeed_for_skyrim_plugin() {
+    fn parse_file_should_succeed_for_skyrim_plugin() {
         let mut plugin = Plugin::new(
             GameId::Skyrim,
             Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
@@ -335,6 +356,42 @@ mod tests {
         assert!(form_ids.contains(
             &FormId::new("Blank.esm", &masters, 0xCF0),
         ));
+    }
+
+    #[test]
+    fn parse_file_should_succeed_for_skyrim_plugin_header_only() {
+        let mut plugin = Plugin::new(
+            GameId::Skyrim,
+            Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
+        );
+
+        assert!(plugin.parse_file(true).is_ok());
+
+        assert_eq!(0, plugin.form_ids().len());
+    }
+
+    #[test]
+    fn parse_file_header_only_should_fail_for_a_non_plugin_file() {
+        write_invalid_plugin();
+
+        let mut plugin = Plugin::new(
+            GameId::Skyrim,
+            Path::new("testing-plugins/Skyrim/Data/Invalid.esm"),
+        );
+
+        assert!(plugin.parse_file(true).is_err());
+    }
+
+    #[test]
+    fn parse_file_should_fail_for_a_non_plugin_file() {
+        write_invalid_plugin();
+
+        let mut plugin = Plugin::new(
+            GameId::Skyrim,
+            Path::new("testing-plugins/Skyrim/Data/Invalid.esm"),
+        );
+
+        assert!(plugin.parse_file(false).is_err());
     }
 
     #[test]
@@ -359,15 +416,17 @@ mod tests {
     }
 
     #[test]
-    fn parse_should_succeed_for_skyrim_plugin_header_only() {
+    fn parse_mmapped_file_should_fail_for_a_non_plugin_file() {
+        write_invalid_plugin();
+
         let mut plugin = Plugin::new(
             GameId::Skyrim,
-            Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
+            Path::new("testing-plugins/Skyrim/Data/Invalid.esm"),
         );
 
-        assert!(plugin.parse_file(true).is_ok());
-
-        assert_eq!(0, plugin.form_ids().len());
+        unsafe {
+            assert!(plugin.parse_mmapped_file(true).is_err());
+        }
     }
 
     #[test]
