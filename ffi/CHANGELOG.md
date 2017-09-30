@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.3] - 2017-09-30
+
+### Changed
+
+- Updated to esplugin v1.0.1.
+
 ## [1.0.2] - 2017-09-26
 
 ### Fixed
