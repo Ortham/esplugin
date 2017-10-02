@@ -18,7 +18,7 @@
  */
 use std::io;
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{ByteOrder, LittleEndian};
 use nom::IResult;
 use nom::le_u32;
 
@@ -58,24 +58,20 @@ impl Record {
         game_id: GameId,
         expected_type: &[u8],
     ) -> Result<Vec<u8>, Error> {
-        let mut content: Vec<u8> = vec![0; 8];
+        let mut content: Vec<u8> = vec![0; header_length(game_id)];
         reader.read_exact(&mut content)?;
 
         if &content[0..4] != expected_type {
             return Err(Error::ParsingError);
         }
 
-        let size_of_subrecords = {
-            let mut cursor = io::Cursor::new(&content);
-            cursor.set_position(4);
-            cursor.read_u32::<LittleEndian>()?
-        };
+        let size_of_subrecords = LittleEndian::read_u32(&content[4..]) as usize;
+        if size_of_subrecords > 0 {
+            let mut subrecords = vec![0; size_of_subrecords];
+            reader.read_exact(&mut subrecords)?;
 
-        let length_remaining = header_length(game_id) - 8 + size_of_subrecords as usize;
-        let mut remaining = vec![0; length_remaining];
-        reader.read_exact(&mut remaining)?;
-
-        content.append(&mut remaining);
+            content.append(&mut subrecords);
+        }
 
         Ok(content)
     }
