@@ -77,10 +77,8 @@ impl Plugin {
         }
     }
 
-    pub fn parse_file(&mut self, load_header_only: bool) -> Result<(), Error> {
-        let f = File::open(&self.path)?;
-
-        let mut reader = BufReader::new(f);
+    pub fn parse_open_file(&mut self, file: File, load_header_only: bool) -> Result<(), Error> {
+        let mut reader = BufReader::new(file);
 
         let mut content: Vec<u8>;
         if load_header_only {
@@ -96,6 +94,12 @@ impl Plugin {
         }
 
         self.parse(&content, load_header_only)
+    }
+
+    pub fn parse_file(&mut self, load_header_only: bool) -> Result<(), Error> {
+        let file = File::open(&self.path)?;
+
+        self.parse_open_file(file, load_header_only)
     }
 
     pub unsafe fn parse_mmapped_file(&mut self, load_header_only: bool) -> Result<(), Error> {
