@@ -1,5 +1,13 @@
 # Changelog
 
+As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
+
+## [1.0.4] - 2017-10-02
+
+### Added
+
+- `Plugin::parse_open_file()` for better performance when a file handle is already open.
+
 ## [1.0.1] - 2017-09-30
 
 ### Fixed
