@@ -16,7 +16,7 @@ exclude = [
 ]
 
 [dependencies]
-esplugin = { path = ".." }
+esplugin = { version = "1.0.4", path = ".." }
 libc = "0.2"
 
 [lib]
