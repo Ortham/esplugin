@@ -1,6 +1,6 @@
 [package]
 name = "esplugin"
-version = "1.0.4"
+version = "1.0.5"
 authors = ["Oliver Hamlet <oliver.hamlet@gmail.com>"]
 description = "A free software library for reading Elder Scrolls plugin (.esp/.esm/.esl) files."
 documentation = "https://docs.rs/esplugin"

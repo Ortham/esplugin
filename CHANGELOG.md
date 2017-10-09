@@ -2,6 +2,17 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [1.0.5] - 2017-10-09
+
+### Added
+
+- Support for Skyrim SE to correctly recognise ESL (light master) plugins when calling `Plugin::is_light_master_file()`.
+- `GameId::SkyrimSE` to distinguish between Skyrim and Skyrim SE plugins (the only difference in handling is ESL support).
+
+### Changed
+
+- Updated to nom v3.2.0.
+
 ## [1.0.4] - 2017-10-02
 
 ### Added

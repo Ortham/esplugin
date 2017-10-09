@@ -1,5 +1,17 @@
 # Changelog
 
+After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
+
+## [1.0.5] - 2017-10-09
+
+### Added
+
+- `ESP_GAME_SKYRIMSE` to distinguish between Skyrim and Skyrim SE plugins, as Skyrim SE now supports light master plugins.
+
+### Changed
+
+- Updated to esplugin v1.0.5.
+
 ## [1.0.3] - 2017-09-30
 
 ### Changed
