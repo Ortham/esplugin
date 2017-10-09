@@ -37,3 +37,6 @@ pub static ESP_GAME_MORROWIND: uint32_t = GameId::Morrowind as uint32_t;
 
 #[no_mangle]
 pub static ESP_GAME_FALLOUT4: uint32_t = GameId::Fallout4 as uint32_t;
+
+#[no_mangle]
+pub static ESP_GAME_SKYRIMSE: uint32_t = GameId::SkyrimSE as uint32_t;

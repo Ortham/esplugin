@@ -25,4 +25,5 @@ pub enum GameId {
     FalloutNV,
     Morrowind,
     Fallout4,
+    SkyrimSE,
 }

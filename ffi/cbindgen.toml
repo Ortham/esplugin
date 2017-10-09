@@ -22,6 +22,7 @@ extern uint32_t ESP_GAME_FALLOUT3;
 extern uint32_t ESP_GAME_FALLOUTNV;
 extern uint32_t ESP_GAME_MORROWIND;
 extern uint32_t ESP_GAME_FALLOUT4;
+extern uint32_t ESP_GAME_SKYRIMSE;
 
 #ifdef __cplusplus
 }

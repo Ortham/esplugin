@@ -162,10 +162,9 @@ impl Plugin {
     }
 
     pub fn is_light_master_file(&self) -> bool {
-        if self.game_id != GameId::Fallout4 {
-            false
-        } else {
-            self.has_extension("esl")
+        match self.game_id {
+            GameId::Fallout4 | GameId::SkyrimSE => self.has_extension("esl"),
+            _ => false,
         }
     }
 
@@ -549,7 +548,7 @@ mod tests {
     }
 
     #[test]
-    fn is_light_master_file_should_be_false_for_all_plugins_for_games_apart_from_fallout4() {
+    fn is_light_master_file_should_be_false_for_all_plugins_for_all_pre_fallout4_games() {
         let plugin = Plugin::new(GameId::Oblivion, Path::new("Blank.esp"));
         assert!(!plugin.is_light_master_file());
         let plugin = Plugin::new(GameId::Oblivion, Path::new("Blank.esm"));
@@ -597,8 +596,24 @@ mod tests {
     }
 
     #[test]
+    fn is_light_master_file_should_be_true_for_skyrimse_plugins_with_an_esl_file_extension() {
+        let plugin = Plugin::new(GameId::SkyrimSE, Path::new("Blank.esp"));
+        assert!(!plugin.is_light_master_file());
+        let plugin = Plugin::new(GameId::SkyrimSE, Path::new("Blank.esm"));
+        assert!(!plugin.is_light_master_file());
+        let plugin = Plugin::new(GameId::SkyrimSE, Path::new("Blank.esl"));
+        assert!(plugin.is_light_master_file());
+    }
+
+    #[test]
     fn is_light_master_file_should_be_true_for_a_ghosted_fallout4_esl_file() {
         let plugin = Plugin::new(GameId::Fallout4, Path::new("Blank.esl.ghost"));
+        assert!(plugin.is_light_master_file());
+    }
+
+    #[test]
+    fn is_light_master_file_should_be_true_for_a_ghosted_skyrimse_esl_file() {
+        let plugin = Plugin::new(GameId::SkyrimSE, Path::new("Blank.esl.ghost"));
         assert!(plugin.is_light_master_file());
     }
 

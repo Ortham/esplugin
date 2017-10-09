@@ -30,6 +30,7 @@ pub fn map_game_id(game_id: u32) -> Result<GameId, u32> {
         x if x == ESP_GAME_FALLOUTNV => Ok(GameId::FalloutNV),
         x if x == ESP_GAME_MORROWIND => Ok(GameId::Morrowind),
         x if x == ESP_GAME_FALLOUT4 => Ok(GameId::Fallout4),
+        x if x == ESP_GAME_SKYRIMSE => Ok(GameId::SkyrimSE),
         _ => Err(ESP_ERROR_INVALID_GAME_ID),
     }
 }

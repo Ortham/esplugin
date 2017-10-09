@@ -12,6 +12,7 @@ void test_game_id_values() {
   assert(ESP_GAME_FALLOUTNV == 3);
   assert(ESP_GAME_MORROWIND == 4);
   assert(ESP_GAME_FALLOUT4 == 5);
+  assert(ESP_GAME_SKYRIMSE == 6);
 }
 
 void test_esp_plugin_new() {
