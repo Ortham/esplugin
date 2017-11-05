@@ -18,7 +18,7 @@ pub static ESP_ERROR_STRING_CONTAINS_NUL: uint32_t = 3;
 pub static ESP_ERROR_INVALID_GAME_ID: uint32_t = 4;
 
 #[no_mangle]
-pub static ESP_ERROR_PARSE_ERROR: uint32_t = 4;
+pub static ESP_ERROR_PARSE_ERROR: uint32_t = 5;
 
 #[no_mangle]
 pub static ESP_GAME_OBLIVION: uint32_t = GameId::Oblivion as uint32_t;
