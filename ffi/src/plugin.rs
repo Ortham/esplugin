@@ -1,4 +1,5 @@
 use std::mem;
+use std::panic;
 use std::path::Path;
 use std::ptr;
 use libc::{c_char, size_t, uint8_t, uint32_t};
@@ -13,20 +14,22 @@ pub unsafe extern "C" fn esp_plugin_new(
     game_id: uint32_t,
     path: *const c_char,
 ) -> uint32_t {
-    let rust_path = match to_str(path) {
-        Ok(x) => Path::new(x),
-        Err(x) => return x,
-    };
+    panic::catch_unwind(|| {
+        let rust_path = match to_str(path) {
+            Ok(x) => Path::new(x),
+            Err(x) => return x,
+        };
 
-    let mapped_game_id = match map_game_id(game_id) {
-        Ok(x) => x,
-        Err(x) => return x,
-    };
+        let mapped_game_id = match map_game_id(game_id) {
+            Ok(x) => x,
+            Err(x) => return x,
+        };
 
-    let plugin = Plugin::new(mapped_game_id, rust_path);
-    *plugin_ptr_ptr = Box::into_raw(Box::new(plugin));
+        let plugin = Plugin::new(mapped_game_id, rust_path);
+        *plugin_ptr_ptr = Box::into_raw(Box::new(plugin));
 
-    ESP_OK
+        ESP_OK
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -41,7 +44,7 @@ pub unsafe extern "C" fn esp_plugin_parse(
     plugin_ptr: *mut Plugin,
     load_header_only: bool,
 ) -> uint32_t {
-    if plugin_ptr.is_null() {
+    panic::catch_unwind(|| if plugin_ptr.is_null() {
         ESP_ERROR_NULL_POINTER
     } else {
         let plugin = &mut *plugin_ptr;
@@ -49,7 +52,7 @@ pub unsafe extern "C" fn esp_plugin_parse(
             Ok(_) => ESP_OK,
             Err(_) => ESP_ERROR_PARSE_ERROR,
         }
-    }
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -57,7 +60,7 @@ pub unsafe extern "C" fn esp_plugin_filename(
     plugin_ptr: *const Plugin,
     filename: *mut *mut c_char,
 ) -> uint32_t {
-    if filename.is_null() || plugin_ptr.is_null() {
+    panic::catch_unwind(|| if filename.is_null() || plugin_ptr.is_null() {
         ESP_ERROR_NULL_POINTER
     } else {
         let plugin = &*plugin_ptr;
@@ -71,7 +74,7 @@ pub unsafe extern "C" fn esp_plugin_filename(
         *filename = c_string;
 
         ESP_OK
-    }
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -80,7 +83,7 @@ pub unsafe extern "C" fn esp_plugin_masters(
     plugin_masters: *mut *mut *mut c_char,
     plugin_masters_size: *mut uint8_t,
 ) -> uint32_t {
-    if plugin_masters.is_null() || plugin_ptr.is_null() {
+    panic::catch_unwind(|| if plugin_masters.is_null() || plugin_ptr.is_null() {
         ESP_ERROR_NULL_POINTER
     } else {
         let plugin = &*plugin_ptr;
@@ -103,7 +106,7 @@ pub unsafe extern "C" fn esp_plugin_masters(
         mem::forget(c_string_vec);
 
         ESP_OK
-    }
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -111,7 +114,7 @@ pub unsafe extern "C" fn esp_plugin_is_master(
     plugin_ptr: *const Plugin,
     is_master: *mut bool,
 ) -> uint32_t {
-    if plugin_ptr.is_null() || is_master.is_null() {
+    panic::catch_unwind(|| if plugin_ptr.is_null() || is_master.is_null() {
         ESP_ERROR_NULL_POINTER
     } else {
         let plugin = &*plugin_ptr;
@@ -119,7 +122,7 @@ pub unsafe extern "C" fn esp_plugin_is_master(
         *is_master = plugin.is_master_file();
 
         ESP_OK
-    }
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -127,7 +130,7 @@ pub unsafe extern "C" fn esp_plugin_is_light_master(
     plugin_ptr: *const Plugin,
     is_light_master: *mut bool,
 ) -> uint32_t {
-    if plugin_ptr.is_null() || is_light_master.is_null() {
+    panic::catch_unwind(|| if plugin_ptr.is_null() || is_light_master.is_null() {
         ESP_ERROR_NULL_POINTER
     } else {
         let plugin = &*plugin_ptr;
@@ -135,7 +138,7 @@ pub unsafe extern "C" fn esp_plugin_is_light_master(
         *is_light_master = plugin.is_light_master_file();
 
         ESP_OK
-    }
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -145,7 +148,7 @@ pub unsafe extern "C" fn esp_plugin_is_valid(
     load_header_only: bool,
     is_valid: *mut bool,
 ) -> uint32_t {
-    if path.is_null() || is_valid.is_null() {
+    panic::catch_unwind(|| if path.is_null() || is_valid.is_null() {
         ESP_ERROR_NULL_POINTER
     } else {
         let rust_path = match to_str(path) {
@@ -161,7 +164,7 @@ pub unsafe extern "C" fn esp_plugin_is_valid(
         *is_valid = Plugin::is_valid(mapped_game_id, rust_path, load_header_only);
 
         ESP_OK
-    }
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -169,7 +172,7 @@ pub unsafe extern "C" fn esp_plugin_description(
     plugin_ptr: *const Plugin,
     description: *mut *mut c_char,
 ) -> uint32_t {
-    if description.is_null() || plugin_ptr.is_null() {
+    panic::catch_unwind(|| if description.is_null() || plugin_ptr.is_null() {
         ESP_ERROR_NULL_POINTER
     } else {
         let plugin = &*plugin_ptr;
@@ -188,7 +191,7 @@ pub unsafe extern "C" fn esp_plugin_description(
         *description = c_string;
 
         ESP_OK
-    }
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -196,7 +199,7 @@ pub unsafe extern "C" fn esp_plugin_is_empty(
     plugin_ptr: *const Plugin,
     is_empty: *mut bool,
 ) -> uint32_t {
-    if plugin_ptr.is_null() || is_empty.is_null() {
+    panic::catch_unwind(|| if plugin_ptr.is_null() || is_empty.is_null() {
         ESP_ERROR_NULL_POINTER
     } else {
         let plugin = &*plugin_ptr;
@@ -204,7 +207,7 @@ pub unsafe extern "C" fn esp_plugin_is_empty(
         *is_empty = plugin.record_and_group_count().unwrap_or(0) == 0;
 
         ESP_OK
-    }
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -212,7 +215,7 @@ pub unsafe extern "C" fn esp_plugin_count_override_records(
     plugin_ptr: *const Plugin,
     count: *mut size_t,
 ) -> uint32_t {
-    if plugin_ptr.is_null() || count.is_null() {
+    panic::catch_unwind(|| if plugin_ptr.is_null() || count.is_null() {
         ESP_ERROR_NULL_POINTER
     } else {
         let plugin = &*plugin_ptr;
@@ -220,7 +223,7 @@ pub unsafe extern "C" fn esp_plugin_count_override_records(
         *count = plugin.count_override_records();
 
         ESP_OK
-    }
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -229,7 +232,9 @@ pub unsafe extern "C" fn esp_plugin_do_records_overlap(
     other_plugin_ptr: *const Plugin,
     overlap: *mut bool,
 ) -> uint32_t {
-    if plugin_ptr.is_null() || other_plugin_ptr.is_null() || overlap.is_null() {
+    panic::catch_unwind(|| if plugin_ptr.is_null() || other_plugin_ptr.is_null() ||
+        overlap.is_null()
+    {
         ESP_ERROR_NULL_POINTER
     } else {
         let plugin = &*plugin_ptr;
@@ -241,5 +246,5 @@ pub unsafe extern "C" fn esp_plugin_do_records_overlap(
             .count() > 0;
 
         ESP_OK
-    }
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
