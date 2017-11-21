@@ -2,6 +2,13 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [1.0.7] - 2017-11-21
+
+### Changed
+
+- `Plugin::is_master_file()` now also returns true for Fallout 4 and Skyrim SE plugins that have `.esm` or `.esl` file extensions, regardless of their master flag value, to match game behaviour.
+- `Plugin::is_light_master_file()` now also returns true for Fallout 4 and Skyrim SE plugins that have the light master flag set, regardless of their file extension, to match game behaviour.
+
 ## [1.0.6] - 2017-10-19
 
 ### Fixed

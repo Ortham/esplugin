@@ -2,6 +2,20 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [1.0.7] - 2017-11-21
+
+### Added
+
+- `ESP_ERROR_PANICKED` return code for indicating that a panic was caught.
+
+### Changed
+
+- Unwinding panics are now caught at the FFI boundary.
+
+### Fixed
+
+- `ESP_ERROR_PARSE_ERROR` and `ESP_ERROR_INVALID_GAME_ID` had the same value.
+
 ## [1.0.5] - 2017-10-09
 
 ### Added
