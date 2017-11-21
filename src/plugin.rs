@@ -165,7 +165,9 @@ impl Plugin {
 
     pub fn is_light_master_file(&self) -> bool {
         match self.game_id {
-            GameId::Fallout4 | GameId::SkyrimSE => self.has_extension("esl"),
+            GameId::Fallout4 | GameId::SkyrimSE => {
+                self.is_light_master_flag_set() || self.has_extension("esl")
+            }
             _ => false,
         }
     }
@@ -242,6 +244,10 @@ impl Plugin {
 
     fn is_master_flag_set(&self) -> bool {
         self.data.header_record.header().flags() & 0x1 != 0
+    }
+
+    fn is_light_master_flag_set(&self) -> bool {
+        self.data.header_record.header().flags() & 0x200 != 0
     }
 }
 
@@ -676,6 +682,40 @@ mod tests {
     fn is_light_master_file_should_be_true_for_a_ghosted_skyrimse_esl_file() {
         let plugin = Plugin::new(GameId::SkyrimSE, Path::new("Blank.esl.ghost"));
         assert!(plugin.is_light_master_file());
+    }
+
+    #[test]
+    fn is_light_master_file_should_be_true_for_an_esp_file_with_the_light_master_flag_set() {
+        use std::fs::copy;
+        copy(
+            Path::new("testing-plugins/SkyrimSE/Data/Blank.esl"),
+            Path::new("testing-plugins/SkyrimSE/Data/Blank.esl.esp"),
+        ).unwrap();
+
+        let mut plugin = Plugin::new(
+            GameId::SkyrimSE,
+            Path::new("testing-plugins/SkyrimSE/Data/Blank.esl.esp"),
+        );
+        assert!(plugin.parse_file(true).is_ok());
+        assert!(plugin.is_light_master_file());
+        assert!(!plugin.is_master_file());
+    }
+
+    #[test]
+    fn is_light_master_file_should_be_true_for_an_esm_file_with_the_light_master_flag_set() {
+        use std::fs::copy;
+        copy(
+            Path::new("testing-plugins/SkyrimSE/Data/Blank.esl"),
+            Path::new("testing-plugins/SkyrimSE/Data/Blank.esl.esm"),
+        ).unwrap();
+
+        let mut plugin = Plugin::new(
+            GameId::SkyrimSE,
+            Path::new("testing-plugins/SkyrimSE/Data/Blank.esl.esm"),
+        );
+        assert!(plugin.parse_file(true).is_ok());
+        assert!(plugin.is_light_master_file());
+        assert!(plugin.is_master_file());
     }
 
     #[test]

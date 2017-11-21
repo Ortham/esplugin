@@ -20,9 +20,9 @@ install:
   - cargo install cargo-travis || true
 
 before_script:
-  - wget https://github.com/WrinklyNinja/testing-plugins/archive/1.2.0.tar.gz
-  - tar -xf 1.2.0.tar.gz
-  - mv testing-plugins-1.2.0 testing-plugins
+  - wget https://github.com/WrinklyNinja/testing-plugins/archive/1.4.0.tar.gz
+  - tar -xf 1.4.0.tar.gz
+  - mv testing-plugins-1.4.0 testing-plugins
 
 script:
   - cargo fmt --all -- --write-mode=diff
