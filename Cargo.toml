@@ -14,12 +14,12 @@ travis-ci = { repository = "WrinklyNinja/esplugin" }
 coveralls = { repository = "WrinklyNinja/esplugin" }
 
 [dependencies]
-byteorder = "1.0.0"
+byteorder = "1.2.0"
 encoding = "0.2.33"
-memmap = "0.5.2"
+memmap = "0.6.2"
 nom = "3.2.0"
 unicase = "2.0.0"
-flate2 = { version = "0.2", optional = true }
+flate2 = { version = "1.0.1", optional = true }
 
 [features]
 default = []

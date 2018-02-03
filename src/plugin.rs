@@ -33,7 +33,6 @@ use nom::ErrorKind;
 use nom::IResult;
 
 use memmap::Mmap;
-use memmap::Protection;
 
 use unicase::eq;
 
@@ -103,15 +102,13 @@ impl Plugin {
     }
 
     pub unsafe fn parse_mmapped_file(&mut self, load_header_only: bool) -> Result<(), Error> {
-        let mmap_view = Mmap::open_path(self.path.as_path(), Protection::Read)?
-            .into_view();
+        let file = File::open(&self.path)?;
+        let mmap = Mmap::map(&file)?;
 
-        let mmap_slice = mmap_view.as_slice();
-
-        if &mmap_slice[0..4] != self.header_type() {
+        if &mmap[0..4] != self.header_type() {
             Err(Error::ParsingError)
         } else {
-            self.parse(mmap_slice, load_header_only)
+            self.parse(&mmap, load_header_only)
         }
     }
 
