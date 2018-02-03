@@ -16,7 +16,7 @@ addons:
 cache: cargo
 
 install:
-  - cargo install rustfmt || true
+  - rustfmt --version || cargo install rustfmt --version=0.9.0 --force
   - cargo install cargo-travis || true
 
 before_script:
