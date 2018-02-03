@@ -27,7 +27,6 @@ before_script:
 script:
   - cargo fmt --all -- --write-mode=diff
   - cargo test --all --all-features
-  - cargo coveralls -p esplugin
   # Need to rebuild the FFI wrapper so that its binary is given a filename
   # without a hash.
   - cargo build -p esplugin-ffi
@@ -36,3 +35,6 @@ script:
   - cmake ..
   - make
   - make test
+
+after_success:
+  - cargo coveralls -p esplugin
