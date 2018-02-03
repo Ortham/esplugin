@@ -2,6 +2,12 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [1.0.8] - 2018-02-03
+
+### Changed
+
+- Updated byteorder, memmap and flate2 dependencies.
+
 ## [1.0.7] - 2017-11-21
 
 ### Added
