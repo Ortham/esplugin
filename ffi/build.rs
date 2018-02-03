@@ -4,7 +4,9 @@ mod ffi_headers {
 
     use std::env;
     use std::fs;
-    use std::path::PathBuf;
+
+    use self::cbindgen::Builder;
+    use self::cbindgen::Language;
 
     pub fn generate_headers() {
         let crate_dir = env::var("CARGO_MANIFEST_DIR").expect(
@@ -13,14 +15,17 @@ mod ffi_headers {
 
         fs::create_dir_all("include").expect("could not create include directory");
 
-        cbindgen::generate(&crate_dir)
+        Builder::new()
+            .with_crate(&crate_dir)
+            .with_language(Language::C)
+            .generate()
             .expect("could not generate C header file")
             .write_to_file("include/esplugin.h");
 
-        let mut config =
-            cbindgen::Config::from_root_or_default(PathBuf::from(&crate_dir).as_path());
-        config.language = cbindgen::Language::Cxx;
-        cbindgen::generate_with_config(&crate_dir, config)
+        Builder::new()
+            .with_crate(&crate_dir)
+            .with_language(Language::Cxx)
+            .generate()
             .expect("could not generate C++ header file")
             .write_to_file("include/esplugin.hpp");
     }
