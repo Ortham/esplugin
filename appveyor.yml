@@ -1,0 +1,35 @@
+os: Visual Studio 2017
+
+version: "{build}-{branch}"
+
+cache:
+  - C:\Users\appveyor\.cargo
+  - target
+
+install:
+  - appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
+  - rustup-init -yv
+  - set PATH=%PATH%;%USERPROFILE%\.cargo\bin
+  - rustc -vV
+  - cargo -vV
+
+  - rustfmt --version || cargo install rustfmt --version=0.9.0 --force
+
+  - ps: (New-Object Net.WebClient).DownloadFile('https://github.com/WrinklyNinja/testing-plugins/archive/1.4.0.zip', "$env:APPVEYOR_BUILD_FOLDER\1.4.0.zip")
+  - ps: 7z x "$env:APPVEYOR_BUILD_FOLDER\1.4.0.zip"
+  - mv testing-plugins-1.4.0 testing-plugins
+
+build: false
+
+test_script:
+  - cargo fmt --all -- --write-mode=diff
+  - cargo test --all --all-features
+
+  # Need to rebuild the FFI wrapper so that its binary is given a filename
+  # without a hash.
+  - cargo build -p esplugin-ffi
+  - ps: mkdir ffi/build
+  - cd ffi/build
+  - cmake .. -G "Visual Studio 15 2017 Win64"
+  - cmake --build .
+  - ctest
