@@ -96,17 +96,14 @@ do_parse!(
 )
 );
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn new_should_store_formids_for_all_records_in_a_group() {
-        let data = &include_bytes!(
-            "../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")
-            [0x56..];
+        let data =
+            &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")[0x56..];
 
         let group = Group::new(data, GameId::Skyrim).to_result().unwrap();
 

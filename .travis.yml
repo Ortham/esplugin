@@ -16,7 +16,8 @@ addons:
 cache: cargo
 
 install:
-  - rustfmt --version || cargo install rustfmt --version=0.9.0 --force
+  - rustup component add rustfmt-preview
+  - rustfmt --version
   - cargo install cargo-travis || true
 
 before_script:

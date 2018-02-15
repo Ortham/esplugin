@@ -63,13 +63,11 @@ impl fmt::Display for Error {
             Error::ParsingError => {
                 write!(f, "{}", "An error was encountered while parsing a plugin")
             }
-            Error::DecodeError(_) => {
-                write!(
-                    f,
-                    "{}",
-                    "Plugin string content could not be decoded from Windows-1252"
-                )
-            }
+            Error::DecodeError(_) => write!(
+                f,
+                "{}",
+                "Plugin string content could not be decoded from Windows-1252"
+            ),
         }
     }
 }

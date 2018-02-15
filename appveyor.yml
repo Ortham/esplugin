@@ -13,7 +13,8 @@ install:
   - rustc -vV
   - cargo -vV
 
-  - rustfmt --version || cargo install rustfmt --version=0.9.0 --force
+  - rustup component add rustfmt-preview
+  - rustfmt --version
 
   - ps: (New-Object Net.WebClient).DownloadFile('https://github.com/WrinklyNinja/testing-plugins/archive/1.4.0.zip', "$env:APPVEYOR_BUILD_FOLDER\1.4.0.zip")
   - ps: 7z x "$env:APPVEYOR_BUILD_FOLDER\1.4.0.zip"

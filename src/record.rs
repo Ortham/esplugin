@@ -128,11 +128,14 @@ fn record(input: &[u8], game_id: GameId, skip_subrecords: bool) -> IResult<&[u8]
     let (input2, subrecords_data) = try_parse!(input1, take!(header.size_of_subrecords));
 
     let subrecords: Vec<Subrecord> = if !skip_subrecords {
-        try_parse!(subrecords_data, apply!(
-            parse_subrecords,
-            game_id,
-            header.are_subrecords_compressed()
-        )).1
+        try_parse!(
+            subrecords_data,
+            apply!(
+                parse_subrecords,
+                game_id,
+                header.are_subrecords_compressed()
+            )
+        ).1
     } else {
         Vec::new()
     };
@@ -156,8 +159,15 @@ fn parse_subrecords(
     let mut large_subrecord_size: u32 = 0;
 
     while !input1.is_empty() {
-        let (input2, subrecord) = try_parse!(input1,
-            apply!(Subrecord::new, game_id, large_subrecord_size, are_compressed));
+        let (input2, subrecord) = try_parse!(
+            input1,
+            apply!(
+                Subrecord::new,
+                game_id,
+                large_subrecord_size,
+                are_compressed
+            )
+        );
         input1 = input2;
         if subrecord.subrecord_type() == "XXXX" {
             large_subrecord_size = try_parse!(subrecord.data(), le_u32).1;
@@ -176,9 +186,8 @@ mod tests {
 
     #[test]
     fn read_should_read_a_record_from_the_given_reader() {
-        let data = &include_bytes!(
-            "../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")
-            [..0x56];
+        let data =
+            &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")[..0x56];
         let mut reader = io::Cursor::new(data);
 
         let bytes = Record::read_and_validate(&mut reader, GameId::Skyrim, b"TES4").unwrap();
@@ -200,9 +209,8 @@ mod tests {
 
     #[test]
     fn read_and_validate_should_fail_if_the_type_is_unexpected() {
-        let data = &include_bytes!(
-            "../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")
-            [..0x56];
+        let data =
+            &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")[..0x56];
         let mut reader = io::Cursor::new(data);
 
         let result = Record::read_and_validate(&mut reader, GameId::Skyrim, b"TES3");
@@ -211,9 +219,8 @@ mod tests {
 
     #[test]
     fn parse_should_read_tes4_header_correctly() {
-        let data = &include_bytes!(
-            "../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")
-            [..0x56];
+        let data =
+            &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")[..0x56];
 
         let record = Record::parse(data, GameId::Skyrim, false)
             .to_result()
@@ -232,9 +239,7 @@ mod tests {
 
     #[test]
     fn parse_should_read_tes3_header_correctly() {
-        let data = &include_bytes!(
-            "../testing-plugins/Morrowind/Data Files/Blank.esm")
-            [..0x144];
+        let data = &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
 
         let record = Record::parse(data, GameId::Morrowind, false)
             .to_result()
@@ -249,9 +254,7 @@ mod tests {
 
     #[test]
     fn parse_should_obey_skip_subrecords_parameter() {
-        let data = &include_bytes!(
-            "../testing-plugins/Morrowind/Data Files/Blank.esm")
-            [..0x144];
+        let data = &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
 
         let record = Record::parse(data, GameId::Morrowind, true)
             .to_result()
@@ -308,14 +311,16 @@ mod tests {
         assert_eq!(1, record.subrecords.len());
 
         let decompressed_data = record.subrecords[0].decompress_data().unwrap();
-        assert_eq!("DEFLATE_DEFLATE_DEFLATE_DEFLATE".as_bytes(), decompressed_data.as_slice());
+        assert_eq!(
+            "DEFLATE_DEFLATE_DEFLATE_DEFLATE".as_bytes(),
+            decompressed_data.as_slice()
+        );
     }
 
     #[test]
     fn parse_form_id_should_return_the_form_id() {
-        let data = &include_bytes!(
-            "../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")
-            [..0x56];
+        let data =
+            &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")[..0x56];
 
         let form_id = Record::parse_form_id(data, GameId::Skyrim)
             .to_result()

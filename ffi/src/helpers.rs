@@ -15,9 +15,8 @@ pub unsafe fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32> {
 }
 
 pub fn to_c_string(string: &str) -> Result<*mut c_char, u32> {
-    let c_string_name = CString::new(string.to_string()).map_err(|_| {
-        ESP_ERROR_STRING_CONTAINS_NUL
-    })?;
+    let c_string_name =
+        CString::new(string.to_string()).map_err(|_| ESP_ERROR_STRING_CONTAINS_NUL)?;
 
     Ok(c_string_name.into_raw())
 }

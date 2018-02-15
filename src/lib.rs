@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with esplugin. If not, see <http://www.gnu.org/licenses/>.
  */
- #![cfg_attr(feature="clippy", feature(plugin))]
- #![cfg_attr(feature="clippy", plugin(clippy))]
+#![cfg_attr(feature = "clippy", feature(plugin))]
+#![cfg_attr(feature = "clippy", plugin(clippy))]
 
 extern crate byteorder;
 extern crate encoding;

@@ -26,7 +26,7 @@ use std::str;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use encoding::{Encoding, DecoderTrap};
+use encoding::{DecoderTrap, Encoding};
 use encoding::all::WINDOWS_1252;
 
 use nom::ErrorKind;
@@ -255,9 +255,9 @@ fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
         .filter(|s| s.subrecord_type() == "MAST")
         .map(|s| &s.data()[0..(s.data().len() - 1)])
         .map(|d| {
-            WINDOWS_1252.decode(d, DecoderTrap::Strict).map_err(
-                Error::DecodeError,
-            )
+            WINDOWS_1252
+                .decode(d, DecoderTrap::Strict)
+                .map_err(Error::DecodeError)
         })
         .collect::<Result<Vec<String>, Error>>()
 }
@@ -288,9 +288,12 @@ fn parse_form_ids<'a>(
 
         let mut form_ids: BTreeSet<FormId> = BTreeSet::new();
         for group in groups {
-            form_ids.extend(group.form_ids().into_iter().map(|form_id| {
-                FormId::new(filename, &masters, form_id)
-            }));
+            form_ids.extend(
+                group
+                    .form_ids()
+                    .into_iter()
+                    .map(|form_id| FormId::new(filename, &masters, form_id)),
+            );
         }
 
         IResult::Done(input1, form_ids)
@@ -365,12 +368,8 @@ mod tests {
         let masters = plugin.masters().unwrap();
         let form_ids = plugin.form_ids();
 
-        assert!(form_ids.contains(
-            &FormId::new("Blank.esm", &masters, 0xCF9),
-        ));
-        assert!(form_ids.contains(
-            &FormId::new("Blank.esm", &masters, 0xCF0),
-        ));
+        assert!(form_ids.contains(&FormId::new("Blank.esm", &masters, 0xCF9)));
+        assert!(form_ids.contains(&FormId::new("Blank.esm", &masters, 0xCF0)));
     }
 
     #[test]
@@ -422,12 +421,8 @@ mod tests {
         let masters = plugin.masters().unwrap();
         let form_ids = plugin.form_ids();
 
-        assert!(form_ids.contains(
-            &FormId::new("Blank.esm", &masters, 0xCF9),
-        ));
-        assert!(form_ids.contains(
-            &FormId::new("Blank.esm", &masters, 0xCF0),
-        ));
+        assert!(form_ids.contains(&FormId::new("Blank.esm", &masters, 0xCF9)));
+        assert!(form_ids.contains(&FormId::new("Blank.esm", &masters, 0xCF0)));
     }
 
     #[test]
@@ -509,7 +504,7 @@ mod tests {
             GameId::Morrowind,
             Path::new(
                 "testing-plugins/Morrowind/Data \
-                                                Files/Blank.esm",
+                 Files/Blank.esm",
             ),
         );
 
@@ -548,7 +543,7 @@ mod tests {
             GameId::Morrowind,
             Path::new(
                 "testing-plugins/Morrowind/Data \
-                                                Files/Blank.esp",
+                 Files/Blank.esp",
             ),
         );
 
@@ -729,7 +724,7 @@ mod tests {
             GameId::Morrowind,
             Path::new(
                 "testing-plugins/Morrowind/Data \
-                                                Files/Blank.esm",
+                 Files/Blank.esm",
             ),
         );
 
@@ -743,7 +738,7 @@ mod tests {
             GameId::Skyrim,
             Path::new(
                 "testing-plugins/Skyrim/Data/Blank - \
-                                                Master Dependent.esm",
+                 Master Dependent.esm",
             ),
         );
 
@@ -757,7 +752,7 @@ mod tests {
             GameId::Morrowind,
             Path::new(
                 "testing-plugins/Morrowind/Data \
-                                                Files/Blank - Master Dependent.esm",
+                 Files/Blank - Master Dependent.esm",
             ),
         );
 
@@ -790,7 +785,7 @@ mod tests {
             GameId::Skyrim,
             Path::new(
                 "testing-plugins/Skyrim/Data/Blank - \
-                                                Master Dependent.esm",
+                 Master Dependent.esm",
             ),
         );
 
