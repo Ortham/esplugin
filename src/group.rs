@@ -25,7 +25,7 @@ use nom::le_u32;
 use game_id::GameId;
 use record::Record;
 
-const GROUP_TYPE: &'static str = "GRUP";
+const GROUP_TYPE: &str = "GRUP";
 const GROUP_TYPE_LENGTH: u8 = 4;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
@@ -56,9 +56,9 @@ named_args!(group_header(game_id: GameId) <u32>,
         group_size: le_u32 >>
         take!(get_header_length_to_skip(game_id)) >>
 
-        (group_size - (GROUP_TYPE_LENGTH
+        (group_size - u32::from(GROUP_TYPE_LENGTH
             + mem::size_of::<u32>() as u8
-            + get_header_length_to_skip(game_id)) as u32)
+            + get_header_length_to_skip(game_id)))
     )
 );
 

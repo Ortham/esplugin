@@ -38,7 +38,7 @@ pub struct RecordHeader {
 
 impl RecordHeader {
     fn are_subrecords_compressed(&self) -> bool {
-        (self.flags & 0x00040000) != 0
+        (self.flags & 0x0004_0000) != 0
     }
 
     pub fn flags(&self) -> u32 {

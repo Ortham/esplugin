@@ -37,7 +37,7 @@ impl FormId {
         let mod_index = (raw_form_id >> 24) as usize;
 
         FormId {
-            object_index: raw_form_id & 0xFFFFFF,
+            object_index: raw_form_id & 0xFF_FFFF,
             plugin_name: masters
                 .get(mod_index)
                 .map_or(parent_plugin_name, |m| m.as_ref())

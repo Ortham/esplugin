@@ -86,10 +86,10 @@ impl error::Error for Error {
     fn cause(&self) -> Option<&error::Error> {
         match *self {
             Error::IoError(ref x) => Some(x),
-            Error::NoFilename => None,
-            Error::ParsingIncomplete => None,
-            Error::ParsingError => None,
-            Error::DecodeError(_) => None,
+            Error::NoFilename
+            | Error::ParsingIncomplete
+            | Error::ParsingError
+            | Error::DecodeError(_) => None,
         }
     }
 }
