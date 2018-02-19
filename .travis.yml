@@ -1,24 +1,18 @@
-sudo: false
+sudo: required
 language: rust
 
-# Dependencies of kcov, used by coverage
+# Dependencies of tarpaulin
 addons:
   apt:
     packages:
-      - libcurl4-openssl-dev
-      - libelf-dev
-      - libdw-dev
-      - binutils-dev
-      - cmake
-    sources:
-      - kalakris-cmake
+      - libssl-dev
 
 cache: cargo
 
 install:
   - rustup component add rustfmt-preview
   - rustfmt --version
-  - cargo install cargo-travis || true
+  - cargo install cargo-tarpaulin || true
 
 before_script:
   - wget https://github.com/WrinklyNinja/testing-plugins/archive/1.4.0.tar.gz
@@ -28,6 +22,7 @@ before_script:
 script:
   - cargo fmt --all -- --write-mode=diff
   - cargo test --all --all-features
+  - cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
   # Need to rebuild the FFI wrapper so that its binary is given a filename
   # without a hash.
   - cargo build -p esplugin-ffi
@@ -36,6 +31,3 @@ script:
   - cmake ..
   - make
   - make test
-
-after_success:
-  - cargo coveralls -p esplugin
