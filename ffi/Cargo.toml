@@ -27,4 +27,4 @@ default = []
 ffi-headers = ["cbindgen"]
 
 [build-dependencies]
-cbindgen = { version = "0.4.3", optional = true }
+cbindgen = { version = "0.5.2", optional = true }
