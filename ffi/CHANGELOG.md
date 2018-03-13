@@ -2,6 +2,12 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [1.0.9] - 2018-03-13
+
+### Changed
+
+- Updated cbindgen dependency to fix build error when generating C/C++ headers.
+
 ## [1.0.8] - 2018-02-03
 
 ### Changed
