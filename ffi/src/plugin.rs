@@ -2,10 +2,11 @@ use std::mem;
 use std::panic;
 use std::path::Path;
 use std::ptr;
+
 use libc::{c_char, size_t, uint32_t, uint8_t};
 
-use esplugin::Plugin as ESPlugin;
 use constants::*;
+use esplugin::Plugin as ESPlugin;
 use helpers::*;
 
 pub struct Plugin(ESPlugin);

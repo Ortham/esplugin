@@ -28,9 +28,9 @@ use std::str;
 #[cfg(feature = "compressed-fields")]
 use flate2::read::DeflateDecoder;
 
+use nom::IResult;
 use nom::le_u16;
 use nom::le_u32;
-use nom::IResult;
 
 use game_id::GameId;
 

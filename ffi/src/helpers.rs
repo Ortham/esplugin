@@ -1,8 +1,9 @@
 use std::ffi::{CStr, CString};
+
 use libc::c_char;
 
-use esplugin::GameId;
 use constants::*;
+use esplugin::GameId;
 
 pub unsafe fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32> {
     if c_string.is_null() {

@@ -26,8 +26,8 @@ use std::str;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use encoding::{DecoderTrap, Encoding};
 use encoding::all::WINDOWS_1252;
+use encoding::{DecoderTrap, Encoding};
 
 use nom::ErrorKind;
 use nom::IResult;
