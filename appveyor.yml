@@ -28,7 +28,7 @@ test_script:
 
   # Need to rebuild the FFI wrapper so that its binary is given a filename
   # without a hash.
-  - cargo build -p esplugin-ffi
+  - cargo build --manifest-path ffi/Cargo.toml --features ffi-headers
   - ps: mkdir ffi/build
   - cd ffi/build
   - cmake .. -G "Visual Studio 15 2017 Win64"
