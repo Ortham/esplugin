@@ -24,7 +24,7 @@ use nom::le_u32;
 
 use error::Error;
 use game_id::GameId;
-use subrecord::Subrecord;
+use subrecord::{Subrecord, parse_subrecord_data_as_u32};
 
 const RECORD_TYPE_LENGTH: u8 = 4;
 
@@ -84,7 +84,7 @@ impl Record {
         let (input1, header) = try_parse!(input, apply!(record_header, game_id));
         let (input2, _) = try_parse!(input1, take!(header.size_of_subrecords));
 
-        IResult::Done(input2, header.form_id)
+        Ok((input2, header.form_id))
     }
 
     pub fn header(&self) -> &RecordHeader {
@@ -140,13 +140,13 @@ fn record(input: &[u8], game_id: GameId, skip_subrecords: bool) -> IResult<&[u8]
         Vec::new()
     };
 
-    IResult::Done(
+    Ok((
         input2,
         Record {
             header: header,
             subrecords: subrecords,
         },
-    )
+    ))
 }
 
 fn parse_subrecords(
@@ -168,16 +168,16 @@ fn parse_subrecords(
                 are_compressed
             )
         );
-        input1 = input2;
         if subrecord.subrecord_type() == "XXXX" {
-            large_subrecord_size = try_parse!(subrecord.data(), le_u32).1;
+            large_subrecord_size = parse_subrecord_data_as_u32(input1)?.1;
         } else {
             large_subrecord_size = 0;
             subrecords.push(subrecord);
         }
+        input1 = input2;
     }
 
-    IResult::Done(input1, subrecords)
+    Ok((input1, subrecords))
 }
 
 #[cfg(test)]
@@ -192,9 +192,7 @@ mod tests {
 
         let bytes = Record::read_and_validate(&mut reader, GameId::Skyrim, b"TES4").unwrap();
 
-        let record = Record::parse(&bytes, GameId::Skyrim, false)
-            .to_result()
-            .unwrap();
+        let record = Record::parse(&bytes, GameId::Skyrim, false).unwrap().1;
 
         assert_eq!(0x1, record.header.flags);
         assert_eq!(0, record.header.form_id);
@@ -222,9 +220,7 @@ mod tests {
         let data =
             &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")[..0x56];
 
-        let record = Record::parse(data, GameId::Skyrim, false)
-            .to_result()
-            .unwrap();
+        let record = Record::parse(data, GameId::Skyrim, false).unwrap().1;
 
         assert_eq!(0x1, record.header.flags);
         assert_eq!(0, record.header.form_id);
@@ -241,9 +237,7 @@ mod tests {
     fn parse_should_read_tes3_header_correctly() {
         let data = &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
 
-        let record = Record::parse(data, GameId::Morrowind, false)
-            .to_result()
-            .unwrap();
+        let record = Record::parse(data, GameId::Morrowind, false).unwrap().1;
 
         assert_eq!(0, record.header.flags);
         assert_eq!(0, record.header.form_id);
@@ -256,9 +250,7 @@ mod tests {
     fn parse_should_obey_skip_subrecords_parameter() {
         let data = &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
 
-        let record = Record::parse(data, GameId::Morrowind, true)
-            .to_result()
-            .unwrap();
+        let record = Record::parse(data, GameId::Morrowind, true).unwrap().1;
 
         assert_eq!(0, record.header.flags);
         assert_eq!(0, record.header.form_id);
@@ -269,9 +261,7 @@ mod tests {
     fn parse_should_read_large_subrecords_correctly() {
         let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esm")[..0x1004C];
 
-        let record = Record::parse(data, GameId::Skyrim, false)
-            .to_result()
-            .unwrap();
+        let record = Record::parse(data, GameId::Skyrim, false).unwrap().1;
 
         assert_eq!(0x1, record.header.flags);
         assert_eq!(0, record.header.form_id);
@@ -302,9 +292,7 @@ mod tests {
             0x6b, 0x32, 0xb5, 0xdc, 0xa3  //field data (compressed)
         ];
 
-        let record = Record::parse(DATA, GameId::Skyrim, false)
-            .to_result()
-            .unwrap();
+        let record = Record::parse(DATA, GameId::Skyrim, false).unwrap().1;
 
         assert_eq!(0xCEC, record.header.form_id);
         assert_eq!(0x00040000, record.header.flags);
@@ -322,25 +310,19 @@ mod tests {
         let data =
             &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")[..0x56];
 
-        let form_id = Record::parse_form_id(data, GameId::Skyrim)
-            .to_result()
-            .unwrap();
+        let form_id = Record::parse_form_id(data, GameId::Skyrim).unwrap().1;
 
         assert_eq!(0, form_id);
 
         let data = &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
 
-        let form_id = Record::parse_form_id(data, GameId::Morrowind)
-            .to_result()
-            .unwrap();
+        let form_id = Record::parse_form_id(data, GameId::Morrowind).unwrap().1;
 
         assert_eq!(0, form_id);
 
         let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esp")[0x53..0xEF];
 
-        let form_id = Record::parse_form_id(data, GameId::Skyrim)
-            .to_result()
-            .unwrap();
+        let form_id = Record::parse_form_id(data, GameId::Skyrim).unwrap().1;
 
         assert_eq!(0xCEC, form_id);
     }

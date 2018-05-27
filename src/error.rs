@@ -22,7 +22,7 @@ use std::error;
 use std::fmt;
 use std::io;
 
-use nom::IError;
+use nom::Err;
 
 #[derive(Debug)]
 pub enum Error {
@@ -33,11 +33,11 @@ pub enum Error {
     DecodeError(Cow<'static, str>),
 }
 
-impl From<IError> for Error {
-    fn from(error: IError) -> Self {
+impl<I> From<Err<I>> for Error {
+    fn from(error: Err<I>) -> Self {
         match error {
-            IError::Error(_) => Error::ParsingError,
-            _ => Error::ParsingIncomplete,
+            Err::Incomplete(_) => Error::ParsingIncomplete,
+            _ => Error::ParsingError,
         }
     }
 }

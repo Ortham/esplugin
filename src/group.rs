@@ -19,8 +19,7 @@
 
 use std::mem;
 
-use nom::IResult;
-use nom::le_u32;
+use nom::{IResult, le_u32};
 
 use game_id::GameId;
 use record::Record;
@@ -63,13 +62,12 @@ named_args!(group_header(game_id: GameId) <u32>,
 );
 
 fn parse_records(input: &[u8], game_id: GameId) -> IResult<&[u8], Vec<u32>> {
-    let mut input1: &[u8] = input;
+    let mut input1 = input;
 
     let mut form_ids: Vec<u32> = Vec::new();
 
     while !input1.is_empty() {
-        let (input2, next_type) = try_parse!(input1, peek!(take_str!(GROUP_TYPE_LENGTH)));
-        assert_eq!(input1, input2);
+        let (_, next_type) = try_parse!(input1, peek!(take_str!(GROUP_TYPE_LENGTH)));
 
         if next_type == GROUP_TYPE {
             let (input2, subgroup) = try_parse!(input1, apply!(Group::new, game_id));
@@ -83,7 +81,7 @@ fn parse_records(input: &[u8], game_id: GameId) -> IResult<&[u8], Vec<u32>> {
         }
     }
 
-    IResult::Done(input1, form_ids)
+    Ok((&input1, form_ids))
 }
 
 named_args!(group(game_id: GameId) <Group>,
@@ -105,7 +103,7 @@ mod tests {
         let data =
             &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")[0x56..];
 
-        let group = Group::new(data, GameId::Skyrim).to_result().unwrap();
+        let group = Group::new(data, GameId::Skyrim).unwrap().1;
 
         assert_eq!(8, group.form_ids.len());
         // Also check three FormIDs from near the beginning, middle and end of the group.
@@ -118,7 +116,7 @@ mod tests {
     fn new_should_store_formids_for_all_records_in_subgroups() {
         let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esm")[0x1004C..0x10114];
 
-        let group = Group::new(data, GameId::Skyrim).to_result().unwrap();
+        let group = Group::new(data, GameId::Skyrim).unwrap().1;
 
         assert_eq!(1, group.form_ids.len());
         assert!(group.form_ids.contains(&0xCF9));

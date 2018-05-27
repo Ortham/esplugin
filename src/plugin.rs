@@ -29,8 +29,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use encoding::all::WINDOWS_1252;
 use encoding::{DecoderTrap, Encoding};
 
-use nom::ErrorKind;
-use nom::IResult;
+use nom::{self, ErrorKind, IResult};
 
 use memmap::Mmap;
 
@@ -68,8 +67,7 @@ impl Plugin {
         match self.filename() {
             None => Err(Error::NoFilename),
             Some(filename) => {
-                self.data = parse_plugin(input, self.game_id, &filename, load_header_only)
-                    .to_full_result()?;
+                self.data = parse_plugin(input, self.game_id, &filename, load_header_only)?.1;
 
                 Ok(())
             }
@@ -266,38 +264,33 @@ fn parse_form_ids<'a>(
     input: &'a [u8],
     game_id: GameId,
     filename: &str,
-    header_record: &Record,
+    masters: &[String],
 ) -> IResult<&'a [u8], BTreeSet<FormId>> {
-    let masters = match masters(header_record) {
-        Ok(x) => x,
-        Err(_) => return IResult::Error(ErrorKind::Custom(1)),
-    };
+    let mut form_ids: BTreeSet<FormId> = BTreeSet::new();
+    let mut remaining_input = input;
 
     if game_id == GameId::Morrowind {
-        let (input1, record_form_ids) =
-            try_parse!(input, many0!(apply!(Record::parse_form_id, game_id)));
+        while remaining_input.len() > 0 {
+            let (input, form_id) = Record::parse_form_id(remaining_input, game_id)?;
+            remaining_input = input;
 
-        let form_ids: BTreeSet<FormId> = record_form_ids
-            .into_iter()
-            .map(|form_id| FormId::new(filename, &masters, form_id))
-            .collect();
-
-        IResult::Done(input1, form_ids)
+            form_ids.insert(FormId::new(filename, masters, form_id));
+        }
     } else {
-        let (input1, groups) = try_parse!(input, many0!(apply!(Group::new, game_id)));
+        while remaining_input.len() > 0 {
+            let (input, group) = Group::new(remaining_input, game_id)?;
+            remaining_input = input;
 
-        let mut form_ids: BTreeSet<FormId> = BTreeSet::new();
-        for group in groups {
             form_ids.extend(
                 group
                     .form_ids()
                     .into_iter()
-                    .map(|form_id| FormId::new(filename, &masters, form_id)),
+                    .map(|form_id| FormId::new(filename, masters, form_id)),
             );
         }
-
-        IResult::Done(input1, form_ids)
     }
+
+    Ok((remaining_input, form_ids))
 }
 
 fn parse_plugin<'a>(
@@ -309,27 +302,28 @@ fn parse_plugin<'a>(
     let (input1, header_record) = try_parse!(input, apply!(Record::parse, game_id, false));
 
     if load_header_only {
-        return IResult::Done(
+        return Ok((
             input1,
             PluginData {
                 header_record: header_record,
                 form_ids: BTreeSet::new(),
             },
-        );
+        ));
     }
 
-    let (input2, form_ids) = try_parse!(
-        input1,
-        apply!(parse_form_ids, game_id, filename, &header_record)
-    );
+    let masters = masters(&header_record)
+        .map_err(|_| nom::Err::Error(nom::Context::Code(input, ErrorKind::Custom(1))))?;
 
-    IResult::Done(
+    let (input2, form_ids) =
+        try_parse!(input1, apply!(parse_form_ids, game_id, filename, &masters));
+
+    Ok((
         input2,
         PluginData {
             header_record: header_record,
             form_ids: form_ids,
         },
-    )
+    ))
 }
 
 #[cfg(test)]

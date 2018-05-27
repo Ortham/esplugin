@@ -123,6 +123,10 @@ named_args!(presized_subrecord(data_length: u32, is_compressed: bool) <Subrecord
     )
 );
 
+pub fn parse_subrecord_data_as_u32(input: &[u8]) -> IResult<&[u8], u32> {
+    do_parse!(input, subrecord_type >> le_u16 >> data: le_u32 >> (data))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -139,8 +143,8 @@ mod tests {
     #[test]
     fn parse_should_parse_a_morrowind_subrecord_correctly() {
         let subrecord = Subrecord::new(TES3_DATA_SUBRECORD, GameId::Morrowind, 0, false)
-            .to_result()
-            .unwrap();
+            .unwrap()
+            .1;
 
         assert_eq!("DATA", subrecord.subrecord_type);
         assert_eq!(
@@ -152,8 +156,8 @@ mod tests {
     #[test]
     fn parse_should_ignore_data_length_override_for_morrowind_subrecords() {
         let subrecord = Subrecord::new(TES3_DATA_SUBRECORD, GameId::Morrowind, 5, false)
-            .to_result()
-            .unwrap();
+            .unwrap()
+            .1;
 
         assert_eq!("DATA", subrecord.subrecord_type);
         assert_eq!(
@@ -165,8 +169,8 @@ mod tests {
     #[test]
     fn parse_should_parse_a_non_morrowind_subrecord_with_no_data_length_override_correctly() {
         let subrecord = Subrecord::new(TES4_CNAM_SUBRECORD, GameId::Skyrim, 0, false)
-            .to_result()
-            .unwrap();
+            .unwrap()
+            .1;
 
         assert_eq!("CNAM", subrecord.subrecord_type);
 
@@ -177,36 +181,36 @@ mod tests {
     #[test]
     fn parse_should_use_data_length_override_if_non_zero_and_game_id_is_not_morrowind() {
         let subrecord = Subrecord::new(TES4_CNAM_SUBRECORD, GameId::Oblivion, 4, false)
-            .to_result()
-            .unwrap();
+            .unwrap()
+            .1;
 
         assert_eq!("CNAM", subrecord.subrecord_type);
         assert_eq!(vec![0x6D, 0x63, 0x61, 0x72], subrecord.data);
 
         let subrecord = Subrecord::new(TES4_CNAM_SUBRECORD, GameId::Skyrim, 4, false)
-            .to_result()
-            .unwrap();
+            .unwrap()
+            .1;
 
         assert_eq!("CNAM", subrecord.subrecord_type);
         assert_eq!(vec![0x6D, 0x63, 0x61, 0x72], subrecord.data);
 
         let subrecord = Subrecord::new(TES4_CNAM_SUBRECORD, GameId::Fallout3, 4, false)
-            .to_result()
-            .unwrap();
+            .unwrap()
+            .1;
 
         assert_eq!("CNAM", subrecord.subrecord_type);
         assert_eq!(vec![0x6D, 0x63, 0x61, 0x72], subrecord.data);
 
         let subrecord = Subrecord::new(TES4_CNAM_SUBRECORD, GameId::FalloutNV, 4, false)
-            .to_result()
-            .unwrap();
+            .unwrap()
+            .1;
 
         assert_eq!("CNAM", subrecord.subrecord_type);
         assert_eq!(vec![0x6D, 0x63, 0x61, 0x72], subrecord.data);
 
         let subrecord = Subrecord::new(TES4_CNAM_SUBRECORD, GameId::Fallout4, 4, false)
-            .to_result()
-            .unwrap();
+            .unwrap()
+            .1;
 
         assert_eq!("CNAM", subrecord.subrecord_type);
         assert_eq!(vec![0x6D, 0x63, 0x61, 0x72], subrecord.data);
@@ -224,9 +228,7 @@ mod tests {
             0x6b, 0x32, 0xb5, 0xdc, 0xa3  //field data (compressed)
         ];
 
-        let subrecord = Subrecord::new(DATA, GameId::Skyrim, 0, true)
-            .to_result()
-            .unwrap();
+        let subrecord = Subrecord::new(DATA, GameId::Skyrim, 0, true).unwrap().1;
 
         let decompressed_data = subrecord.decompress_data().unwrap();
 
@@ -249,9 +251,7 @@ mod tests {
             0x6b, 0x32, 0xb5, 0xdc, 0xa3  //field data (compressed)
         ];
 
-        let subrecord = Subrecord::new(DATA, GameId::Skyrim, 0, true)
-            .to_result()
-            .unwrap();
+        let subrecord = Subrecord::new(DATA, GameId::Skyrim, 0, true).unwrap().1;
 
         assert!(subrecord.decompress_data().is_err());
     }
