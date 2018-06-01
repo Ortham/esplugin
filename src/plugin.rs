@@ -131,16 +131,15 @@ impl Plugin {
 
     fn has_extension(&self, extension: &str) -> bool {
         match self.path.extension() {
-            Some(x) if eq(x.to_string_lossy().deref(), extension) => true,
+            Some(x) if eq(x.to_string_lossy().deref(), &extension[1..]) => true,
             Some(x) if eq(x.to_string_lossy().deref(), "ghost") => {
-                let dot_extension = ".".to_owned() + extension;
                 let file_stem = self.path
                     .file_stem()
                     .and_then(|file_stem| file_stem.to_str())
                     .map(|f| f.to_lowercase());
 
                 match file_stem {
-                    Some(file_stem) => file_stem.ends_with(&dot_extension),
+                    Some(file_stem) => file_stem.ends_with(extension),
                     None => false,
                 }
             }
@@ -150,9 +149,9 @@ impl Plugin {
 
     pub fn is_master_file(&self) -> bool {
         match self.game_id {
-            GameId::Morrowind => self.has_extension("esm"),
+            GameId::Morrowind => self.has_extension(".esm"),
             GameId::Fallout4 | GameId::SkyrimSE => {
-                self.is_master_flag_set() || self.has_extension("esm") || self.has_extension("esl")
+                self.is_master_flag_set() || self.has_extension(".esm") || self.has_extension(".esl")
             }
             _ => self.is_master_flag_set(),
         }
@@ -161,7 +160,7 @@ impl Plugin {
     pub fn is_light_master_file(&self) -> bool {
         match self.game_id {
             GameId::Fallout4 | GameId::SkyrimSE => {
-                self.is_light_master_flag_set() || self.has_extension("esl")
+                self.is_light_master_flag_set() || self.has_extension(".esl")
             }
             _ => false,
         }
