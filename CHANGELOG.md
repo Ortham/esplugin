@@ -2,6 +2,12 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [1.0.10] - 2018-06-02
+
+### Changed
+
+- Updated to nom v4.0.0.
+
 ## [1.0.8] - 2018-02-03
 
 ### Changed
