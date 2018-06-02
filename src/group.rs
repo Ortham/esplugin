@@ -19,7 +19,7 @@
 
 use std::mem;
 
-use nom::{IResult, le_u32};
+use nom::{le_u32, IResult};
 
 use game_id::GameId;
 use record::Record;

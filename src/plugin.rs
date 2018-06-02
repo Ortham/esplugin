@@ -151,7 +151,8 @@ impl Plugin {
         match self.game_id {
             GameId::Morrowind => self.has_extension(".esm"),
             GameId::Fallout4 | GameId::SkyrimSE => {
-                self.is_master_flag_set() || self.has_extension(".esm") || self.has_extension(".esl")
+                self.is_master_flag_set() || self.has_extension(".esm")
+                    || self.has_extension(".esl")
             }
             _ => self.is_master_flag_set(),
         }
