@@ -3,7 +3,7 @@ esplugin
 
 [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/WrinklyNinja/esplugin?branch=master&svg=true)](https://ci.appveyor.com/project/WrinklyNinja/esplugin)
 [![Travis Build Status](https://travis-ci.org/WrinklyNinja/esplugin.svg?branch=master)](https://travis-ci.org/WrinklyNinja/esplugin)
-[![Coveralls branch](https://img.shields.io/coveralls/WrinklyNinja/esplugin/master.svg)](https://coveralls.io/github/WrinklyNinja/esplugin)
+[![Coverage Status](https://coveralls.io/repos/github/WrinklyNinja/esplugin/badge.svg?branch=master)](https://coveralls.io/github/WrinklyNinja/esplugin?branch=master)
 [![dependency status](https://deps.rs/repo/github/WrinklyNinja/esplugin/status.svg)](https://deps.rs/repo/github/WrinklyNinja/esplugin)
 [![docs](https://docs.rs/esplugin/badge.svg)](https://docs.rs/crate/esplugin)
 
