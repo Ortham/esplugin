@@ -12,7 +12,11 @@ cache: cargo
 install:
   - rustup component add rustfmt-preview
   - rustfmt --version
-  - cargo install cargo-tarpaulin || true
+  - |
+    if [[ $(cargo tarpaulin --version) != *0.6.1 ]]
+    then
+      bash <(curl https://raw.githubusercontent.com/xd009642/tarpaulin/0.6.1/travis-install.sh)
+    fi
 
 before_script:
   - wget https://github.com/WrinklyNinja/testing-plugins/archive/1.4.0.tar.gz
