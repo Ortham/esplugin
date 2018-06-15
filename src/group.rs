@@ -89,7 +89,7 @@ do_parse!(
     form_ids: length_value!(apply!(group_header, game_id), apply!(parse_records, game_id)) >>
 
     (Group {
-        form_ids: form_ids
+        form_ids
     })
 )
 );

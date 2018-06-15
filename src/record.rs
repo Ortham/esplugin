@@ -116,9 +116,9 @@ named_args!(record_header(game_id: GameId) <RecordHeader>,
 
         (RecordHeader {
             record_type: record_type.to_string(),
-            flags: flags,
+            flags,
             form_id: form_id.unwrap_or(0),
-            size_of_subrecords: size_of_subrecords,
+            size_of_subrecords,
         })
     )
 );
@@ -140,13 +140,7 @@ fn record(input: &[u8], game_id: GameId, skip_subrecords: bool) -> IResult<&[u8]
         Vec::new()
     };
 
-    Ok((
-        input2,
-        Record {
-            header: header,
-            subrecords: subrecords,
-        },
-    ))
+    Ok((input2, Record { header, subrecords }))
 }
 
 fn parse_subrecords(

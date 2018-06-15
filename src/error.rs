@@ -60,12 +60,9 @@ impl fmt::Display for Error {
             Error::IoError(ref x) => x.fmt(f),
             Error::NoFilename => write!(f, "The plugin path has no filename part"),
             Error::ParsingIncomplete => write!(f, "More input was expected by the plugin parser"),
-            Error::ParsingError => {
-                write!(f, "{}", "An error was encountered while parsing a plugin")
-            }
+            Error::ParsingError => write!(f, "An error was encountered while parsing a plugin"),
             Error::DecodeError(_) => write!(
                 f,
-                "{}",
                 "Plugin string content could not be decoded from Windows-1252"
             ),
         }

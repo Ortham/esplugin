@@ -57,7 +57,7 @@ pub struct Plugin {
 impl Plugin {
     pub fn new(game_id: GameId, filepath: &Path) -> Plugin {
         Plugin {
-            game_id: game_id,
+            game_id,
             path: filepath.to_path_buf(),
             data: PluginData::default(),
         }
@@ -270,14 +270,14 @@ fn parse_form_ids<'a>(
     let mut remaining_input = input;
 
     if game_id == GameId::Morrowind {
-        while remaining_input.len() > 0 {
+        while !remaining_input.is_empty() {
             let (input, form_id) = Record::parse_form_id(remaining_input, game_id)?;
             remaining_input = input;
 
             form_ids.insert(FormId::new(filename, masters, form_id));
         }
     } else {
-        while remaining_input.len() > 0 {
+        while !remaining_input.is_empty() {
             let (input, group) = Group::new(remaining_input, game_id)?;
             remaining_input = input;
 
@@ -305,7 +305,7 @@ fn parse_plugin<'a>(
         return Ok((
             input1,
             PluginData {
-                header_record: header_record,
+                header_record,
                 form_ids: BTreeSet::new(),
             },
         ));
@@ -320,8 +320,8 @@ fn parse_plugin<'a>(
     Ok((
         input2,
         PluginData {
-            header_record: header_record,
-            form_ids: form_ids,
+            header_record,
+            form_ids,
         },
     ))
 }
