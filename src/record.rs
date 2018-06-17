@@ -81,10 +81,17 @@ impl Record {
     }
 
     pub fn parse_form_id(input: &[u8], game_id: GameId) -> IResult<&[u8], u32> {
-        let (input1, header) = try_parse!(input, apply!(record_header, game_id));
-        let (input2, _) = try_parse!(input1, take!(header.size_of_subrecords));
-
-        Ok((input2, header.form_id))
+        do_parse!(
+            input,
+            take!(RECORD_TYPE_LENGTH) >> size_of_subrecords: le_u32
+                >> cond!(game_id == GameId::Morrowind, take!(4)) >> take!(4)
+                >> form_id: cond!(game_id != GameId::Morrowind, le_u32)
+                >> cond!(game_id != GameId::Morrowind, take!(4))
+                >> cond!(
+                    game_id != GameId::Morrowind && game_id != GameId::Oblivion,
+                    take!(4)
+                ) >> take!(size_of_subrecords) >> (form_id.unwrap_or(0))
+        )
     }
 
     pub fn header(&self) -> &RecordHeader {
