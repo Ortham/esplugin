@@ -21,9 +21,16 @@ nom = "4.0.0"
 unicase = "2.0.0"
 flate2 = { version = "1.0.1", optional = true }
 
+[dev-dependencies]
+criterion = "0.2.0"
+
 [features]
 default = []
 compressed-fields = ["flate2"]
 
 [workspace]
 members = ["ffi"]
+
+[[bench]]
+name = "parsing"
+harness = false
