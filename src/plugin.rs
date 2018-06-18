@@ -75,7 +75,7 @@ impl Plugin {
     }
 
     pub fn parse_open_file(&mut self, file: File, load_header_only: bool) -> Result<(), Error> {
-        let mut reader = BufReader::new(file);
+        let mut reader = BufReader::new(&file);
 
         let mut content: Vec<u8>;
         if load_header_only {
@@ -86,6 +86,8 @@ impl Plugin {
             if &content[0..4] != self.header_type() {
                 return Err(Error::ParsingError);
             }
+
+            content.reserve(file.metadata().map(|m| m.len() as usize - 3).unwrap_or(0));
 
             reader.read_to_end(&mut content)?;
         }
