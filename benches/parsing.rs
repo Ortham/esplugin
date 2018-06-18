@@ -28,21 +28,6 @@ fn criterion_benchmark(c: &mut Criterion) {
             assert!(plugin.parse_file(false).is_ok());
         });
     });
-    c.bench_function("Plugin.parse_mmapped_file() header-only", |b| {
-        let mut plugin = Plugin::new(GameId::SkyrimSE, Path::new(PLUGIN_TO_PARSE));
-
-        b.iter(|| unsafe {
-            assert!(plugin.parse_mmapped_file(true).is_ok());
-        });
-    });
-
-    c.bench_function("Plugin.parse_mmapped_file() full", |b| {
-        let mut plugin = Plugin::new(GameId::SkyrimSE, Path::new(PLUGIN_TO_PARSE));
-
-        b.iter(|| unsafe {
-            assert!(plugin.parse_mmapped_file(false).is_ok());
-        });
-    });
 }
 
 criterion_group!(benches, criterion_benchmark);
