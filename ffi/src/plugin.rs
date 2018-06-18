@@ -52,7 +52,7 @@ pub unsafe extern "C" fn esp_plugin_parse(
             ESP_ERROR_NULL_POINTER
         } else {
             let plugin = &mut *plugin_ptr;
-            match plugin.0.parse_mmapped_file(load_header_only) {
+            match plugin.0.parse_file(load_header_only) {
                 Ok(_) => ESP_OK,
                 Err(_) => ESP_ERROR_PARSE_ERROR,
             }

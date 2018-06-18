@@ -41,6 +41,9 @@ use game_id::GameId;
 use group::Group;
 use record::Record;
 
+// 1 MB is around the file size at which memory-mapping becomes more performant.
+const MIN_MMAP_FILE_SIZE: u64 = 1_000_000;
+
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
 struct PluginData {
     header_record: Record,
@@ -77,22 +80,33 @@ impl Plugin {
     pub fn parse_open_file(&mut self, file: File, load_header_only: bool) -> Result<(), Error> {
         let mut reader = BufReader::new(&file);
 
-        let mut content: Vec<u8>;
         if load_header_only {
-            content = Record::read_and_validate(&mut reader, self.game_id, self.header_type())?;
+            let content = Record::read_and_validate(&mut reader, self.game_id, self.header_type())?;
+            self.parse(&content, load_header_only)
         } else {
-            content = vec![0; 4];
-            reader.read_exact(&mut content)?;
-            if &content[0..4] != self.header_type() {
-                return Err(Error::ParsingError);
+            let file_size = file.metadata().map(|m| m.len()).unwrap_or(0);
+
+            if file_size > MIN_MMAP_FILE_SIZE {
+                let mmap = unsafe { Mmap::map(&file)? };
+
+                if &mmap[0..4] != self.header_type() {
+                    Err(Error::ParsingError)
+                } else {
+                    self.parse(&mmap, false)
+                }
+            } else {
+                let mut content = vec![0; 4];
+                reader.read_exact(&mut content)?;
+                if &content[0..4] != self.header_type() {
+                    return Err(Error::ParsingError);
+                }
+
+                content.reserve(file_size as usize - 3);
+                reader.read_to_end(&mut content)?;
+
+                self.parse(&content, false)
             }
-
-            content.reserve(file.metadata().map(|m| m.len() as usize - 3).unwrap_or(0));
-
-            reader.read_to_end(&mut content)?;
         }
-
-        self.parse(&content, load_header_only)
     }
 
     pub fn parse_file(&mut self, load_header_only: bool) -> Result<(), Error> {
@@ -101,6 +115,10 @@ impl Plugin {
         self.parse_open_file(file, load_header_only)
     }
 
+    #[deprecated(
+        since = "1.0.11",
+        note = "parse_file() and parse_open_file() now use memory-mapping if it will probably be more performant"
+    )]
     pub unsafe fn parse_mmapped_file(&mut self, load_header_only: bool) -> Result<(), Error> {
         let file = File::open(&self.path)?;
         let mmap = Mmap::map(&file)?;
@@ -411,6 +429,7 @@ mod tests {
             Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
         );
 
+        #[allow(deprecated)]
         unsafe {
             assert!(plugin.parse_mmapped_file(false).is_ok());
         }
@@ -430,6 +449,7 @@ mod tests {
             Path::new("testing-plugins/Skyrim/Data/Invalid.esm"),
         );
 
+        #[allow(deprecated)]
         unsafe {
             assert!(plugin.parse_mmapped_file(true).is_err());
         }
