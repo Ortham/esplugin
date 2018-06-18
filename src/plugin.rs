@@ -286,7 +286,7 @@ fn parse_form_ids<'a>(
     filename: &str,
     masters: &[String],
 ) -> IResult<&'a [u8], BTreeSet<FormId>> {
-    let mut form_ids: BTreeSet<FormId> = BTreeSet::new();
+    let mut form_ids = Vec::new();
     let mut remaining_input = input;
 
     if game_id == GameId::Morrowind {
@@ -294,21 +294,19 @@ fn parse_form_ids<'a>(
             let (input, form_id) = Record::parse_form_id(remaining_input, game_id)?;
             remaining_input = input;
 
-            form_ids.insert(FormId::new(filename, masters, form_id));
+            form_ids.push(form_id);
         }
     } else {
         while !remaining_input.is_empty() {
-            let (input, group) = Group::new(remaining_input, game_id)?;
+            let (input, _) = Group::parse_for_form_ids(remaining_input, game_id, &mut form_ids)?;
             remaining_input = input;
-
-            form_ids.extend(
-                group
-                    .form_ids()
-                    .into_iter()
-                    .map(|form_id| FormId::new(filename, masters, form_id)),
-            );
         }
     }
+
+    let form_ids: BTreeSet<FormId> = form_ids
+        .into_iter()
+        .map(|form_id| FormId::new(filename, masters, form_id))
+        .collect();
 
     Ok((remaining_input, form_ids))
 }
