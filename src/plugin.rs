@@ -385,6 +385,16 @@ mod tests {
     }
 
     #[test]
+    fn parse_file_should_succeed_for_morrowind_plugin() {
+        let mut plugin = Plugin::new(
+            GameId::Morrowind,
+            Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+        );
+
+        assert!(plugin.parse_file(false).is_ok());
+    }
+
+    #[test]
     fn parse_file_should_succeed_for_skyrim_plugin_header_only() {
         let mut plugin = Plugin::new(
             GameId::Skyrim,
@@ -808,6 +818,19 @@ mod tests {
     }
 
     #[test]
+    fn description_should_return_morrowind_plugin_header_hedr_subrecord_content() {
+        let mut plugin = Plugin::new(
+            GameId::Morrowind,
+            Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+        );
+
+        assert!(plugin.parse_file(true).is_ok());
+
+        let expected_description = format!("{:\0<218}{:\0<38}\n\0\0", "v5.0", "\r");
+        assert_eq!(expected_description, plugin.description().unwrap().unwrap());
+    }
+
+    #[test]
     fn record_and_group_count_should_be_non_zero() {
         let mut plugin = Plugin::new(
             GameId::Skyrim,
@@ -816,7 +839,19 @@ mod tests {
 
         assert!(plugin.record_and_group_count().is_none());
         assert!(plugin.parse_file(true).is_ok());
-        assert_ne!(0, plugin.record_and_group_count().unwrap());
+        assert_eq!(15, plugin.record_and_group_count().unwrap());
+    }
+
+    #[test]
+    fn record_and_group_count_should_read_correct_offset_for_morrowind_plugin() {
+        let mut plugin = Plugin::new(
+            GameId::Morrowind,
+            Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+        );
+
+        assert!(plugin.record_and_group_count().is_none());
+        assert!(plugin.parse_file(true).is_ok());
+        assert_eq!(10, plugin.record_and_group_count().unwrap());
     }
 
     #[test]

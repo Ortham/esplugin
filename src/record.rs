@@ -248,6 +248,21 @@ mod tests {
     }
 
     #[test]
+    fn parse_should_read_oblivion_header_correctly() {
+        let data = &include_bytes!("../testing-plugins/Oblivion/Data/Blank.esm")[..0x144];
+
+        let record = Record::parse(data, GameId::Oblivion, false).unwrap().1;
+
+        assert_eq!(1, record.header.flags);
+        assert_eq!(0, record.header.form_id);
+        assert_eq!(3, record.subrecords.len());
+
+        assert_eq!("HEDR", record.subrecords[0].subrecord_type());
+        assert_eq!("CNAM", record.subrecords[1].subrecord_type());
+        assert_eq!("SNAM", record.subrecords[2].subrecord_type());
+    }
+
+    #[test]
     fn parse_should_obey_skip_subrecords_parameter() {
         let data = &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
 
