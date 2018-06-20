@@ -250,6 +250,10 @@ impl Plugin {
         }
     }
 
+    pub fn overlaps_with(&self, other: &Self) -> bool {
+        self.form_ids().intersection(other.form_ids()).count() > 0
+    }
+
     fn header_type(&self) -> &'static [u8] {
         match self.game_id {
             GameId::Morrowind => b"TES3",
@@ -863,5 +867,23 @@ mod tests {
 
         assert!(plugin.parse_file(false).is_ok());
         assert_eq!(4, plugin.count_override_records());
+    }
+
+    #[test]
+    fn overlaps_with() {
+        let mut plugin1 = Plugin::new(
+            GameId::Skyrim,
+            Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
+        );
+        let mut plugin2 = Plugin::new(
+            GameId::Skyrim,
+            Path::new("testing-plugins/Skyrim/Data/Blank - Different.esm"),
+        );
+
+        assert!(plugin1.parse_file(false).is_ok());
+        assert!(plugin2.parse_file(false).is_ok());
+
+        assert!(plugin1.overlaps_with(&plugin1));
+        assert!(!plugin1.overlaps_with(&plugin2));
     }
 }
