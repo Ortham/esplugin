@@ -114,21 +114,6 @@ impl Plugin {
         self.parse_open_file(file, load_header_only)
     }
 
-    #[deprecated(
-        since = "1.0.11",
-        note = "parse_file() and parse_open_file() now use memory-mapping if it will probably be more performant"
-    )]
-    pub unsafe fn parse_mmapped_file(&mut self, load_header_only: bool) -> Result<(), Error> {
-        let file = File::open(&self.path)?;
-        let mmap = Mmap::map(&file)?;
-
-        if &mmap[0..4] != self.header_type() {
-            Err(Error::ParsingError)
-        } else {
-            self.parse(&mmap, load_header_only)
-        }
-    }
-
     pub fn game_id(&self) -> &GameId {
         &self.game_id
     }
@@ -465,40 +450,6 @@ mod tests {
         );
 
         assert!(plugin.parse_file(false).is_err());
-    }
-
-    #[test]
-    fn parse_mmapped_file_should_succeed() {
-        let mut plugin = Plugin::new(
-            GameId::Skyrim,
-            Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
-        );
-
-        #[allow(deprecated)]
-        unsafe {
-            assert!(plugin.parse_mmapped_file(false).is_ok());
-        }
-
-        assert_eq!(plugin.data.form_ids.len(), 10);
-        assert_eq!(plugin.data.form_ids[0].mod_index(), 0);
-        assert_eq!(plugin.data.form_ids[0].object_index(), 0xCF0);
-        assert_eq!(plugin.data.form_ids[9].mod_index(), 0);
-        assert_eq!(plugin.data.form_ids[9].object_index(), 0xCF9);
-    }
-
-    #[test]
-    fn parse_mmapped_file_should_fail_for_a_non_plugin_file() {
-        write_invalid_plugin();
-
-        let mut plugin = Plugin::new(
-            GameId::Skyrim,
-            Path::new("testing-plugins/Skyrim/Data/Invalid.esm"),
-        );
-
-        #[allow(deprecated)]
-        unsafe {
-            assert!(plugin.parse_mmapped_file(true).is_err());
-        }
     }
 
     #[test]
