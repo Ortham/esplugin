@@ -18,179 +18,219 @@
  */
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
-use std::string::ToString;
-
-use unicase::{eq, UniCase};
 
 #[derive(Clone, Debug, Default)]
-pub struct FormId {
+pub struct HashedFormId {
+    // Store mod index for easy plugin ownership checks and filename mapping.
+    // Store it separately as bit shifting on access is relatively slow and
+    // alignment padding means no space is wasted anyway.
+    mod_index: u8,
     object_index: u32,
-    plugin_name: String,
+    hashed_plugin_name: u64,
 }
 
-impl FormId {
-    pub fn new<T: AsRef<str> + ToString>(
-        parent_plugin_name: &str,
-        masters: &[T],
-        raw_form_id: u32,
-    ) -> FormId {
-        let mod_index = (raw_form_id >> 24) as usize;
+impl HashedFormId {
+    pub fn new(hashed_parent_plugin_name: u64, hashed_masters: &[u64], raw_form_id: u32) -> Self {
+        let mod_index = raw_form_id >> 24;
 
-        FormId {
+        Self {
+            mod_index: mod_index as u8,
             object_index: raw_form_id & 0xFF_FFFF,
-            plugin_name: masters
-                .get(mod_index)
-                .map_or(parent_plugin_name, |m| m.as_ref())
-                .to_string(),
+            hashed_plugin_name: hashed_masters
+                .get(mod_index as usize)
+                .cloned()
+                .unwrap_or(hashed_parent_plugin_name),
         }
     }
 
-    pub fn plugin_name(&self) -> &str {
-        &self.plugin_name
+    pub fn mod_index(&self) -> u8 {
+        self.mod_index
+    }
+
+    pub fn object_index(&self) -> u32 {
+        self.object_index
     }
 }
 
-impl Ord for FormId {
-    fn cmp(&self, other: &FormId) -> Ordering {
-        if self.object_index != other.object_index {
-            self.object_index.cmp(&other.object_index)
-        } else {
-            UniCase::new(&self.plugin_name).cmp(&UniCase::new(&other.plugin_name))
+impl Ord for HashedFormId {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.object_index.cmp(&other.object_index) {
+            Ordering::Equal => self.hashed_plugin_name.cmp(&other.hashed_plugin_name),
+            o => o,
         }
     }
 }
 
-impl PartialOrd for FormId {
-    fn partial_cmp(&self, other: &FormId) -> Option<Ordering> {
+impl PartialOrd for HashedFormId {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl PartialEq for FormId {
-    fn eq(&self, other: &FormId) -> bool {
-        self.object_index == other.object_index && eq(&self.plugin_name, &other.plugin_name)
+impl PartialEq for HashedFormId {
+    fn eq(&self, other: &Self) -> bool {
+        self.object_index == other.object_index
+            && self.hashed_plugin_name == other.hashed_plugin_name
     }
 }
 
-impl Eq for FormId {}
+impl Eq for HashedFormId {}
 
-impl Hash for FormId {
+impl Hash for HashedFormId {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.object_index.hash(state);
-        self.plugin_name.to_lowercase().hash(state);
+        self.hashed_plugin_name.hash(state);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    const PARENT_PLUGIN_NAME: &'static str = "plugin0";
-    const OTHER_PLUGIN_NAME: &'static str = "plugin1";
-    const MASTERS: &'static [&'static str] = &["plugin2", "plugin3"];
-    const NO_MASTERS: &'static [&'static str] = &[];
+
+    use std::collections::hash_map::DefaultHasher;
+
+    const PARENT_PLUGIN_NAME: u64 = 2;
+    const OTHER_PLUGIN_NAME: u64 = 3;
+    const MASTERS: &[u64] = &[0, 1];
+    const NO_MASTERS: &[u64] = &[];
+
+    fn hash(form_id: &HashedFormId) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        form_id.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    #[test]
+    fn mod_index_should_equal_first_byte_of_raw_form_id_value() {
+        let form_id = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
+
+        assert_eq!(0, form_id.mod_index);
+
+        let form_id = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01000001);
+
+        assert_eq!(1, form_id.mod_index);
+    }
 
     #[test]
     fn object_index_should_equal_last_three_bytes_of_raw_form_id_value() {
-        let form_id = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
+        let form_id = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
 
         assert_eq!(0x01, form_id.object_index);
 
-        let form_id = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01000001);
+        let form_id = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01000001);
 
         assert_eq!(0x01, form_id.object_index);
     }
 
     #[test]
     fn should_store_master_at_mod_index_as_plugin_name() {
-        let form_id = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
+        let form_id = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
 
-        assert_eq!(MASTERS[0], form_id.plugin_name);
+        assert_eq!(MASTERS[0], form_id.hashed_plugin_name);
 
-        let form_id = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01000001);
+        let form_id = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01000001);
 
-        assert_eq!(MASTERS[1], form_id.plugin_name);
+        assert_eq!(MASTERS[1], form_id.hashed_plugin_name);
     }
 
     #[test]
     fn should_store_parent_plugin_name_for_mod_index_greater_than_last_index_of_masters() {
-        let form_id = FormId::new(PARENT_PLUGIN_NAME, NO_MASTERS, 0x01);
+        let form_id = HashedFormId::new(PARENT_PLUGIN_NAME, NO_MASTERS, 0x01);
 
-        assert_eq!(PARENT_PLUGIN_NAME, form_id.plugin_name);
+        assert_eq!(PARENT_PLUGIN_NAME, form_id.hashed_plugin_name);
 
-        let form_id = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x05000001);
+        let form_id = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x05000001);
 
-        assert_eq!(PARENT_PLUGIN_NAME, form_id.plugin_name);
+        assert_eq!(PARENT_PLUGIN_NAME, form_id.hashed_plugin_name);
     }
 
     #[test]
     fn form_ids_should_not_be_equal_if_plugin_names_are_unequal() {
-        let form_id1 = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
-        let form_id2 = FormId::new(OTHER_PLUGIN_NAME, MASTERS, 0x05000001);
+        let form_id1 = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
+        let form_id2 = HashedFormId::new(OTHER_PLUGIN_NAME, MASTERS, 0x05000001);
 
         assert_ne!(form_id1, form_id2);
     }
 
     #[test]
     fn form_ids_should_not_be_equal_if_object_indices_are_unequal() {
-        let form_id1 = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
-        let form_id2 = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x02);
+        let form_id1 = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
+        let form_id2 = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x02);
 
         assert_ne!(form_id1, form_id2);
     }
 
     #[test]
     fn form_ids_with_equal_plugin_names_and_object_ids_should_be_equal() {
-        let form_id1 = FormId::new(PARENT_PLUGIN_NAME, NO_MASTERS, 0x01);
-        let form_id2 = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x05000001);
+        let form_id1 = HashedFormId::new(PARENT_PLUGIN_NAME, NO_MASTERS, 0x01);
+        let form_id2 = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x05000001);
 
         assert_eq!(form_id1, form_id2);
     }
 
     #[test]
-    fn form_ids_should_be_equal_if_plugin_names_are_case_insensitively_equal() {
-        let form_id1 = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
-        let form_id2 = FormId::new("PLUGIN0", MASTERS, 0x01);
+    fn form_ids_can_be_equal_with_unequal_mod_indices() {
+        let form_id1 = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
+        let form_id2 = HashedFormId::new(MASTERS[0], NO_MASTERS, 0x05000001);
 
+        assert_ne!(form_id1.mod_index, form_id2.mod_index);
         assert_eq!(form_id1, form_id2);
     }
 
     #[test]
-    fn form_ids_should_be_ordered_according_to_object_index_then_icase_lexicographically() {
-        let form_id1 = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x05000001);
-        let form_id2 = FormId::new("PLUGIN0", MASTERS, 0x05000001);
+    fn form_ids_should_be_ordered_according_to_object_index_then_hashed_plugin_names() {
+        let form_id1 = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
+        let form_id2 = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x02);
 
-        assert_eq!(Ordering::Equal, form_id1.cmp(&form_id2));
+        assert_eq!(Ordering::Less, form_id1.cmp(&form_id2));
+        assert_eq!(Ordering::Greater, form_id2.cmp(&form_id1));
+
+        let form_id1 = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x05000001);
+        let form_id2 = HashedFormId::new(OTHER_PLUGIN_NAME, MASTERS, 0x05000001);
+
+        assert_eq!(Ordering::Less, form_id1.cmp(&form_id2));
+        assert_eq!(Ordering::Greater, form_id2.cmp(&form_id1));
+    }
+
+    #[test]
+    fn form_ids_should_not_be_ordered_according_to_mod_index() {
+        let form_id1 = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
+        let form_id2 = HashedFormId::new(MASTERS[0], NO_MASTERS, 0x05000001);
+
+        assert_ne!(form_id1.mod_index, form_id2.mod_index);
         assert_eq!(Ordering::Equal, form_id2.cmp(&form_id1));
-
-        let form_id1 = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
-        let form_id2 = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x02);
-
-        assert_eq!(Ordering::Less, form_id1.cmp(&form_id2));
-        assert_eq!(Ordering::Greater, form_id2.cmp(&form_id1));
-
-        let form_id1 = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x05000001);
-        let form_id2 = FormId::new(OTHER_PLUGIN_NAME, MASTERS, 0x05000001);
-
-        assert_eq!(Ordering::Less, form_id1.cmp(&form_id2));
-        assert_eq!(Ordering::Greater, form_id2.cmp(&form_id1));
     }
 
     #[test]
-    fn form_ids_with_case_insensitive_equal_plugin_names_should_have_the_same_hash() {
-        let form_id1 = FormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
-        let form_id2 = FormId::new("PLUGIN0", MASTERS, 0x01);
+    fn form_id_hashes_should_not_be_equal_if_plugin_names_are_unequal() {
+        let form_id1 = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
+        let form_id2 = HashedFormId::new(OTHER_PLUGIN_NAME, MASTERS, 0x05000001);
 
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::Hasher;
+        assert_ne!(hash(&form_id1), hash(&form_id2));
+    }
 
-        let mut hasher = DefaultHasher::new();
-        form_id1.hash(&mut hasher);
-        let hash1 = hasher.finish();
+    #[test]
+    fn form_id_hashes_should_not_be_equal_if_object_indices_are_unequal() {
+        let form_id1 = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
+        let form_id2 = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x02);
 
-        let mut hasher = DefaultHasher::new();
-        form_id2.hash(&mut hasher);
-        let hash2 = hasher.finish();
+        assert_ne!(hash(&form_id1), hash(&form_id2));
+    }
 
-        assert_eq!(hash1, hash2);
+    #[test]
+    fn form_id_hashes_with_equal_plugin_names_and_object_ids_should_be_equal() {
+        let form_id1 = HashedFormId::new(PARENT_PLUGIN_NAME, NO_MASTERS, 0x01);
+        let form_id2 = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x05000001);
+
+        assert_eq!(hash(&form_id1), hash(&form_id2));
+    }
+
+    #[test]
+    fn form_id_hashes_can_be_equal_with_unequal_mod_indices() {
+        let form_id1 = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
+        let form_id2 = HashedFormId::new(MASTERS[0], NO_MASTERS, 0x05000001);
+
+        assert_ne!(form_id1.mod_index, form_id2.mod_index);
+        assert_eq!(hash(&form_id1), hash(&form_id2));
     }
 }

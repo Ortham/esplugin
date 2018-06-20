@@ -28,9 +28,8 @@ extern crate unicase;
 extern crate flate2;
 
 pub use error::Error;
-pub use form_id::*;
-pub use game_id::*;
-pub use plugin::*;
+pub use game_id::GameId;
+pub use plugin::Plugin;
 
 mod error;
 mod form_id;

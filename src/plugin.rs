@@ -17,7 +17,6 @@
  * along with esplugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::collections::BTreeSet;
 use std::fs::File;
 use std::io::{BufReader, Cursor, Read};
 use std::ops::Deref;
@@ -36,7 +35,7 @@ use memmap::Mmap;
 use unicase::eq;
 
 use error::Error;
-use form_id::FormId;
+use form_id::HashedFormId;
 use game_id::GameId;
 use group::Group;
 use record::Record;
@@ -47,7 +46,7 @@ const MIN_MMAP_FILE_SIZE: u64 = 1_000_000;
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
 struct PluginData {
     header_record: Record,
-    form_ids: BTreeSet<FormId>,
+    form_ids: Vec<HashedFormId>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
@@ -235,23 +234,35 @@ impl Plugin {
         Option::None
     }
 
-    pub fn form_ids(&self) -> &BTreeSet<FormId> {
-        &self.data.form_ids
-    }
-
     pub fn count_override_records(&self) -> usize {
-        if let Some(n) = self.filename() {
-            self.form_ids()
-                .iter()
-                .filter(|f| !eq(f.plugin_name(), &n))
-                .count()
-        } else {
-            0
-        }
+        let masters_count = count_masters(&self.data.header_record);
+
+        self.data
+            .form_ids
+            .iter()
+            .filter(|f| (f.mod_index() as usize) < masters_count)
+            .count()
     }
 
     pub fn overlaps_with(&self, other: &Self) -> bool {
-        self.form_ids().intersection(other.form_ids()).count() > 0
+        let form_ids = &self.data.form_ids;
+        let other_form_ids = &other.data.form_ids;
+
+        let mut index = 0;
+        let mut other_index = 0;
+
+        while index != form_ids.len() && other_index != other_form_ids.len() {
+            if form_ids[index] < other_form_ids[other_index] {
+                index += 1;
+            } else {
+                if other_form_ids[other_index] == form_ids[index] {
+                    return true;
+                }
+                other_index += 1;
+            }
+        }
+
+        false
     }
 
     fn header_type(&self) -> &'static [u8] {
@@ -270,6 +281,36 @@ impl Plugin {
     }
 }
 
+fn hashed_form_ids(form_ids: &[u32], filename: &str, masters: &[String]) -> Vec<HashedFormId> {
+    let hashed_filename = hash(filename);
+    let hashed_masters: Vec<_> = masters.iter().map(|m| hash(&m)).collect();
+
+    let mut form_ids: Vec<_> = form_ids
+        .iter()
+        .map(|form_id| HashedFormId::new(hashed_filename, &hashed_masters, *form_id))
+        .collect();
+
+    form_ids.sort();
+
+    form_ids
+}
+
+fn hash(string: &str) -> u64 {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    let mut hasher = DefaultHasher::new();
+    string.to_lowercase().hash(&mut hasher);
+    hasher.finish()
+}
+
+fn count_masters(header_record: &Record) -> usize {
+    header_record
+        .subrecords()
+        .iter()
+        .filter(|s| s.subrecord_type() == "MAST")
+        .count()
+}
+
 fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
     header_record
         .subrecords()
@@ -284,12 +325,7 @@ fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
         .collect::<Result<Vec<String>, Error>>()
 }
 
-fn parse_form_ids<'a>(
-    input: &'a [u8],
-    game_id: GameId,
-    filename: &str,
-    masters: &[String],
-) -> IResult<&'a [u8], BTreeSet<FormId>> {
+fn parse_form_ids<'a>(input: &'a [u8], game_id: GameId) -> IResult<&'a [u8], Vec<u32>> {
     let mut form_ids = Vec::new();
     let mut remaining_input = input;
 
@@ -307,11 +343,6 @@ fn parse_form_ids<'a>(
         }
     }
 
-    let form_ids: BTreeSet<FormId> = form_ids
-        .into_iter()
-        .map(|form_id| FormId::new(filename, masters, form_id))
-        .collect();
-
     Ok((remaining_input, form_ids))
 }
 
@@ -328,16 +359,17 @@ fn parse_plugin<'a>(
             input1,
             PluginData {
                 header_record,
-                form_ids: BTreeSet::new(),
+                form_ids: Vec::new(),
             },
         ));
     }
 
+    let (input2, form_ids) = try_parse!(input1, apply!(parse_form_ids, game_id));
+
     let masters = masters(&header_record)
         .map_err(|_| nom::Err::Error(nom::Context::Code(input, ErrorKind::Custom(1))))?;
 
-    let (input2, form_ids) =
-        try_parse!(input1, apply!(parse_form_ids, game_id, filename, &masters));
+    let form_ids = hashed_form_ids(&form_ids, filename, &masters);
 
     Ok((
         input2,
@@ -381,11 +413,12 @@ mod tests {
         );
 
         assert!(plugin.parse_file(false).is_ok());
-        let masters = plugin.masters().unwrap();
-        let form_ids = plugin.form_ids();
 
-        assert!(form_ids.contains(&FormId::new("Blank.esm", &masters, 0xCF9)));
-        assert!(form_ids.contains(&FormId::new("Blank.esm", &masters, 0xCF0)));
+        assert_eq!(plugin.data.form_ids.len(), 10);
+        assert_eq!(plugin.data.form_ids[0].mod_index(), 0);
+        assert_eq!(plugin.data.form_ids[0].object_index(), 0xCF0);
+        assert_eq!(plugin.data.form_ids[9].mod_index(), 0);
+        assert_eq!(plugin.data.form_ids[9].object_index(), 0xCF9);
     }
 
     #[test]
@@ -407,7 +440,7 @@ mod tests {
 
         assert!(plugin.parse_file(true).is_ok());
 
-        assert_eq!(0, plugin.form_ids().len());
+        assert_eq!(0, plugin.data.form_ids.len());
     }
 
     #[test]
@@ -445,11 +478,12 @@ mod tests {
         unsafe {
             assert!(plugin.parse_mmapped_file(false).is_ok());
         }
-        let masters = plugin.masters().unwrap();
-        let form_ids = plugin.form_ids();
 
-        assert!(form_ids.contains(&FormId::new("Blank.esm", &masters, 0xCF9)));
-        assert!(form_ids.contains(&FormId::new("Blank.esm", &masters, 0xCF0)));
+        assert_eq!(plugin.data.form_ids.len(), 10);
+        assert_eq!(plugin.data.form_ids[0].mod_index(), 0);
+        assert_eq!(plugin.data.form_ids[0].object_index(), 0xCF0);
+        assert_eq!(plugin.data.form_ids[9].mod_index(), 0);
+        assert_eq!(plugin.data.form_ids[9].object_index(), 0xCF9);
     }
 
     #[test]
@@ -862,11 +896,11 @@ mod tests {
     fn count_override_records() {
         let mut plugin = Plugin::new(
             GameId::Skyrim,
-            Path::new("testing-plugins/Skyrim/Data/Blank - Master Dependent.esm"),
+            Path::new("testing-plugins/Skyrim/Data/Blank - Different Master Dependent.esp"),
         );
 
         assert!(plugin.parse_file(false).is_ok());
-        assert_eq!(4, plugin.count_override_records());
+        assert_eq!(2, plugin.count_override_records());
     }
 
     #[test]
