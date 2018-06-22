@@ -73,8 +73,7 @@ pub unsafe extern "C" fn esp_plugin_filename(
 
             let c_string: *mut c_char = match plugin.0.filename().map(|s| to_c_string(&s)) {
                 None => ptr::null_mut(),
-                Some(Ok(x)) => x,
-                Some(Err(x)) => return x,
+                Some(x) => x,
             };
 
             *filename = c_string;
@@ -96,14 +95,9 @@ pub unsafe extern "C" fn esp_plugin_masters(
         } else {
             let plugin = &*plugin_ptr;
 
-            let masters_vec = match plugin.0.masters() {
+            let mut c_string_vec: Vec<*mut c_char> = match plugin.0.masters() {
                 Ok(x) => x.iter().map(|m| to_c_string(m)).collect(),
                 Err(_) => return ESP_ERROR_NOT_UTF8,
-            };
-
-            let mut c_string_vec: Vec<*mut c_char> = match masters_vec {
-                Ok(x) => x,
-                Err(x) => return x,
             };
 
             c_string_vec.shrink_to_fit();
@@ -200,8 +194,7 @@ pub unsafe extern "C" fn esp_plugin_description(
 
             let c_string = match description_option {
                 None => ptr::null_mut(),
-                Some(Ok(x)) => x,
-                Some(Err(x)) => return x,
+                Some(x) => x,
             };
 
             *description = c_string;
