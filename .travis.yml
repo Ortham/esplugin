@@ -13,9 +13,9 @@ install:
   - rustup component add rustfmt-preview
   - rustfmt --version
   - |
-    if [[ $(cargo tarpaulin --version) != *0.6.1 ]]
+    if [[ $(cargo tarpaulin --version) != *0.6.2 ]]
     then
-      bash <(curl https://raw.githubusercontent.com/xd009642/tarpaulin/0.6.1/travis-install.sh)
+      bash <(curl https://raw.githubusercontent.com/xd009642/tarpaulin/0.6.2/travis-install.sh)
     fi
 
 before_script:
