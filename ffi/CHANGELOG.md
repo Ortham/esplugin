@@ -2,6 +2,15 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [2.0.0] - 2018-06-24
+
+### Changed
+
+- `esp_plugin_filename`, `esp_plugin_masters` and `esp_plugin_description` will
+  now truncate string output when the string contains a null byte, instead of
+  erroring.
+- Updated to esplugin v2.0.0.
+
 ## [1.0.10] - 2018-06-02
 
 ### Changed

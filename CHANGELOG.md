@@ -2,6 +2,25 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [2.0.0] - 2018-06-24
+
+### Added
+
+- `Plugin::overlaps_with()` for checking if two plugins edit the same records.
+
+### Changed
+
+- `Plugin::parse_file()` and `Plugin::parse_open_file()` now use memory mapping
+  when fully parsing plugin files that are larger than 1 MB.
+- Improved performance when parsing plugin headers and full plugin files by
+  reducing allocations.
+
+### Removed
+
+- `FormId` and `Plugin::form_ids()`, there is now no public interface for
+  representing or getting a plugin's FormIDs.
+- `Plugin::parse_mmapped_file()`, use `Plugin::parse_file()` instead.
+
 ## [1.0.10] - 2018-06-02
 
 ### Changed
