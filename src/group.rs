@@ -25,7 +25,6 @@ use game_id::GameId;
 use record::Record;
 
 const GROUP_TYPE: &[u8] = b"GRUP";
-const GROUP_TYPE_LENGTH: u8 = 4;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
 pub struct Group;
@@ -55,12 +54,14 @@ fn get_header_length_to_skip(game_id: GameId) -> u8 {
 
 fn parse_header(input: &[u8], game_id: GameId) -> IResult<&[u8], u32> {
     let skip_length = get_header_length_to_skip(game_id);
+    let group_header_length = GROUP_TYPE.len() as u8 + mem::size_of::<u32>() as u8 + skip_length;
 
     do_parse!(
         input,
-        take!(GROUP_TYPE_LENGTH) >> group_size: le_u32 >> take!(skip_length)
-            >> (group_size
-                - u32::from(GROUP_TYPE_LENGTH + mem::size_of::<u32>() as u8 + skip_length))
+        tag!(GROUP_TYPE)
+            >> group_size: le_u32
+            >> take!(skip_length)
+            >> (group_size - u32::from(group_header_length))
     )
 }
 
@@ -72,7 +73,7 @@ fn parse_records<'a>(
     let mut input1 = input;
 
     while !input1.is_empty() {
-        let (_, next_type) = try_parse!(input1, peek!(take!(GROUP_TYPE_LENGTH)));
+        let (_, next_type) = try_parse!(input1, peek!(take!(GROUP_TYPE.len())));
 
         if next_type == GROUP_TYPE {
             let (input2, _) =
