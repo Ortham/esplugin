@@ -40,7 +40,7 @@ impl Group {
             length_value!(
                 apply!(parse_header, game_id),
                 apply!(parse_records, game_id, form_ids)
-            ) >> (())
+            ) >> ()
         )
     }
 }
