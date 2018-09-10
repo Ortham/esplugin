@@ -24,7 +24,7 @@ before_script:
   - mv testing-plugins-1.4.0 testing-plugins
 
 script:
-  - cargo fmt --all -- --write-mode=diff
+  - cargo fmt --all -- --check
   - cargo test --all --all-features
   - cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
   # Need to rebuild the FFI wrapper so that its binary is given a filename

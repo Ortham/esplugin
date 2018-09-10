@@ -23,7 +23,7 @@ install:
 build: false
 
 test_script:
-  - cargo fmt --all -- --write-mode=diff
+  - cargo fmt --all -- --check
   - cargo test --all --all-features
 
   # Need to rebuild the FFI wrapper so that its binary is given a filename
