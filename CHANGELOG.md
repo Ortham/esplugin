@@ -2,6 +2,14 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [2.0.1] - 2018-09-10
+
+## Changed
+
+- Error on top-level records by failing group parsing if the group type is not
+  `GRUP`. Top-level records would previously cause errors later in parsing, this
+  change makes it more obvious where the issue lies.
+
 ## [2.0.0] - 2018-06-24
 
 ### Added
