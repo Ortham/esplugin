@@ -137,7 +137,8 @@ impl Plugin {
         match self.path.extension() {
             Some(x) if eq(x.to_string_lossy().deref(), &extension[1..]) => true,
             Some(x) if eq(x.to_string_lossy().deref(), "ghost") => {
-                let file_stem = self.path
+                let file_stem = self
+                    .path
                     .file_stem()
                     .and_then(|file_stem| file_stem.to_str())
                     .map(|f| f.to_lowercase());
