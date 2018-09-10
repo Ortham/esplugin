@@ -13,7 +13,7 @@ install:
   - rustup component add rustfmt-preview
   - rustfmt --version
   - |
-    if [[ $(cargo tarpaulin --version) != *0.6.2 ]]
+    if [[ $(cargo tarpaulin --version) != *0.6.6 ]]
     then
       RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install --force cargo-tarpaulin
     fi
