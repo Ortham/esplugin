@@ -1,22 +1,11 @@
 sudo: required
 language: rust
 
-# Dependencies of tarpaulin
-addons:
-  apt:
-    packages:
-      - libssl-dev
-
 cache: cargo
 
 install:
   - rustup component add rustfmt-preview
   - rustfmt --version
-  - |
-    if [[ $(cargo tarpaulin --version) != *0.6.6 ]]
-    then
-      RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install --force cargo-tarpaulin
-    fi
 
 before_script:
   - wget https://github.com/WrinklyNinja/testing-plugins/archive/1.4.0.tar.gz
@@ -26,7 +15,6 @@ before_script:
 script:
   - cargo fmt --all -- --check
   - cargo test --all --all-features
-  - cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
   # Need to rebuild the FFI wrapper so that its binary is given a filename
   # without a hash.
   - cargo build --manifest-path ffi/Cargo.toml --features ffi-headers
