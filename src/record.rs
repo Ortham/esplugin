@@ -92,7 +92,9 @@ impl Record {
                 >> cond!(
                     game_id != GameId::Morrowind && game_id != GameId::Oblivion,
                     take!(4)
-                ) >> take!(size_of_subrecords) >> (form_id.unwrap_or(0))
+                )
+                >> take!(size_of_subrecords)
+                >> (form_id.unwrap_or(0))
         )
     }
 

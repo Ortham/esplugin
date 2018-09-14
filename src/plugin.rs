@@ -308,8 +308,7 @@ fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
             WINDOWS_1252
                 .decode(d, DecoderTrap::Strict)
                 .map_err(Error::DecodeError)
-        })
-        .collect::<Result<Vec<String>, Error>>()
+        }).collect::<Result<Vec<String>, Error>>()
 }
 
 fn parse_form_ids<'a>(input: &'a [u8], game_id: GameId) -> IResult<&'a [u8], Vec<u32>> {
