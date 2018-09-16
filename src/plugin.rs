@@ -842,7 +842,7 @@ mod tests {
     }
 
     #[test]
-    fn count_override_records() {
+    fn count_override_records_should_count_how_many_records_come_from_masters() {
         let mut plugin = Plugin::new(
             GameId::Skyrim,
             Path::new("testing-plugins/Skyrim/Data/Blank - Different Master Dependent.esp"),
@@ -853,7 +853,7 @@ mod tests {
     }
 
     #[test]
-    fn overlaps_with() {
+    fn overlaps_with_should_detect_when_two_plugins_have_a_record_from_the_same_master() {
         let mut plugin1 = Plugin::new(
             GameId::Skyrim,
             Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
