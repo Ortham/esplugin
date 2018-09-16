@@ -18,12 +18,12 @@
  */
 
 use std::fs::File;
-use std::io::{BufReader, Cursor, Read};
+use std::io::{BufReader, Read};
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::str;
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{ByteOrder, LittleEndian};
 
 use encoding::all::WINDOWS_1252;
 use encoding::{DecoderTrap, Encoding};
@@ -210,15 +210,12 @@ impl Plugin {
             4
         };
 
-        for subrecord in self.data.header_record.subrecords() {
-            if subrecord.subrecord_type() == "HEDR" {
-                let data = &subrecord.data()[count_offset..count_offset + 4];
-                let mut cursor = Cursor::new(data);
-                return cursor.read_u32::<LittleEndian>().ok();
-            }
-        }
-
-        Option::None
+        self.data
+            .header_record
+            .subrecords()
+            .iter()
+            .find(|s| s.subrecord_type() == "HEDR")
+            .map(|s| LittleEndian::read_u32(&s.data()[count_offset..count_offset + 4]))
     }
 
     pub fn count_override_records(&self) -> usize {
