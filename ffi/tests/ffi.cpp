@@ -127,6 +127,23 @@ void test_esp_plugin_description() {
   esp_plugin_free(plugin);
 }
 
+void test_esp_plugin_header_version() {
+  printf("testing esp_plugin_header_version()...\n");
+  Plugin * plugin;
+  auto return_code = esp_plugin_new(&plugin, ESP_GAME_SKYRIM, "../../testing-plugins/Skyrim/Data/Blank.esm");
+  assert(return_code == ESP_OK);
+
+  return_code = esp_plugin_parse(plugin, true);
+  assert(return_code == ESP_OK);
+
+  float version;
+  return_code = esp_plugin_header_version(plugin, &version);
+  assert(return_code == ESP_OK);
+  assert(version == 0.94f);
+
+  esp_plugin_free(plugin);
+}
+
 void test_esp_plugin_is_empty() {
   printf("testing esp_plugin_is_empty()...\n");
   Plugin * plugin;
@@ -189,6 +206,7 @@ int main() {
   test_esp_plugin_is_light_master();
   test_esp_plugin_is_valid();
   test_esp_plugin_description();
+  test_esp_plugin_header_version();
   test_esp_plugin_is_empty();
   test_esp_plugin_count_override_records();
   test_esp_plugin_do_records_overlap();

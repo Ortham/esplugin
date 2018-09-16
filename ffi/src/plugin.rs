@@ -1,9 +1,7 @@
-use std::mem;
-use std::panic;
 use std::path::Path;
-use std::ptr;
+use std::{f32, mem, panic, ptr};
 
-use libc::{c_char, size_t, uint32_t, uint8_t};
+use libc::{c_char, c_float, size_t, uint32_t, uint8_t};
 
 use constants::*;
 use esplugin::Plugin as ESPlugin;
@@ -198,6 +196,27 @@ pub unsafe extern "C" fn esp_plugin_description(
             };
 
             *description = c_string;
+
+            ESP_OK
+        }
+    }).unwrap_or(ESP_ERROR_PANICKED)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn esp_plugin_header_version(
+    plugin_ptr: *const Plugin,
+    header_version: *mut c_float,
+) -> uint32_t {
+    panic::catch_unwind(|| {
+        if plugin_ptr.is_null() || header_version.is_null() {
+            ESP_ERROR_NULL_POINTER
+        } else {
+            let plugin = &*plugin_ptr;
+
+            match plugin.0.header_version() {
+                Some(i) => *header_version = i,
+                None => *header_version = f32::NAN,
+            }
 
             ESP_OK
         }
