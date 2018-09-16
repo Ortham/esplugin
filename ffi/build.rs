@@ -17,6 +17,8 @@ mod ffi_headers {
         Builder::new()
             .with_crate(&crate_dir)
             .with_language(Language::C)
+            .with_parse_deps(true)
+            .with_parse_include(&["esplugin"])
             .generate()
             .expect("could not generate C header file")
             .write_to_file("include/esplugin.h");
@@ -24,6 +26,8 @@ mod ffi_headers {
         Builder::new()
             .with_crate(&crate_dir)
             .with_language(Language::Cxx)
+            .with_parse_deps(true)
+            .with_parse_include(&["esplugin"])
             .generate()
             .expect("could not generate C++ header file")
             .write_to_file("include/esplugin.hpp");

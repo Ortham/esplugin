@@ -4,10 +4,8 @@ use std::{f32, mem, panic, ptr};
 use libc::{c_char, c_float, size_t, uint32_t, uint8_t};
 
 use constants::*;
-use esplugin::Plugin as ESPlugin;
+use esplugin::Plugin;
 use helpers::*;
-
-pub struct Plugin(ESPlugin);
 
 #[no_mangle]
 pub unsafe extern "C" fn esp_plugin_new(
@@ -26,7 +24,7 @@ pub unsafe extern "C" fn esp_plugin_new(
             Err(x) => return x,
         };
 
-        let plugin = Plugin(ESPlugin::new(mapped_game_id, rust_path));
+        let plugin = Plugin::new(mapped_game_id, rust_path);
         *plugin_ptr_ptr = Box::into_raw(Box::new(plugin));
 
         ESP_OK
@@ -50,7 +48,7 @@ pub unsafe extern "C" fn esp_plugin_parse(
             ESP_ERROR_NULL_POINTER
         } else {
             let plugin = &mut *plugin_ptr;
-            match plugin.0.parse_file(load_header_only) {
+            match plugin.parse_file(load_header_only) {
                 Ok(_) => ESP_OK,
                 Err(_) => ESP_ERROR_PARSE_ERROR,
             }
@@ -69,7 +67,7 @@ pub unsafe extern "C" fn esp_plugin_filename(
         } else {
             let plugin = &*plugin_ptr;
 
-            let c_string: *mut c_char = match plugin.0.filename().map(|s| to_c_string(&s)) {
+            let c_string: *mut c_char = match plugin.filename().map(|s| to_c_string(&s)) {
                 None => ptr::null_mut(),
                 Some(x) => x,
             };
@@ -93,7 +91,7 @@ pub unsafe extern "C" fn esp_plugin_masters(
         } else {
             let plugin = &*plugin_ptr;
 
-            let mut c_string_vec: Vec<*mut c_char> = match plugin.0.masters() {
+            let mut c_string_vec: Vec<*mut c_char> = match plugin.masters() {
                 Ok(x) => x.iter().map(|m| to_c_string(m)).collect(),
                 Err(_) => return ESP_ERROR_NOT_UTF8,
             };
@@ -121,7 +119,7 @@ pub unsafe extern "C" fn esp_plugin_is_master(
         } else {
             let plugin = &*plugin_ptr;
 
-            *is_master = plugin.0.is_master_file();
+            *is_master = plugin.is_master_file();
 
             ESP_OK
         }
@@ -139,7 +137,7 @@ pub unsafe extern "C" fn esp_plugin_is_light_master(
         } else {
             let plugin = &*plugin_ptr;
 
-            *is_light_master = plugin.0.is_light_master_file();
+            *is_light_master = plugin.is_light_master_file();
 
             ESP_OK
         }
@@ -167,7 +165,7 @@ pub unsafe extern "C" fn esp_plugin_is_valid(
                 Err(x) => return x,
             };
 
-            *is_valid = ESPlugin::is_valid(mapped_game_id, rust_path, load_header_only);
+            *is_valid = Plugin::is_valid(mapped_game_id, rust_path, load_header_only);
 
             ESP_OK
         }
@@ -185,7 +183,7 @@ pub unsafe extern "C" fn esp_plugin_description(
         } else {
             let plugin = &*plugin_ptr;
 
-            let description_option = match plugin.0.description() {
+            let description_option = match plugin.description() {
                 Ok(x) => x.map(|d| to_c_string(&d)),
                 Err(_) => return ESP_ERROR_NOT_UTF8,
             };
@@ -213,7 +211,7 @@ pub unsafe extern "C" fn esp_plugin_header_version(
         } else {
             let plugin = &*plugin_ptr;
 
-            match plugin.0.header_version() {
+            match plugin.header_version() {
                 Some(i) => *header_version = i,
                 None => *header_version = f32::NAN,
             }
@@ -234,7 +232,7 @@ pub unsafe extern "C" fn esp_plugin_is_empty(
         } else {
             let plugin = &*plugin_ptr;
 
-            *is_empty = plugin.0.record_and_group_count().unwrap_or(0) == 0;
+            *is_empty = plugin.record_and_group_count().unwrap_or(0) == 0;
 
             ESP_OK
         }
@@ -252,7 +250,7 @@ pub unsafe extern "C" fn esp_plugin_count_override_records(
         } else {
             let plugin = &*plugin_ptr;
 
-            *count = plugin.0.count_override_records();
+            *count = plugin.count_override_records();
 
             ESP_OK
         }
@@ -272,7 +270,7 @@ pub unsafe extern "C" fn esp_plugin_do_records_overlap(
             let plugin = &*plugin_ptr;
             let other_plugin = &*other_plugin_ptr;
 
-            *overlap = plugin.0.overlaps_with(&other_plugin.0);
+            *overlap = plugin.overlaps_with(&other_plugin);
 
             ESP_OK
         }
