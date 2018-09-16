@@ -203,6 +203,15 @@ impl Plugin {
         Ok(Option::None)
     }
 
+    pub fn header_version(&self) -> Option<f32> {
+        self.data
+            .header_record
+            .subrecords()
+            .iter()
+            .find(|s| s.subrecord_type() == "HEDR")
+            .map(|s| LittleEndian::read_f32(&s.data()[..4]))
+    }
+
     pub fn record_and_group_count(&self) -> Option<u32> {
         let count_offset = if self.game_id == GameId::Morrowind {
             296
@@ -815,6 +824,54 @@ mod tests {
 
         let expected_description = format!("{:\0<218}{:\0<38}\n\0\0", "v5.0", "\r");
         assert_eq!(expected_description, plugin.description().unwrap().unwrap());
+    }
+
+    #[test]
+    fn header_version_should_return_plugin_header_hedr_subrecord_field_for_morrowind() {
+        let mut plugin = Plugin::new(
+            GameId::Morrowind,
+            Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+        );
+
+        assert!(plugin.parse_file(true).is_ok());
+
+        assert_eq!(1.2, plugin.header_version().unwrap());
+    }
+
+    #[test]
+    fn header_version_should_return_plugin_header_hedr_subrecord_field_for_oblivion() {
+        let mut plugin = Plugin::new(
+            GameId::Oblivion,
+            Path::new("testing-plugins/Oblivion/Data/Blank.esm"),
+        );
+
+        assert!(plugin.parse_file(true).is_ok());
+
+        assert_eq!(0.8, plugin.header_version().unwrap());
+    }
+
+    #[test]
+    fn header_version_should_return_plugin_header_hedr_subrecord_field_for_skyrim() {
+        let mut plugin = Plugin::new(
+            GameId::Skyrim,
+            Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
+        );
+
+        assert!(plugin.parse_file(true).is_ok());
+
+        assert_eq!(0.94, plugin.header_version().unwrap());
+    }
+
+    #[test]
+    fn header_version_should_return_plugin_header_hedr_subrecord_field_for_skyrim_se() {
+        let mut plugin = Plugin::new(
+            GameId::SkyrimSE,
+            Path::new("testing-plugins/SkyrimSE/Data/Blank.esm"),
+        );
+
+        assert!(plugin.parse_file(true).is_ok());
+
+        assert_eq!(0.94, plugin.header_version().unwrap());
     }
 
     #[test]
