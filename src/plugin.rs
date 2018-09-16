@@ -910,6 +910,19 @@ mod tests {
     }
 
     #[test]
+    fn hashed_form_ids_should_use_plugin_names_case_insensitively() {
+        let raw_form_ids = vec![0x0000_0001, 0x0100_0002];
+
+        let masters = vec!["tést.esm".to_string()];
+        let form_ids = hashed_form_ids(&raw_form_ids, "Blàñk.esp", &masters);
+
+        let other_masters = vec!["TÉST.ESM".to_string()];
+        let other_form_ids = hashed_form_ids(&raw_form_ids, "BLÀÑK.ESP", &other_masters);
+
+        assert_eq!(form_ids, other_form_ids);
+    }
+
+    #[test]
     fn overlaps_with_should_detect_when_two_plugins_have_a_record_from_the_same_master() {
         let mut plugin1 = Plugin::new(
             GameId::Skyrim,
