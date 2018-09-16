@@ -2,6 +2,17 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [2.1.0] - 2018-09-16
+
+### Added
+
+- `Plugin::header_version()` for getting the value of version field in the
+  TES3/TES4 header record's `HEDR` subrecord.
+- `Plugin::is_valid_as_light_master()` for checking if it is safe to convert the
+  plugin to a light master. This is true for Skyrim SE and Fallout 4 plugins
+  that only add records with FormIDs with object indices between 0x800 and 0xFFF
+  inclusive, and false otherwise.
+
 ## [2.0.1] - 2018-09-10
 
 ## Changed

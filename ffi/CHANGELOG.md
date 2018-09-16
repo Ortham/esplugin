@@ -2,6 +2,20 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [2.1.0] - 2018-09-16
+
+### Added
+
+- `esp_plugin_header_version()`, which wraps
+  `esplugin::Plugin::header_version()`. If no header version is present, the
+  output is `NaN`.
+- `esp_plugin_is_valid_as_light_master()`, which wraps
+  `esplugin::Plugin::is_valid_as_light_master()`.
+
+### Changed
+
+- Updated to esplugin v2.1.0.
+
 ## [2.0.1] - 2018-09-10
 
 ### Changed
