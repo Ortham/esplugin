@@ -195,6 +195,23 @@ void test_esp_plugin_do_records_overlap() {
   esp_plugin_free(plugin);
 }
 
+void test_esp_plugin_is_valid_as_light_master() {
+  printf("testing esp_plugin_is_valid_as_light_master()...\n");
+  Plugin * plugin;
+  auto return_code = esp_plugin_new(&plugin, ESP_GAME_SKYRIMSE, "../../testing-plugins/SkyrimSE/Data/Blank.esm");
+  assert(return_code == ESP_OK);
+
+  return_code = esp_plugin_parse(plugin, true);
+  assert(return_code == ESP_OK);
+
+  bool is_valid;
+  return_code = esp_plugin_is_valid_as_light_master(plugin, &is_valid);
+  assert(return_code == ESP_OK);
+  assert(is_valid);
+
+  esp_plugin_free(plugin);
+}
+
 int main() {
   test_game_id_values();
 
@@ -210,6 +227,7 @@ int main() {
   test_esp_plugin_is_empty();
   test_esp_plugin_count_override_records();
   test_esp_plugin_do_records_overlap();
+  test_esp_plugin_is_valid_as_light_master();
 
   printf("SUCCESS\n");
   return 0;

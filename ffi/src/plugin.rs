@@ -276,3 +276,21 @@ pub unsafe extern "C" fn esp_plugin_do_records_overlap(
         }
     }).unwrap_or(ESP_ERROR_PANICKED)
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn esp_plugin_is_valid_as_light_master(
+    plugin_ptr: *const Plugin,
+    is_valid: *mut bool,
+) -> uint32_t {
+    panic::catch_unwind(|| {
+        if plugin_ptr.is_null() || is_valid.is_null() {
+            ESP_ERROR_NULL_POINTER
+        } else {
+            let plugin = &*plugin_ptr;
+
+            *is_valid = plugin.is_valid_as_light_master();
+
+            ESP_OK
+        }
+    }).unwrap_or(ESP_ERROR_PANICKED)
+}
