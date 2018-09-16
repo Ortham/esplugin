@@ -258,6 +258,29 @@ impl Plugin {
         false
     }
 
+    // A valid light master is one for which all the new records it adds have
+    // object indices in the range 0x800 to 0xFFF.
+    pub fn is_valid_as_light_master(&self) -> bool {
+        match self.game_id {
+            GameId::Fallout4 | GameId::SkyrimSE => {
+                let masters_count = self
+                    .data
+                    .header_record
+                    .subrecords()
+                    .iter()
+                    .filter(|s| s.subrecord_type() == "MAST")
+                    .count() as u8;
+
+                self.data
+                    .form_ids
+                    .iter()
+                    .filter(|f| f.mod_index() >= masters_count)
+                    .all(|f| f.object_index() >= 0x800 && f.object_index() <= 0xFFF)
+            }
+            _ => false,
+        }
+    }
+
     fn header_type(&self) -> &'static [u8] {
         match self.game_id {
             GameId::Morrowind => b"TES3",
@@ -375,6 +398,8 @@ fn parse_plugin<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::fs::read;
 
     fn write_invalid_plugin() {
         use std::io::Write;
@@ -938,5 +963,125 @@ mod tests {
 
         assert!(plugin1.overlaps_with(&plugin1));
         assert!(!plugin1.overlaps_with(&plugin2));
+    }
+
+    #[test]
+    fn is_valid_as_light_master_should_be_true_if_the_plugin_has_no_form_ids_outside_the_valid_range(
+) {
+        let mut plugin = Plugin::new(
+            GameId::SkyrimSE,
+            Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
+        );
+        assert!(plugin.parse_file(false).is_ok());
+
+        assert!(plugin.is_valid_as_light_master());
+    }
+
+    #[test]
+    fn is_valid_as_light_master_should_be_true_if_the_plugin_has_an_override_form_id_outside_the_valid_range(
+) {
+        let mut plugin = Plugin::new(
+            GameId::SkyrimSE,
+            Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
+        );
+        let mut bytes = read(plugin.path()).unwrap();
+
+        assert_eq!(0xF0, bytes[0x7A]);
+        assert_eq!(0x0C, bytes[0x7B]);
+        bytes[0x7A] = 0xFF;
+        bytes[0x7B] = 0x07;
+
+        assert!(plugin.parse(&bytes, false).is_ok());
+
+        assert!(plugin.is_valid_as_light_master());
+    }
+
+    #[test]
+    fn is_valid_as_light_master_should_be_true_only_for_skyrim_se_and_fallout_4() {
+        let mut plugin = Plugin::new(
+            GameId::Oblivion,
+            Path::new("testing-plugins/Oblivion/Data/Blank - Master Dependent.esm"),
+        );
+        assert!(plugin.parse_file(false).is_ok());
+        assert!(!plugin.is_valid_as_light_master());
+
+        let mut plugin = Plugin::new(
+            GameId::Skyrim,
+            Path::new("testing-plugins/Skyrim/Data/Blank - Master Dependent.esm"),
+        );
+        assert!(plugin.parse_file(false).is_ok());
+        assert!(!plugin.is_valid_as_light_master());
+
+        let mut plugin = Plugin::new(
+            GameId::Fallout3,
+            Path::new("testing-plugins/Skyrim/Data/Blank - Master Dependent.esm"),
+        );
+        assert!(plugin.parse_file(false).is_ok());
+        assert!(!plugin.is_valid_as_light_master());
+
+        let mut plugin = Plugin::new(
+            GameId::FalloutNV,
+            Path::new("testing-plugins/Skyrim/Data/Blank - Master Dependent.esm"),
+        );
+        assert!(plugin.parse_file(false).is_ok());
+        assert!(!plugin.is_valid_as_light_master());
+
+        let mut plugin = Plugin::new(
+            GameId::Morrowind,
+            Path::new("testing-plugins/Morrowind/Data Files/Blank - Master Dependent.esm"),
+        );
+        assert!(plugin.parse_file(false).is_ok());
+        assert!(!plugin.is_valid_as_light_master());
+
+        let mut plugin = Plugin::new(
+            GameId::Fallout4,
+            Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
+        );
+        assert!(plugin.parse_file(false).is_ok());
+        assert!(plugin.is_valid_as_light_master());
+
+        let mut plugin = Plugin::new(
+            GameId::SkyrimSE,
+            Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
+        );
+        assert!(plugin.parse_file(false).is_ok());
+        assert!(plugin.is_valid_as_light_master());
+    }
+
+    #[test]
+    fn is_valid_as_light_master_should_be_false_if_the_plugin_has_a_new_form_id_less_than_0x800() {
+        let mut plugin = Plugin::new(
+            GameId::SkyrimSE,
+            Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
+        );
+        let mut bytes = read(plugin.path()).unwrap();
+
+        assert_eq!(0xEB, bytes[0x386]);
+        assert_eq!(0x0C, bytes[0x387]);
+        bytes[0x386] = 0xFF;
+        bytes[0x387] = 0x07;
+
+        assert!(plugin.parse(&bytes, false).is_ok());
+
+        assert!(!plugin.is_valid_as_light_master());
+    }
+
+    #[test]
+    fn is_valid_as_light_master_should_be_false_if_the_plugin_has_a_new_form_id_greater_than_0xfff()
+    {
+        let mut plugin = Plugin::new(
+            GameId::SkyrimSE,
+            Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
+        );
+        let mut bytes = read(plugin.path()).unwrap();
+
+        assert_eq!(0xEB, bytes[0x386]);
+        assert_eq!(0x0C, bytes[0x387]);
+        bytes[0x386] = 0x00;
+        bytes[0x387] = 0x10;
+
+        assert!(plugin.parse(&bytes, false).is_ok());
+
+        assert!(!plugin.is_valid_as_light_master());
     }
 }
