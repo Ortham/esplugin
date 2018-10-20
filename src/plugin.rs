@@ -183,10 +183,9 @@ impl Plugin {
     }
 
     pub fn description(&self) -> Result<Option<String>, Error> {
-        let (target_subrecord_type, description_offset) = if self.game_id == GameId::Morrowind {
-            ("HEDR", 40)
-        } else {
-            ("SNAM", 0)
+        let (target_subrecord_type, description_offset) = match self.game_id {
+            GameId::Morrowind => ("HEDR", 40),
+            _ => ("SNAM", 0),
         };
 
         for subrecord in self.data.header_record.subrecords() {
@@ -195,12 +194,12 @@ impl Plugin {
 
                 return WINDOWS_1252
                     .decode(data, DecoderTrap::Strict)
-                    .map(Option::Some)
+                    .map(Some)
                     .map_err(Error::DecodeError);
             }
         }
 
-        Ok(Option::None)
+        Ok(None)
     }
 
     pub fn header_version(&self) -> Option<f32> {
@@ -213,10 +212,9 @@ impl Plugin {
     }
 
     pub fn record_and_group_count(&self) -> Option<u32> {
-        let count_offset = if self.game_id == GameId::Morrowind {
-            296
-        } else {
-            4
+        let count_offset = match self.game_id {
+            GameId::Morrowind => 296,
+            _ => 4,
         };
 
         self.data
@@ -263,13 +261,7 @@ impl Plugin {
     pub fn is_valid_as_light_master(&self) -> bool {
         match self.game_id {
             GameId::Fallout4 | GameId::SkyrimSE => {
-                let masters_count = self
-                    .data
-                    .header_record
-                    .subrecords()
-                    .iter()
-                    .filter(|s| s.subrecord_type() == "MAST")
-                    .count() as u8;
+                let masters_count = count_masters(&self.data.header_record) as u8;
 
                 self.data
                     .form_ids
