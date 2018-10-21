@@ -5,6 +5,7 @@ mod ffi_headers {
     use std::env;
     use std::fs;
 
+    use self::cbindgen::generate;
     use self::cbindgen::Builder;
     use self::cbindgen::Language;
 
@@ -23,12 +24,7 @@ mod ffi_headers {
             .expect("could not generate C header file")
             .write_to_file("include/esplugin.h");
 
-        Builder::new()
-            .with_crate(&crate_dir)
-            .with_language(Language::Cxx)
-            .with_parse_deps(true)
-            .with_parse_include(&["esplugin"])
-            .generate()
+        generate(&crate_dir)
             .expect("could not generate C++ header file")
             .write_to_file("include/esplugin.hpp");
     }
