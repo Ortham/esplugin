@@ -2,6 +2,14 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [2.1.1] - 2018-10-22
+
+### Changed
+
+- It is now possible to generate a C++ header file with the cbindgen CLI using
+  the included `cbindgen.toml`.
+- Updated to esplugin v2.1.1.
+
 ## [2.1.0] - 2018-09-16
 
 ### Added

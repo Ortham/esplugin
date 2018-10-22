@@ -2,6 +2,15 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [2.1.1] - 2018-10-22
+
+### Fixed
+
+- `Plugin::description()`, `Plugin::header_version()` and
+  `Plugin::record_and_group_count()` could panic if the TES4 subrecords they
+  read were smaller than expected. Instead, the former will now error, and the
+  latter two will now return `None`.
+
 ## [2.1.0] - 2018-09-16
 
 ### Added
