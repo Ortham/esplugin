@@ -65,6 +65,13 @@ impl Subrecord {
             return Ok(self.data.clone());
         }
 
+        if self.data.len() < 5 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Compressed subrecord is too small",
+            ));
+        }
+
         let mut deflater = DeflateDecoder::new(&self.data[4..]);
         let mut decompressed_data: Vec<u8> = Vec::new();
         deflater.read_to_end(&mut decompressed_data)?;
@@ -253,6 +260,20 @@ mod tests {
             0x6c, 0xdc, 0x57, 0x48, 0x3c, 0xfd, 0x5b, 0x5c, 0x02,
             0xd4, //field data (compressed)
             0x6b, 0x32, 0xb5, 0xdc, 0xa3, //field data (compressed)
+        ];
+
+        let subrecord = Subrecord::new(DATA, GameId::Skyrim, 0, true).unwrap().1;
+
+        assert!(subrecord.decompress_data().is_err());
+    }
+
+    #[test]
+    #[cfg(feature = "compressed-fields")]
+    fn decompress_data_should_error_if_the_compressed_data_is_too_small() {
+        const DATA: &'static [u8] = &[
+            0x42, 0x50, 0x54, 0x4E, //field type
+            0x02, 0x00, //field size
+            0x19, 0x00, //field data
         ];
 
         let subrecord = Subrecord::new(DATA, GameId::Skyrim, 0, true).unwrap().1;

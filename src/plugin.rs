@@ -134,6 +134,10 @@ impl Plugin {
     }
 
     fn has_extension(&self, extension: &str) -> bool {
+        if extension.is_empty() {
+            return false;
+        }
+
         match self.path.extension() {
             Some(x) if eq(x.to_string_lossy().deref(), &extension[1..]) => true,
             Some(x) if eq(x.to_string_lossy().deref(), "ghost") => {
@@ -190,6 +194,10 @@ impl Plugin {
 
         for subrecord in self.data.header_record.subrecords() {
             if subrecord.subrecord_type() == target_subrecord_type {
+                if subrecord.data().len() <= description_offset {
+                    return Err(Error::ParsingError);
+                }
+
                 let data = &subrecord.data()[description_offset..(subrecord.data().len() - 1)];
 
                 return WINDOWS_1252
@@ -207,7 +215,7 @@ impl Plugin {
             .header_record
             .subrecords()
             .iter()
-            .find(|s| s.subrecord_type() == "HEDR")
+            .find(|s| s.subrecord_type() == "HEDR" && s.data().len() > 3)
             .map(|s| LittleEndian::read_f32(&s.data()[..4]))
     }
 
@@ -221,7 +229,7 @@ impl Plugin {
             .header_record
             .subrecords()
             .iter()
-            .find(|s| s.subrecord_type() == "HEDR")
+            .find(|s| s.subrecord_type() == "HEDR" && s.data().len() > count_offset)
             .map(|s| LittleEndian::read_u32(&s.data()[count_offset..count_offset + 4]))
     }
 
@@ -525,6 +533,16 @@ mod tests {
         let plugin = Plugin::new(GameId::Skyrim, Path::new("Blank.esp.ghost"));
 
         assert_eq!("Blank.esp.ghost", plugin.filename().unwrap());
+    }
+
+    #[test]
+    fn has_extension_should_be_false_if_passed_an_empty_string() {
+        let plugin = Plugin::new(
+            GameId::Skyrim,
+            Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
+        );
+
+        assert!(!plugin.has_extension(""));
     }
 
     #[test]
@@ -844,6 +862,42 @@ mod tests {
     }
 
     #[test]
+    fn description_should_error_for_a_morrowind_plugin_subrecord_that_is_too_small() {
+        let mut plugin = Plugin::new(
+            GameId::Morrowind,
+            Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+        );
+
+        let mut data =
+            include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x20].to_vec();
+        data[0x04] = 16;
+        data[0x05] = 0;
+        data[0x14] = 8;
+        data[0x15] = 0;
+
+        assert!(plugin.parse(&data, true).is_ok());
+        assert!(plugin.description().is_err());
+    }
+
+    #[test]
+    fn header_version_should_be_none_for_a_plugin_hedr_subrecord_that_is_too_small() {
+        let mut plugin = Plugin::new(
+            GameId::Morrowind,
+            Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+        );
+
+        let mut data =
+            include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x1B].to_vec();
+        data[0x04] = 11;
+        data[0x05] = 0;
+        data[0x14] = 3;
+        data[0x15] = 0;
+
+        assert!(plugin.parse(&data, true).is_ok());
+        assert!(plugin.header_version().is_none());
+    }
+
+    #[test]
     fn header_version_should_return_plugin_header_hedr_subrecord_field_for_morrowind() {
         let mut plugin = Plugin::new(
             GameId::Morrowind,
@@ -889,6 +943,22 @@ mod tests {
         assert!(plugin.parse_file(true).is_ok());
 
         assert_eq!(0.94, plugin.header_version().unwrap());
+    }
+
+    #[test]
+    fn record_and_group_count_should_be_none_for_a_plugin_hedr_subrecord_that_is_too_small() {
+        let mut plugin = Plugin::new(
+            GameId::Morrowind,
+            Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+        );
+
+        let mut data =
+            include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x140].to_vec();
+        data[0x04] = 0x30;
+        data[0x14] = 0x28;
+
+        assert!(plugin.parse(&data, true).is_ok());
+        assert!(plugin.record_and_group_count().is_none());
     }
 
     #[test]
