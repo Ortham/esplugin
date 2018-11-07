@@ -8,7 +8,7 @@ install:
   - rustfmt --version
 
 before_script:
-  - wget https://github.com/WrinklyNinja/testing-plugins/archive/1.4.0.tar.gz
+  - wget https://github.com/Ortham/testing-plugins/archive/1.4.0.tar.gz
   - tar -xf 1.4.0.tar.gz
   - mv testing-plugins-1.4.0 testing-plugins
 

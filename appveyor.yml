@@ -16,7 +16,7 @@ install:
   - rustup component add rustfmt-preview
   - rustfmt --version
 
-  - ps: (New-Object Net.WebClient).DownloadFile('https://github.com/WrinklyNinja/testing-plugins/archive/1.4.0.zip', "$env:APPVEYOR_BUILD_FOLDER\1.4.0.zip")
+  - ps: (New-Object Net.WebClient).DownloadFile('https://github.com/Ortham/testing-plugins/archive/1.4.0.zip', "$env:APPVEYOR_BUILD_FOLDER\1.4.0.zip")
   - ps: 7z x "$env:APPVEYOR_BUILD_FOLDER\1.4.0.zip"
   - mv testing-plugins-1.4.0 testing-plugins
 
