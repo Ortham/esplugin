@@ -146,7 +146,8 @@ fn record(input: &[u8], game_id: GameId, skip_subrecords: bool) -> IResult<&[u8]
                 game_id,
                 header.are_subrecords_compressed()
             )
-        ).1
+        )
+        .1
     } else {
         Vec::new()
     };

@@ -337,7 +337,8 @@ fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
             WINDOWS_1252
                 .decode(d, DecoderTrap::Strict)
                 .map_err(Error::DecodeError)
-        }).collect::<Result<Vec<String>, Error>>()
+        })
+        .collect::<Result<Vec<String>, Error>>()
 }
 
 fn parse_form_ids<'a>(input: &'a [u8], game_id: GameId) -> IResult<&'a [u8], Vec<u32>> {
@@ -612,7 +613,8 @@ mod tests {
         copy(
             Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
             Path::new("testing-plugins/Skyrim/Data/Blank.esm.esp"),
-        ).unwrap();
+        )
+        .unwrap();
 
         let plugin = Plugin::new(GameId::Fallout4, Path::new("Blank.esp"));
         assert!(!plugin.is_master_file());
@@ -737,7 +739,8 @@ mod tests {
         copy(
             Path::new("testing-plugins/SkyrimSE/Data/Blank.esl"),
             Path::new("testing-plugins/SkyrimSE/Data/Blank.esl.esp"),
-        ).unwrap();
+        )
+        .unwrap();
 
         let mut plugin = Plugin::new(
             GameId::SkyrimSE,
@@ -754,7 +757,8 @@ mod tests {
         copy(
             Path::new("testing-plugins/SkyrimSE/Data/Blank.esl"),
             Path::new("testing-plugins/SkyrimSE/Data/Blank.esl.esm"),
-        ).unwrap();
+        )
+        .unwrap();
 
         let mut plugin = Plugin::new(
             GameId::SkyrimSE,
@@ -1029,7 +1033,7 @@ mod tests {
 
     #[test]
     fn is_valid_as_light_master_should_be_true_if_the_plugin_has_no_form_ids_outside_the_valid_range(
-) {
+    ) {
         let mut plugin = Plugin::new(
             GameId::SkyrimSE,
             Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
@@ -1041,7 +1045,7 @@ mod tests {
 
     #[test]
     fn is_valid_as_light_master_should_be_true_if_the_plugin_has_an_override_form_id_outside_the_valid_range(
-) {
+    ) {
         let mut plugin = Plugin::new(
             GameId::SkyrimSE,
             Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),

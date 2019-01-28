@@ -28,7 +28,8 @@ pub unsafe extern "C" fn esp_plugin_new(
         *plugin_ptr_ptr = Box::into_raw(Box::new(plugin));
 
         ESP_OK
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -53,7 +54,8 @@ pub unsafe extern "C" fn esp_plugin_parse(
                 Err(_) => ESP_ERROR_PARSE_ERROR,
             }
         }
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -76,7 +78,8 @@ pub unsafe extern "C" fn esp_plugin_filename(
 
             ESP_OK
         }
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -105,7 +108,8 @@ pub unsafe extern "C" fn esp_plugin_masters(
 
             ESP_OK
         }
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -123,7 +127,8 @@ pub unsafe extern "C" fn esp_plugin_is_master(
 
             ESP_OK
         }
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -141,7 +146,8 @@ pub unsafe extern "C" fn esp_plugin_is_light_master(
 
             ESP_OK
         }
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -169,7 +175,8 @@ pub unsafe extern "C" fn esp_plugin_is_valid(
 
             ESP_OK
         }
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -197,7 +204,8 @@ pub unsafe extern "C" fn esp_plugin_description(
 
             ESP_OK
         }
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -218,7 +226,8 @@ pub unsafe extern "C" fn esp_plugin_header_version(
 
             ESP_OK
         }
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -236,7 +245,8 @@ pub unsafe extern "C" fn esp_plugin_is_empty(
 
             ESP_OK
         }
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -254,7 +264,8 @@ pub unsafe extern "C" fn esp_plugin_count_override_records(
 
             ESP_OK
         }
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -274,7 +285,8 @@ pub unsafe extern "C" fn esp_plugin_do_records_overlap(
 
             ESP_OK
         }
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
 }
 
 #[no_mangle]
@@ -292,5 +304,6 @@ pub unsafe extern "C" fn esp_plugin_is_valid_as_light_master(
 
             ESP_OK
         }
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
 }
