@@ -7,9 +7,11 @@ use std::path::Path;
 use criterion::Criterion;
 use esplugin::{GameId, Plugin};
 
-// Hearthfires.esm is a 3.8 MB file, so it's got plenty of content without being
+// HearthFires.esm is a 3.8 MB file, so it's got plenty of content without being
 // large enough to slow down benchmarking much.
-const PLUGIN_TO_PARSE: &str = "testing-plugins/SkyrimSE/Data/Hearthfires.esm";
+// NOTE: This plugin isn't shipped in testing-plugins, it needs to be copied
+// from Skyrim SE.
+const PLUGIN_TO_PARSE: &str = "testing-plugins/SkyrimSE/Data/HearthFires.esm";
 
 fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("Plugin.parse_file() header-only", |b| {
