@@ -345,14 +345,7 @@ fn parse_form_ids<'a>(input: &'a [u8], game_id: GameId) -> IResult<&'a [u8], Vec
     let mut form_ids = Vec::new();
     let mut remaining_input = input;
 
-    if game_id == GameId::Morrowind {
-        while !remaining_input.is_empty() {
-            let (input, form_id) = Record::parse_form_id(remaining_input, game_id)?;
-            remaining_input = input;
-
-            form_ids.push(form_id);
-        }
-    } else {
+    if game_id != GameId::Morrowind {
         while !remaining_input.is_empty() {
             let (input, _) = Group::parse_for_form_ids(remaining_input, game_id, &mut form_ids)?;
             remaining_input = input;

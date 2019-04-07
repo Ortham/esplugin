@@ -17,6 +17,7 @@
  * along with esplugin. If not, see <http://www.gnu.org/licenses/>.
  */
 use std::io;
+use std::num::NonZeroU32;
 
 use byteorder::{ByteOrder, LittleEndian};
 use nom::le_u32;
@@ -32,7 +33,7 @@ const RECORD_TYPE_LENGTH: u8 = 4;
 pub struct RecordHeader {
     record_type: String,
     flags: u32,
-    form_id: u32,
+    form_id: Option<NonZeroU32>,
     size_of_subrecords: u32,
 }
 
@@ -80,22 +81,29 @@ impl Record {
         record(input, game_id, skip_subrecords)
     }
 
-    pub fn parse_form_id(input: &[u8], game_id: GameId) -> IResult<&[u8], u32> {
-        do_parse!(
-            input,
-            take!(RECORD_TYPE_LENGTH)
-                >> size_of_subrecords: le_u32
-                >> cond!(game_id == GameId::Morrowind, take!(4))
-                >> take!(4)
-                >> form_id: cond!(game_id != GameId::Morrowind, le_u32)
-                >> cond!(game_id != GameId::Morrowind, take!(4))
-                >> cond!(
-                    game_id != GameId::Morrowind && game_id != GameId::Oblivion,
-                    take!(4)
-                )
-                >> take!(size_of_subrecords)
-                >> (form_id.unwrap_or(0))
-        )
+    pub fn parse_form_id(input: &[u8], game_id: GameId) -> IResult<&[u8], Option<NonZeroU32>> {
+        if game_id == GameId::Morrowind {
+            do_parse!(
+                input,
+                take!(RECORD_TYPE_LENGTH)
+                    >> size_of_subrecords: le_u32
+                    >> take!(8)
+                    >> take!(size_of_subrecords)
+                    >> (None)
+            )
+        } else {
+            do_parse!(
+                input,
+                take!(RECORD_TYPE_LENGTH)
+                    >> size_of_subrecords: le_u32
+                    >> take!(4)
+                    >> form_id: le_u32
+                    >> take!(4)
+                    >> cond!(game_id != GameId::Oblivion, take!(4))
+                    >> take!(size_of_subrecords)
+                    >> (NonZeroU32::new(form_id))
+            )
+        }
     }
 
     pub fn header(&self) -> &RecordHeader {
@@ -128,7 +136,7 @@ named_args!(record_header(game_id: GameId) <RecordHeader>,
         (RecordHeader {
             record_type: record_type.to_string(),
             flags,
-            form_id: form_id.unwrap_or(0),
+            form_id: form_id.and_then(NonZeroU32::new),
             size_of_subrecords,
         })
     )
@@ -206,20 +214,30 @@ mod tests {
             let record = Record::parse(data, GameId::Morrowind, false).unwrap().1;
 
             assert_eq!(0, record.header.flags);
-            assert_eq!(0, record.header.form_id);
+            assert!(record.header.form_id.is_none());
             assert_eq!(1, record.subrecords.len());
 
             assert_eq!("HEDR", record.subrecords[0].subrecord_type());
         }
 
         #[test]
-        fn parse_form_id_should_return_zero() {
+        fn parse_should_set_form_id_to_none_for_all_records() {
+            let data =
+                &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[0x144..0x16F];
+
+            let record = Record::parse(data, GameId::Morrowind, false).unwrap().1;
+
+            assert!(record.header.form_id.is_none());
+        }
+
+        #[test]
+        fn parse_form_id_should_return_none() {
             let data =
                 &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
 
             let form_id = Record::parse_form_id(data, GameId::Morrowind).unwrap().1;
 
-            assert_eq!(0, form_id);
+            assert!(form_id.is_none());
         }
     }
 
@@ -238,7 +256,7 @@ mod tests {
             let record = Record::parse(data, GameId::Oblivion, false).unwrap().1;
 
             assert_eq!(1, record.header.flags);
-            assert_eq!(0, record.header.form_id);
+            assert!(record.header.form_id.is_none());
             assert_eq!(3, record.subrecords.len());
 
             assert_eq!("HEDR", record.subrecords[0].subrecord_type());
@@ -247,12 +265,22 @@ mod tests {
         }
 
         #[test]
+        fn parse_should_set_non_zero_form_id_for_non_header_records() {
+            let data =
+                &include_bytes!("../testing-plugins/Oblivion/Data/Blank.esm")[0x4C..0x70];
+
+            let record = Record::parse(data, GameId::Oblivion, false).unwrap().1;
+
+            assert_eq!(0xCF0, record.header.form_id.unwrap().get());
+        }
+
+        #[test]
         fn parse_form_id_should_return_the_form_id() {
             let data = &include_bytes!("../testing-plugins/Oblivion/Data/Blank.esm")[0x4C..0x70];
 
             let form_id = Record::parse_form_id(data, GameId::Oblivion).unwrap().1;
 
-            assert_eq!(0xCF0, form_id);
+            assert_eq!(0xCF0, form_id.unwrap().get());
         }
     }
 
@@ -273,7 +301,7 @@ mod tests {
             let record = Record::parse(data, GameId::Skyrim, false).unwrap().1;
 
             assert_eq!(0x1, record.header.flags);
-            assert_eq!(0, record.header.form_id);
+            assert!(record.header.form_id.is_none());
             assert_eq!(5, record.subrecords.len());
 
             assert_eq!("HEDR", record.subrecords[0].subrecord_type());
@@ -284,12 +312,22 @@ mod tests {
         }
 
         #[test]
+        fn parse_should_set_non_zero_form_id_for_non_header_records() {
+            let data =
+                &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esp")[0x53..0xEF];
+
+            let record = Record::parse(data, GameId::Skyrim, false).unwrap().1;
+
+            assert_eq!(0xCEC, record.header.form_id.unwrap().get());
+        }
+
+        #[test]
         fn parse_form_id_should_return_the_form_id() {
             let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esp")[0x53..0xEF];
 
             let form_id = Record::parse_form_id(data, GameId::Skyrim).unwrap().1;
 
-            assert_eq!(0xCEC, form_id);
+            assert_eq!(0xCEC, form_id.unwrap().get());
         }
     }
 
@@ -321,7 +359,6 @@ mod tests {
         let record = Record::parse(data, GameId::Skyrim, true).unwrap().1;
 
         assert_eq!(1, record.header.flags);
-        assert_eq!(0, record.header.form_id);
         assert_eq!(0, record.subrecords.len());
     }
 
@@ -332,7 +369,6 @@ mod tests {
         let record = Record::parse(data, GameId::Skyrim, false).unwrap().1;
 
         assert_eq!(0x1, record.header.flags);
-        assert_eq!(0, record.header.form_id);
         assert_eq!(4, record.subrecords.len());
 
         assert_eq!("HEDR", record.subrecords[0].subrecord_type());
@@ -364,7 +400,7 @@ mod tests {
 
         let record = Record::parse(DATA, GameId::Skyrim, false).unwrap().1;
 
-        assert_eq!(0xCEC, record.header.form_id);
+        assert_eq!(0xCEC, record.header.form_id.unwrap().get());
         assert_eq!(0x00040000, record.header.flags);
         assert_eq!(1, record.subrecords.len());
 

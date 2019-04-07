@@ -82,7 +82,9 @@ fn parse_records<'a>(
         } else {
             let (input2, form_id) = try_parse!(input1, apply!(Record::parse_form_id, game_id));
             input1 = input2;
-            form_ids.push(form_id);
+            if let Some(fid) = form_id {
+                form_ids.push(fid.get());
+            }
         }
     }
 
