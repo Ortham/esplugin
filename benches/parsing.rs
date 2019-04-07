@@ -12,10 +12,11 @@ use esplugin::{GameId, Plugin};
 // NOTE: This plugin isn't shipped in testing-plugins, it needs to be copied
 // from Skyrim SE.
 const PLUGIN_TO_PARSE: &str = "testing-plugins/SkyrimSE/Data/HearthFires.esm";
+const GAME_ID: GameId = GameId::SkyrimSE;
 
 fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("Plugin.parse_file() header-only", |b| {
-        let mut plugin = Plugin::new(GameId::SkyrimSE, Path::new(PLUGIN_TO_PARSE));
+        let mut plugin = Plugin::new(GAME_ID, Path::new(PLUGIN_TO_PARSE));
 
         b.iter(|| {
             assert!(plugin.parse_file(true).is_ok());
@@ -23,7 +24,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     });
 
     c.bench_function("Plugin.parse_file() full", |b| {
-        let mut plugin = Plugin::new(GameId::SkyrimSE, Path::new(PLUGIN_TO_PARSE));
+        let mut plugin = Plugin::new(GAME_ID, Path::new(PLUGIN_TO_PARSE));
 
         b.iter(|| {
             assert!(plugin.parse_file(false).is_ok());
@@ -31,7 +32,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     });
 
     c.bench_function("Plugin.overlaps_with()", |b| {
-        let mut plugin = Plugin::new(GameId::SkyrimSE, Path::new(PLUGIN_TO_PARSE));
+        let mut plugin = Plugin::new(GAME_ID, Path::new(PLUGIN_TO_PARSE));
 
         assert!(plugin.parse_file(false).is_ok());
 
@@ -41,7 +42,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     });
 
     c.bench_function("Plugin.count_override_records()", |b| {
-        let mut plugin = Plugin::new(GameId::SkyrimSE, Path::new(PLUGIN_TO_PARSE));
+        let mut plugin = Plugin::new(GAME_ID, Path::new(PLUGIN_TO_PARSE));
 
         assert!(plugin.parse_file(false).is_ok());
 
