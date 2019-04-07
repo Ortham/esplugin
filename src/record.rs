@@ -190,25 +190,118 @@ fn parse_subrecords(
 mod tests {
     use super::*;
 
+    mod morrowind {
+        use super::super::*;
+
+        #[test]
+        fn header_length_should_be_16() {
+            assert_eq!(16, header_length(GameId::Morrowind));
+        }
+
+        #[test]
+        fn parse_should_read_tes3_header_correctly() {
+            let data =
+                &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
+
+            let record = Record::parse(data, GameId::Morrowind, false).unwrap().1;
+
+            assert_eq!(0, record.header.flags);
+            assert_eq!(0, record.header.form_id);
+            assert_eq!(1, record.subrecords.len());
+
+            assert_eq!("HEDR", record.subrecords[0].subrecord_type());
+        }
+
+        #[test]
+        fn parse_form_id_should_return_zero() {
+            let data =
+                &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
+
+            let form_id = Record::parse_form_id(data, GameId::Morrowind).unwrap().1;
+
+            assert_eq!(0, form_id);
+        }
+    }
+
+    mod oblivion {
+        use super::super::*;
+
+        #[test]
+        fn header_length_should_be_20() {
+            assert_eq!(20, header_length(GameId::Oblivion));
+        }
+
+        #[test]
+        fn parse_should_read_tes4_header_correctly() {
+            let data = &include_bytes!("../testing-plugins/Oblivion/Data/Blank.esm")[..0x144];
+
+            let record = Record::parse(data, GameId::Oblivion, false).unwrap().1;
+
+            assert_eq!(1, record.header.flags);
+            assert_eq!(0, record.header.form_id);
+            assert_eq!(3, record.subrecords.len());
+
+            assert_eq!("HEDR", record.subrecords[0].subrecord_type());
+            assert_eq!("CNAM", record.subrecords[1].subrecord_type());
+            assert_eq!("SNAM", record.subrecords[2].subrecord_type());
+        }
+
+        #[test]
+        fn parse_form_id_should_return_the_form_id() {
+            let data = &include_bytes!("../testing-plugins/Oblivion/Data/Blank.esm")[0x4C..0x70];
+
+            let form_id = Record::parse_form_id(data, GameId::Oblivion).unwrap().1;
+
+            assert_eq!(0xCF0, form_id);
+        }
+    }
+
+    mod skyrim {
+        use super::super::*;
+
+        #[test]
+        fn header_length_should_be_24() {
+            assert_eq!(24, header_length(GameId::Skyrim));
+        }
+
+        #[test]
+        fn parse_should_read_tes4_header_correctly() {
+            let data =
+                &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")
+                    [..0x56];
+
+            let record = Record::parse(data, GameId::Skyrim, false).unwrap().1;
+
+            assert_eq!(0x1, record.header.flags);
+            assert_eq!(0, record.header.form_id);
+            assert_eq!(5, record.subrecords.len());
+
+            assert_eq!("HEDR", record.subrecords[0].subrecord_type());
+            assert_eq!("CNAM", record.subrecords[1].subrecord_type());
+            assert_eq!("SNAM", record.subrecords[2].subrecord_type());
+            assert_eq!("MAST", record.subrecords[3].subrecord_type());
+            assert_eq!("DATA", record.subrecords[4].subrecord_type());
+        }
+
+        #[test]
+        fn parse_form_id_should_return_the_form_id() {
+            let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esp")[0x53..0xEF];
+
+            let form_id = Record::parse_form_id(data, GameId::Skyrim).unwrap().1;
+
+            assert_eq!(0xCEC, form_id);
+        }
+    }
+
     #[test]
-    fn read_should_read_a_record_from_the_given_reader() {
+    fn read_and_validate_should_read_a_record_from_the_given_reader() {
         let data =
             &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")[..0x56];
         let mut reader = io::Cursor::new(data);
 
         let bytes = Record::read_and_validate(&mut reader, GameId::Skyrim, b"TES4").unwrap();
 
-        let record = Record::parse(&bytes, GameId::Skyrim, false).unwrap().1;
-
-        assert_eq!(0x1, record.header.flags);
-        assert_eq!(0, record.header.form_id);
-        assert_eq!(5, record.subrecords.len());
-
-        assert_eq!("HEDR", record.subrecords[0].subrecord_type());
-        assert_eq!("CNAM", record.subrecords[1].subrecord_type());
-        assert_eq!("SNAM", record.subrecords[2].subrecord_type());
-        assert_eq!("MAST", record.subrecords[3].subrecord_type());
-        assert_eq!("DATA", record.subrecords[4].subrecord_type());
+        assert_eq!(data, bytes.as_slice());
     }
 
     #[test]
@@ -222,58 +315,12 @@ mod tests {
     }
 
     #[test]
-    fn parse_should_read_tes4_header_correctly() {
-        let data =
-            &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")[..0x56];
+    fn parse_should_obey_skip_subrecords_parameter() {
+        let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esm")[..0x1004C];
 
-        let record = Record::parse(data, GameId::Skyrim, false).unwrap().1;
-
-        assert_eq!(0x1, record.header.flags);
-        assert_eq!(0, record.header.form_id);
-        assert_eq!(5, record.subrecords.len());
-
-        assert_eq!("HEDR", record.subrecords[0].subrecord_type());
-        assert_eq!("CNAM", record.subrecords[1].subrecord_type());
-        assert_eq!("SNAM", record.subrecords[2].subrecord_type());
-        assert_eq!("MAST", record.subrecords[3].subrecord_type());
-        assert_eq!("DATA", record.subrecords[4].subrecord_type());
-    }
-
-    #[test]
-    fn parse_should_read_tes3_header_correctly() {
-        let data = &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
-
-        let record = Record::parse(data, GameId::Morrowind, false).unwrap().1;
-
-        assert_eq!(0, record.header.flags);
-        assert_eq!(0, record.header.form_id);
-        assert_eq!(1, record.subrecords.len());
-
-        assert_eq!("HEDR", record.subrecords[0].subrecord_type());
-    }
-
-    #[test]
-    fn parse_should_read_oblivion_header_correctly() {
-        let data = &include_bytes!("../testing-plugins/Oblivion/Data/Blank.esm")[..0x144];
-
-        let record = Record::parse(data, GameId::Oblivion, false).unwrap().1;
+        let record = Record::parse(data, GameId::Skyrim, true).unwrap().1;
 
         assert_eq!(1, record.header.flags);
-        assert_eq!(0, record.header.form_id);
-        assert_eq!(3, record.subrecords.len());
-
-        assert_eq!("HEDR", record.subrecords[0].subrecord_type());
-        assert_eq!("CNAM", record.subrecords[1].subrecord_type());
-        assert_eq!("SNAM", record.subrecords[2].subrecord_type());
-    }
-
-    #[test]
-    fn parse_should_obey_skip_subrecords_parameter() {
-        let data = &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
-
-        let record = Record::parse(data, GameId::Morrowind, true).unwrap().1;
-
-        assert_eq!(0, record.header.flags);
         assert_eq!(0, record.header.form_id);
         assert_eq!(0, record.subrecords.len());
     }
@@ -326,27 +373,5 @@ mod tests {
             "DEFLATE_DEFLATE_DEFLATE_DEFLATE".as_bytes(),
             decompressed_data.as_slice()
         );
-    }
-
-    #[test]
-    fn parse_form_id_should_return_the_form_id() {
-        let data =
-            &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")[..0x56];
-
-        let form_id = Record::parse_form_id(data, GameId::Skyrim).unwrap().1;
-
-        assert_eq!(0, form_id);
-
-        let data = &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
-
-        let form_id = Record::parse_form_id(data, GameId::Morrowind).unwrap().1;
-
-        assert_eq!(0, form_id);
-
-        let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esp")[0x53..0xEF];
-
-        let form_id = Record::parse_form_id(data, GameId::Skyrim).unwrap().1;
-
-        assert_eq!(0xCEC, form_id);
     }
 }
