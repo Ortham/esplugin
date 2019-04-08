@@ -234,12 +234,10 @@ impl Plugin {
     }
 
     pub fn count_override_records(&self) -> usize {
-        let masters_count = count_masters(&self.data.header_record);
-
         self.data
             .form_ids
             .iter()
-            .filter(|f| (f.mod_index() as usize) < masters_count)
+            .filter(|f| f.is_overridden_record())
             .count()
     }
 
@@ -268,15 +266,12 @@ impl Plugin {
     // object indices in the range 0x800 to 0xFFF.
     pub fn is_valid_as_light_master(&self) -> bool {
         match self.game_id {
-            GameId::Fallout4 | GameId::SkyrimSE => {
-                let masters_count = count_masters(&self.data.header_record) as u8;
-
-                self.data
-                    .form_ids
-                    .iter()
-                    .filter(|f| f.mod_index() >= masters_count)
-                    .all(|f| f.object_index() >= 0x800 && f.object_index() <= 0xFFF)
-            }
+            GameId::Fallout4 | GameId::SkyrimSE => self
+                .data
+                .form_ids
+                .iter()
+                .filter(|f| !f.is_overridden_record())
+                .all(HashedFormId::valid_in_light_master),
             _ => false,
         }
     }
@@ -317,14 +312,6 @@ fn hash(string: &str) -> u64 {
     let mut hasher = DefaultHasher::new();
     string.to_lowercase().hash(&mut hasher);
     hasher.finish()
-}
-
-fn count_masters(header_record: &Record) -> usize {
-    header_record
-        .subrecords()
-        .iter()
-        .filter(|s| s.subrecord_type() == "MAST")
-        .count()
 }
 
 fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
@@ -565,10 +552,6 @@ mod tests {
             assert!(plugin.parse_file(false).is_ok());
 
             assert_eq!(plugin.data.form_ids.len(), 10);
-            assert_eq!(plugin.data.form_ids[0].mod_index(), 0);
-            assert_eq!(plugin.data.form_ids[0].object_index(), 0xCF0);
-            assert_eq!(plugin.data.form_ids[9].mod_index(), 0);
-            assert_eq!(plugin.data.form_ids[9].object_index(), 0xCF9);
         }
 
         #[test]

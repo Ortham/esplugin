@@ -21,10 +21,9 @@ use std::hash::{Hash, Hasher};
 
 #[derive(Clone, Debug, Default)]
 pub struct HashedFormId {
-    // Store mod index for easy plugin ownership checks and filename mapping.
-    // Store it separately as bit shifting on access is relatively slow and
-    // alignment padding means no space is wasted anyway.
-    mod_index: u8,
+    // Precalculate and store whether this FormID is for an overridden record
+    // for efficiency, as alignment padding means it wastes no space.
+    overridden_record: bool,
     object_index: u32,
     hashed_plugin_name: u64,
 }
@@ -34,7 +33,7 @@ impl HashedFormId {
         let mod_index = raw_form_id >> 24;
 
         Self {
-            mod_index: mod_index as u8,
+            overridden_record: (mod_index as usize) < hashed_masters.len(),
             object_index: raw_form_id & 0xFF_FFFF,
             hashed_plugin_name: hashed_masters
                 .get(mod_index as usize)
@@ -43,12 +42,12 @@ impl HashedFormId {
         }
     }
 
-    pub fn mod_index(&self) -> u8 {
-        self.mod_index
+    pub fn valid_in_light_master(&self) -> bool {
+        self.object_index >= 0x800 && self.object_index <= 0xFFF
     }
 
-    pub fn object_index(&self) -> u32 {
-        self.object_index
+    pub fn is_overridden_record(&self) -> bool {
+        self.overridden_record
     }
 }
 
@@ -101,14 +100,54 @@ mod tests {
     }
 
     #[test]
-    fn mod_index_should_equal_first_byte_of_raw_form_id_value() {
+    fn is_overridden_record_should_be_true_if_mod_index_is_less_than_masters_length() {
         let form_id = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
 
-        assert_eq!(0, form_id.mod_index);
+        assert!(form_id.is_overridden_record());
 
         let form_id = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01000001);
 
-        assert_eq!(1, form_id.mod_index);
+        assert!(form_id.is_overridden_record());
+    }
+
+    #[test]
+    fn is_overridden_record_should_be_false_if_mod_index_is_not_less_than_masters_length() {
+        let form_id = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x02000001);
+
+        assert!(!form_id.is_overridden_record());
+
+        let form_id = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x03000001);
+
+        assert!(!form_id.is_overridden_record());
+    }
+
+    #[allow(non_snake_case)]
+    #[test]
+    fn valid_in_light_master_should_be_true_if_object_index_is_between_0x800_and_0xFFF_inclusive() {
+        let form_id = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x800);
+
+        assert!(form_id.valid_in_light_master());
+
+        let form_id = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0xD00);
+
+        assert!(form_id.valid_in_light_master());
+
+        let form_id = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0xFFF);
+
+        assert!(form_id.valid_in_light_master());
+    }
+
+    #[allow(non_snake_case)]
+    #[test]
+    fn valid_in_light_master_should_be_false_if_object_index_is_outwith_0x800_and_0xFFF_inclusive()
+    {
+        let form_id = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x7FF);
+
+        assert!(!form_id.valid_in_light_master());
+
+        let form_id = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x1000);
+
+        assert!(!form_id.valid_in_light_master());
     }
 
     #[test]
@@ -169,11 +208,11 @@ mod tests {
     }
 
     #[test]
-    fn form_ids_can_be_equal_with_unequal_mod_indices() {
+    fn form_ids_can_be_equal_if_one_is_an_override_record_and_the_other_is_not() {
         let form_id1 = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
         let form_id2 = HashedFormId::new(MASTERS[0], NO_MASTERS, 0x05000001);
 
-        assert_ne!(form_id1.mod_index, form_id2.mod_index);
+        assert_ne!(form_id1.overridden_record, form_id2.overridden_record);
         assert_eq!(form_id1, form_id2);
     }
 
@@ -193,11 +232,11 @@ mod tests {
     }
 
     #[test]
-    fn form_ids_should_not_be_ordered_according_to_mod_index() {
+    fn form_ids_should_not_be_ordered_according_to_override_record_flag_value() {
         let form_id1 = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
         let form_id2 = HashedFormId::new(MASTERS[0], NO_MASTERS, 0x05000001);
 
-        assert_ne!(form_id1.mod_index, form_id2.mod_index);
+        assert_ne!(form_id1.overridden_record, form_id2.overridden_record);
         assert_eq!(Ordering::Equal, form_id2.cmp(&form_id1));
     }
 
@@ -226,11 +265,11 @@ mod tests {
     }
 
     #[test]
-    fn form_id_hashes_can_be_equal_with_unequal_mod_indices() {
+    fn form_id_hashes_can_be_equal_with_unequal_override_record_flag_values() {
         let form_id1 = HashedFormId::new(PARENT_PLUGIN_NAME, MASTERS, 0x01);
         let form_id2 = HashedFormId::new(MASTERS[0], NO_MASTERS, 0x05000001);
 
-        assert_ne!(form_id1.mod_index, form_id2.mod_index);
+        assert_ne!(form_id1.overridden_record, form_id2.overridden_record);
         assert_eq!(hash(&form_id1), hash(&form_id2));
     }
 }
