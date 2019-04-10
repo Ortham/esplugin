@@ -180,10 +180,7 @@ impl Plugin {
     pub fn is_valid(game_id: GameId, filepath: &Path, load_header_only: bool) -> bool {
         let mut plugin = Plugin::new(game_id, &filepath.to_path_buf());
 
-        match plugin.parse_file(load_header_only) {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+        plugin.parse_file(load_header_only).is_ok()
     }
 
     pub fn description(&self) -> Result<Option<String>, Error> {
