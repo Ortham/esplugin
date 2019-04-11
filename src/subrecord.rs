@@ -23,22 +23,20 @@ extern crate nom;
 use std::io;
 #[cfg(feature = "compressed-fields")]
 use std::io::Read;
-use std::str;
 
 #[cfg(feature = "compressed-fields")]
 use flate2::read::DeflateDecoder;
 
-use nom::le_u16;
-use nom::le_u32;
+use nom::{le_u8, le_u16, le_u32};
 use nom::IResult;
 
 use game_id::GameId;
 
-const SUBRECORD_TYPE_LENGTH: u8 = 4;
+const SUBRECORD_TYPE_LENGTH: usize = 4;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
 pub struct Subrecord {
-    subrecord_type: String,
+    subrecord_type: [u8; 4],
     data: Vec<u8>,
     is_compressed: bool,
 }
@@ -50,13 +48,16 @@ impl Subrecord {
         data_length_override: u32,
         is_compressed: bool,
     ) -> IResult<&[u8], Subrecord> {
-        if game_id == GameId::Morrowind {
-            morrowind_subrecord(input)
-        } else if data_length_override != 0 {
-            presized_subrecord(input, data_length_override, is_compressed)
-        } else {
-            simple_subrecord(input, is_compressed)
-        }
+        let (remaining_input, (subrecord_type, data)) =
+            parse(input, game_id, data_length_override)?;
+        Ok((
+            remaining_input,
+            Subrecord {
+                subrecord_type,
+                data: data.to_vec(),
+                is_compressed,
+            },
+        ))
     }
 
     #[cfg(feature = "compressed-fields")]
@@ -79,7 +80,7 @@ impl Subrecord {
         Ok(decompressed_data)
     }
 
-    pub fn subrecord_type(&self) -> &str {
+    pub fn subrecord_type(&self) -> &[u8; 4] {
         &self.subrecord_type
     }
 
@@ -88,45 +89,47 @@ impl Subrecord {
     }
 }
 
-named!(subrecord_type<&str>, take_str!(SUBRECORD_TYPE_LENGTH));
+fn parse(
+    input: &[u8],
+    game_id: GameId,
+    data_length_override: u32,
+) -> IResult<&[u8], ([u8; 4], &[u8])> {
+    if game_id == GameId::Morrowind {
+        morrowind_subrecord(input)
+    } else if data_length_override != 0 {
+        presized_subrecord(input, data_length_override)
+    } else {
+        simple_subrecord(input)
+    }
+}
 
-named!(morrowind_subrecord(&[u8]) -> Subrecord,
+named!(subrecord_type<[u8; 4]>, count_fixed!(u8, le_u8, SUBRECORD_TYPE_LENGTH));
+
+named!(morrowind_subrecord(&[u8]) -> ([u8; 4], &[u8]),
     do_parse!(
         subrecord_type: subrecord_type >>
         data: length_bytes!(le_u32) >>
 
-        (Subrecord {
-            subrecord_type: subrecord_type.to_string(),
-            data: data.to_vec(),
-            is_compressed: false,
-        })
+        ((subrecord_type, data))
     )
 );
 
-named_args!(simple_subrecord(is_compressed: bool) <Subrecord>,
+named!(simple_subrecord(&[u8]) -> ([u8; 4], &[u8]),
     do_parse!(
         subrecord_type: subrecord_type >>
         data: length_bytes!(le_u16) >>
 
-        (Subrecord {
-            subrecord_type: subrecord_type.to_string(),
-            data: data.to_vec(),
-            is_compressed,
-        })
+        ((subrecord_type, data))
     )
 );
 
-named_args!(presized_subrecord(data_length: u32, is_compressed: bool) <Subrecord>,
+named_args!(presized_subrecord(data_length: u32) <([u8; 4], &[u8])>,
     do_parse!(
         subrecord_type: subrecord_type >>
         le_u16 >>
         data: take!(data_length) >>
 
-        (Subrecord {
-            subrecord_type: subrecord_type.to_string(),
-            data: data.to_vec(),
-            is_compressed,
-        })
+        ((subrecord_type, data))
     )
 );
 
@@ -150,7 +153,7 @@ mod tests {
                 .unwrap()
                 .1;
 
-            assert_eq!("DATA", subrecord.subrecord_type);
+            assert_eq!(b"DATA", &subrecord.subrecord_type);
             assert_eq!(&TES3_DATA_SUBRECORD[8..], subrecord.data.as_slice());
         }
 
@@ -160,7 +163,7 @@ mod tests {
                 .unwrap()
                 .1;
 
-            assert_eq!("DATA", subrecord.subrecord_type);
+            assert_eq!(b"DATA", &subrecord.subrecord_type);
             assert_eq!(&TES3_DATA_SUBRECORD[8..], subrecord.data.as_slice());
         }
     }
@@ -179,7 +182,7 @@ mod tests {
                 .unwrap()
                 .1;
 
-            assert_eq!("CNAM", subrecord.subrecord_type);
+            assert_eq!(b"CNAM", &subrecord.subrecord_type);
             assert_eq!(&TES4_CNAM_SUBRECORD[6..], subrecord.data.as_slice());
         }
 
@@ -189,35 +192,35 @@ mod tests {
                 .unwrap()
                 .1;
 
-            assert_eq!("CNAM", subrecord.subrecord_type);
+            assert_eq!(b"CNAM", &subrecord.subrecord_type);
             assert_eq!(&TES4_CNAM_SUBRECORD[6..10], subrecord.data.as_slice());
 
             let subrecord = Subrecord::new(TES4_CNAM_SUBRECORD, GameId::Skyrim, 4, false)
                 .unwrap()
                 .1;
 
-            assert_eq!("CNAM", subrecord.subrecord_type);
+            assert_eq!(b"CNAM", &subrecord.subrecord_type);
             assert_eq!(&TES4_CNAM_SUBRECORD[6..10], subrecord.data.as_slice());
 
             let subrecord = Subrecord::new(TES4_CNAM_SUBRECORD, GameId::Fallout3, 4, false)
                 .unwrap()
                 .1;
 
-            assert_eq!("CNAM", subrecord.subrecord_type);
+            assert_eq!(b"CNAM", &subrecord.subrecord_type);
             assert_eq!(&TES4_CNAM_SUBRECORD[6..10], subrecord.data.as_slice());
 
             let subrecord = Subrecord::new(TES4_CNAM_SUBRECORD, GameId::FalloutNV, 4, false)
                 .unwrap()
                 .1;
 
-            assert_eq!("CNAM", subrecord.subrecord_type);
+            assert_eq!(b"CNAM", &subrecord.subrecord_type);
             assert_eq!(&TES4_CNAM_SUBRECORD[6..10], subrecord.data.as_slice());
 
             let subrecord = Subrecord::new(TES4_CNAM_SUBRECORD, GameId::Fallout4, 4, false)
                 .unwrap()
                 .1;
 
-            assert_eq!("CNAM", subrecord.subrecord_type);
+            assert_eq!(b"CNAM", &subrecord.subrecord_type);
             assert_eq!(&TES4_CNAM_SUBRECORD[6..10], subrecord.data.as_slice());
         }
 
@@ -239,7 +242,7 @@ mod tests {
 
             let decompressed_data = subrecord.decompress_data().unwrap();
 
-            assert_eq!("BPTN", subrecord.subrecord_type);
+            assert_eq!(b"BPTN", &subrecord.subrecord_type);
             assert_eq!(
                 "DEFLATE_DEFLATE_DEFLATE_DEFLATE".as_bytes(),
                 decompressed_data.as_slice()

@@ -20,18 +20,18 @@ use std::io;
 use std::num::NonZeroU32;
 
 use byteorder::{ByteOrder, LittleEndian};
-use nom::le_u32;
+use nom::{le_u8, le_u32};
 use nom::IResult;
 
 use error::Error;
 use game_id::GameId;
 use subrecord::{parse_subrecord_data_as_u32, Subrecord};
 
-const RECORD_TYPE_LENGTH: u8 = 4;
+const RECORD_TYPE_LENGTH: usize = 4;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
 pub struct RecordHeader {
-    record_type: String,
+    record_type: [u8; 4],
     flags: u32,
     form_id: Option<NonZeroU32>,
     size_of_subrecords: u32,
@@ -123,9 +123,11 @@ fn header_length(game_id: GameId) -> usize {
     }
 }
 
+named!(record_type<[u8; 4]>, count_fixed!(u8, le_u8, RECORD_TYPE_LENGTH));
+
 named_args!(record_header(game_id: GameId) <RecordHeader>,
     do_parse!(
-        record_type: take_str!(RECORD_TYPE_LENGTH) >>
+        record_type: record_type >>
         size_of_subrecords: le_u32 >>
         cond!(game_id == GameId::Morrowind, take!(4)) >>
         flags: le_u32 >>
@@ -134,7 +136,7 @@ named_args!(record_header(game_id: GameId) <RecordHeader>,
         cond!(game_id != GameId::Morrowind && game_id != GameId::Oblivion, take!(4)) >>
 
         (RecordHeader {
-            record_type: record_type.to_string(),
+            record_type,
             flags,
             form_id: form_id.and_then(NonZeroU32::new),
             size_of_subrecords,
@@ -182,7 +184,7 @@ fn parse_subrecords(
                 are_compressed
             )
         );
-        if subrecord.subrecord_type() == "XXXX" {
+        if subrecord.subrecord_type() == b"XXXX" {
             large_subrecord_size = parse_subrecord_data_as_u32(input1)?.1;
         } else {
             large_subrecord_size = 0;
@@ -217,7 +219,7 @@ mod tests {
             assert!(record.header.form_id.is_none());
             assert_eq!(1, record.subrecords.len());
 
-            assert_eq!("HEDR", record.subrecords[0].subrecord_type());
+            assert_eq!(b"HEDR", record.subrecords[0].subrecord_type());
         }
 
         #[test]
@@ -259,9 +261,9 @@ mod tests {
             assert!(record.header.form_id.is_none());
             assert_eq!(3, record.subrecords.len());
 
-            assert_eq!("HEDR", record.subrecords[0].subrecord_type());
-            assert_eq!("CNAM", record.subrecords[1].subrecord_type());
-            assert_eq!("SNAM", record.subrecords[2].subrecord_type());
+            assert_eq!(b"HEDR", record.subrecords[0].subrecord_type());
+            assert_eq!(b"CNAM", record.subrecords[1].subrecord_type());
+            assert_eq!(b"SNAM", record.subrecords[2].subrecord_type());
         }
 
         #[test]
@@ -304,11 +306,11 @@ mod tests {
             assert!(record.header.form_id.is_none());
             assert_eq!(5, record.subrecords.len());
 
-            assert_eq!("HEDR", record.subrecords[0].subrecord_type());
-            assert_eq!("CNAM", record.subrecords[1].subrecord_type());
-            assert_eq!("SNAM", record.subrecords[2].subrecord_type());
-            assert_eq!("MAST", record.subrecords[3].subrecord_type());
-            assert_eq!("DATA", record.subrecords[4].subrecord_type());
+            assert_eq!(b"HEDR", record.subrecords[0].subrecord_type());
+            assert_eq!(b"CNAM", record.subrecords[1].subrecord_type());
+            assert_eq!(b"SNAM", record.subrecords[2].subrecord_type());
+            assert_eq!(b"MAST", record.subrecords[3].subrecord_type());
+            assert_eq!(b"DATA", record.subrecords[4].subrecord_type());
         }
 
         #[test]
@@ -371,10 +373,10 @@ mod tests {
         assert_eq!(0x1, record.header.flags);
         assert_eq!(4, record.subrecords.len());
 
-        assert_eq!("HEDR", record.subrecords[0].subrecord_type());
-        assert_eq!("CNAM", record.subrecords[1].subrecord_type());
-        assert_eq!("SNAM", record.subrecords[2].subrecord_type());
-        assert_eq!("ONAM", record.subrecords[3].subrecord_type());
+        assert_eq!(b"HEDR", record.subrecords[0].subrecord_type());
+        assert_eq!(b"CNAM", record.subrecords[1].subrecord_type());
+        assert_eq!(b"SNAM", record.subrecords[2].subrecord_type());
+        assert_eq!(b"ONAM", record.subrecords[3].subrecord_type());
     }
 
     #[test]

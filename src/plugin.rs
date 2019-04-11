@@ -185,8 +185,8 @@ impl Plugin {
 
     pub fn description(&self) -> Result<Option<String>, Error> {
         let (target_subrecord_type, description_offset) = match self.game_id {
-            GameId::Morrowind => ("HEDR", 40),
-            _ => ("SNAM", 0),
+            GameId::Morrowind => (b"HEDR", 40),
+            _ => (b"SNAM", 0),
         };
 
         for subrecord in self.data.header_record.subrecords() {
@@ -212,7 +212,7 @@ impl Plugin {
             .header_record
             .subrecords()
             .iter()
-            .find(|s| s.subrecord_type() == "HEDR" && s.data().len() > 3)
+            .find(|s| s.subrecord_type() == b"HEDR" && s.data().len() > 3)
             .map(|s| LittleEndian::read_f32(&s.data()[..4]))
     }
 
@@ -226,7 +226,7 @@ impl Plugin {
             .header_record
             .subrecords()
             .iter()
-            .find(|s| s.subrecord_type() == "HEDR" && s.data().len() > count_offset)
+            .find(|s| s.subrecord_type() == b"HEDR" && s.data().len() > count_offset)
             .map(|s| LittleEndian::read_u32(&s.data()[count_offset..count_offset + 4]))
     }
 
@@ -315,7 +315,7 @@ fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
     header_record
         .subrecords()
         .iter()
-        .filter(|s| s.subrecord_type() == "MAST")
+        .filter(|s| s.subrecord_type() == b"MAST")
         .map(|s| &s.data()[0..(s.data().len() - 1)])
         .map(|d| {
             WINDOWS_1252
