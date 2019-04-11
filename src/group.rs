@@ -23,6 +23,7 @@ use nom::{le_u32, IResult};
 
 use game_id::GameId;
 use record::Record;
+use record_id::RecordId;
 
 const GROUP_TYPE: &[u8] = b"GRUP";
 
@@ -80,10 +81,10 @@ fn parse_records<'a>(
                 try_parse!(input1, apply!(Group::parse_for_form_ids, game_id, form_ids));
             input1 = input2;
         } else {
-            let (input2, form_id) = try_parse!(input1, apply!(Record::parse_form_id, game_id));
+            let (input2, record_id) = try_parse!(input1, apply!(Record::parse_record_id, game_id));
             input1 = input2;
-            if let Some(fid) = form_id {
-                form_ids.push(fid.get());
+            if let Some(RecordId::FormId(form_id)) = record_id {
+                form_ids.push(form_id.get());
             }
         }
     }

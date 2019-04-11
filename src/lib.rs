@@ -37,4 +37,5 @@ mod game_id;
 mod group;
 mod plugin;
 mod record;
+mod record_id;
 mod subrecord;

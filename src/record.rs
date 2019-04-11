@@ -20,12 +20,13 @@ use std::io;
 use std::num::NonZeroU32;
 
 use byteorder::{ByteOrder, LittleEndian};
-use nom::{le_u8, le_u32};
 use nom::IResult;
+use nom::{le_u32, le_u8};
 
 use error::Error;
 use game_id::GameId;
-use subrecord::{parse_subrecord_data_as_u32, Subrecord};
+use record_id::{NamespacedId, RecordId};
+use subrecord::{parse_subrecord_data_as_u32, Subrecord, SubrecordRef};
 
 const RECORD_TYPE_LENGTH: usize = 4;
 
@@ -81,16 +82,25 @@ impl Record {
         record(input, game_id, skip_subrecords)
     }
 
-    pub fn parse_form_id(input: &[u8], game_id: GameId) -> IResult<&[u8], Option<NonZeroU32>> {
+    pub fn parse_record_id(input: &[u8], game_id: GameId) -> IResult<&[u8], Option<RecordId>> {
         if game_id == GameId::Morrowind {
-            do_parse!(
-                input,
-                take!(RECORD_TYPE_LENGTH)
-                    >> size_of_subrecords: le_u32
-                    >> take!(8)
-                    >> take!(size_of_subrecords)
-                    >> (None)
-            )
+            let (remaining_input, header) = try_parse!(input, apply!(record_header, game_id));
+            let (remaining_input, subrecords_data) =
+                try_parse!(remaining_input, take!(header.size_of_subrecords));
+
+            // Header is parsed, now parse subrecords until the id subrecord has been found.
+            let mappers = get_record_id_subrecord_mappers(&header.record_type);
+            if !mappers.is_empty() {
+                let data = try_parse!(subrecords_data, apply!(parse_id_subrecords, mappers)).1;
+
+                let namespaced_id = data.map(|data| {
+                    RecordId::NamespacedId(NamespacedId::new(&header.record_type, data))
+                });
+
+                Ok((remaining_input, namespaced_id))
+            } else {
+                Ok((remaining_input, None))
+            }
         } else {
             do_parse!(
                 input,
@@ -101,7 +111,7 @@ impl Record {
                     >> take!(4)
                     >> cond!(game_id != GameId::Oblivion, take!(4))
                     >> take!(size_of_subrecords)
-                    >> (NonZeroU32::new(form_id))
+                    >> (NonZeroU32::new(form_id).map(RecordId::FormId))
             )
         }
     }
@@ -115,6 +125,48 @@ impl Record {
     }
 }
 
+fn map_scpt_id_data(data: &[u8]) -> Option<&[u8]> {
+    if data.len() > 32 {
+        Some(&data[..32])
+    } else {
+        None
+    }
+}
+
+fn map_cell_name_id_data(data: &[u8]) -> Option<&[u8]> {
+    if data.len() > 1 {
+        Some(data)
+    } else {
+        None
+    }
+}
+
+fn map_generic_id_data(data: &[u8]) -> Option<&[u8]> {
+    Some(data)
+}
+
+fn get_record_id_subrecord_mappers<'a>(
+    record_type: &[u8],
+) -> Vec<(&[u8], &dyn Fn(&'a [u8]) -> Option<&'a [u8]>)> {
+    match record_type {
+        b"GMST" | b"GLOB" | b"CLAS" | b"FACT" | b"RACE" | b"SOUN" | b"REGN" | b"BSGN" | b"LTEX"
+        | b"STAT" | b"DOOR" | b"MISC" | b"WEAP" | b"CONT" | b"SPEL" | b"CREA" | b"BODY"
+        | b"LIGH" | b"ENCH" | b"NPC_" | b"ARMO" | b"CLOT" | b"REPA" | b"ACTI" | b"APPA"
+        | b"LOCK" | b"PROB" | b"INGR" | b"BOOK" | b"ALCH" | b"LEVI" | b"LEVC" | b"PGRD"
+        | b"DIAL" => vec![(b"NAME", &map_generic_id_data)],
+        b"SKIL" | b"MGEF" => vec![(b"INDX", &map_generic_id_data)],
+        b"SNDG" => vec![(b"SNAM", &map_generic_id_data)],
+        b"INFO" => vec![(b"INAM", &map_generic_id_data)],
+        b"LAND" => vec![(b"INTV", &map_generic_id_data)],
+        b"SCPT" => vec![(b"SCHD", &map_scpt_id_data)],
+        b"CELL" => vec![
+            (b"NAME", &map_cell_name_id_data),
+            (b"REGN", &map_generic_id_data),
+        ],
+        b"TES3" | _ => Vec::new(),
+    }
+}
+
 fn header_length(game_id: GameId) -> usize {
     match game_id {
         GameId::Morrowind => 16,
@@ -123,7 +175,10 @@ fn header_length(game_id: GameId) -> usize {
     }
 }
 
-named!(record_type<[u8; 4]>, count_fixed!(u8, le_u8, RECORD_TYPE_LENGTH));
+named!(
+    record_type<[u8; 4]>,
+    count_fixed!(u8, le_u8, RECORD_TYPE_LENGTH)
+);
 
 named_args!(record_header(game_id: GameId) <RecordHeader>,
     do_parse!(
@@ -196,6 +251,37 @@ fn parse_subrecords(
     Ok((input1, subrecords))
 }
 
+/// Parses subrecords until one of each given subrecord type has been read, then
+/// skips to the end of the record and returns.
+fn parse_id_subrecords<'a>(
+    input: &'a [u8],
+    mut subrecord_mappers: Vec<(&[u8], &dyn Fn(&'a [u8]) -> Option<&'a [u8]>)>,
+) -> IResult<&'a [u8], Option<&'a [u8]>> {
+    let mut remaining_input: &[u8] = input;
+
+    while !remaining_input.is_empty() {
+        if subrecord_mappers.is_empty() {
+            break;
+        }
+        let (input2, subrecord) = try_parse!(
+            remaining_input,
+            apply!(SubrecordRef::new, GameId::Morrowind, 0)
+        );
+        if let Ok(index) =
+            subrecord_mappers.binary_search_by(|m| m.0.cmp(subrecord.subrecord_type()))
+        {
+            let data = subrecord_mappers[index].1(subrecord.data());
+            if let Some(_) = data {
+                return Ok((remaining_input, data));
+            }
+            subrecord_mappers.swap_remove(index);
+        }
+        remaining_input = input2;
+    }
+
+    Ok((remaining_input, None))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -233,13 +319,117 @@ mod tests {
         }
 
         #[test]
-        fn parse_form_id_should_return_none() {
+        fn parse_record_id_should_return_none_for_tes3_header() {
             let data =
                 &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
 
-            let form_id = Record::parse_form_id(data, GameId::Morrowind).unwrap().1;
+            let form_id = Record::parse_record_id(data, GameId::Morrowind).unwrap().1;
 
             assert!(form_id.is_none());
+        }
+
+        #[test]
+        fn parse_record_id_should_return_some_namespaced_id_for_gmst() {
+            let data =
+                &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[0x144..0x16F];
+
+            let form_id = Record::parse_record_id(data, GameId::Morrowind).unwrap().1;
+
+            assert!(form_id.unwrap().namespaced_id().is_some());
+        }
+
+        #[test]
+        fn get_record_id_subrecord_mappers_should_use_name_data_for_most_record_types() {
+            let mappers = get_record_id_subrecord_mappers(b"GMST");
+            assert_eq!(1, mappers.len());
+            assert_eq!(b"NAME", mappers[0].0);
+            assert_eq!(Some(b"".as_ref()), mappers[0].1(b""));
+            assert_eq!(Some(b" ".as_ref()), mappers[0].1(b" "));
+            assert_eq!(Some(b"testdata".as_ref()), mappers[0].1(b"testdata"));
+        }
+
+        #[test]
+        fn get_record_id_subrecord_mappers_should_use_indx_data_for_skil_and_mgef_records() {
+            let mappers = get_record_id_subrecord_mappers(b"SKIL");
+            assert_eq!(1, mappers.len());
+            assert_eq!(b"INDX", mappers[0].0);
+            assert_eq!(Some(b"".as_ref()), mappers[0].1(b""));
+            assert_eq!(Some(b" ".as_ref()), mappers[0].1(b" "));
+            assert_eq!(Some(b"testdata".as_ref()), mappers[0].1(b"testdata"));
+
+            let mappers = get_record_id_subrecord_mappers(b"MGEF");
+            assert_eq!(1, mappers.len());
+            assert_eq!(b"INDX", mappers[0].0);
+            assert_eq!(Some(b"".as_ref()), mappers[0].1(b""));
+            assert_eq!(Some(b" ".as_ref()), mappers[0].1(b" "));
+            assert_eq!(Some(b"testdata".as_ref()), mappers[0].1(b"testdata"));
+        }
+
+        #[test]
+        fn get_record_id_subrecord_mappers_should_use_snam_data_for_sndg_records() {
+            let mappers = get_record_id_subrecord_mappers(b"SNDG");
+            assert_eq!(1, mappers.len());
+            assert_eq!(b"SNAM", mappers[0].0);
+            assert_eq!(Some(b"".as_ref()), mappers[0].1(b""));
+            assert_eq!(Some(b" ".as_ref()), mappers[0].1(b" "));
+            assert_eq!(Some(b"testdata".as_ref()), mappers[0].1(b"testdata"));
+        }
+
+        #[test]
+        fn get_record_id_subrecord_mappers_should_use_inam_data_for_info_records() {
+            let mappers = get_record_id_subrecord_mappers(b"INFO");
+            assert_eq!(1, mappers.len());
+            assert_eq!(b"INAM", mappers[0].0);
+            assert_eq!(Some(b"".as_ref()), mappers[0].1(b""));
+            assert_eq!(Some(b" ".as_ref()), mappers[0].1(b" "));
+            assert_eq!(Some(b"testdata".as_ref()), mappers[0].1(b"testdata"));
+        }
+
+        #[test]
+        fn get_record_id_subrecord_mappers_should_use_intv_data_for_land_records() {
+            let mappers = get_record_id_subrecord_mappers(b"LAND");
+            assert_eq!(1, mappers.len());
+            assert_eq!(b"INTV", mappers[0].0);
+            assert_eq!(Some(b"".as_ref()), mappers[0].1(b""));
+            assert_eq!(Some(b" ".as_ref()), mappers[0].1(b" "));
+            assert_eq!(Some(b"testdata".as_ref()), mappers[0].1(b"testdata"));
+        }
+
+        #[test]
+        fn get_record_id_subrecord_mappers_should_use_schd_data_for_scpt_records() {
+            let mappers = get_record_id_subrecord_mappers(b"SCPT");
+            assert_eq!(1, mappers.len());
+            assert_eq!(b"SCHD", mappers[0].0);
+            assert_eq!(None, mappers[0].1(b"testdata"));
+            assert_eq!(Some([0u8; 32].as_ref()), mappers[0].1([0u8; 35].as_ref()));
+        }
+
+        #[test]
+        fn get_record_id_subrecord_mappers_should_use_name_and_regn_data_for_cell_records() {
+            let mappers = get_record_id_subrecord_mappers(b"CELL");
+            assert_eq!(2, mappers.len());
+
+            assert_eq!(b"NAME", mappers[0].0);
+            assert_eq!(None, mappers[0].1(b""));
+            assert_eq!(None, mappers[0].1(b" "));
+            assert_eq!(Some(b"testdata".as_ref()), mappers[0].1(b"testdata"));
+
+            assert_eq!(b"REGN", mappers[1].0);
+            assert_eq!(Some(b"".as_ref()), mappers[1].1(b""));
+            assert_eq!(Some(b" ".as_ref()), mappers[1].1(b" "));
+            assert_eq!(Some(b"testdata".as_ref()), mappers[1].1(b"testdata"));
+        }
+
+        #[test]
+        fn get_record_id_subrecord_mappers_should_return_an_empty_vec_for_the_tes3_record() {
+            let mappers = get_record_id_subrecord_mappers(b"TES3");
+            assert!(mappers.is_empty());
+        }
+
+        #[test]
+        fn get_record_id_subrecord_mappers_should_return_an_empty_vec_for_unrecognised_types() {
+            let mappers = get_record_id_subrecord_mappers(b"DUMY");
+            assert!(mappers.is_empty());
         }
     }
 
@@ -268,8 +458,7 @@ mod tests {
 
         #[test]
         fn parse_should_set_non_zero_form_id_for_non_header_records() {
-            let data =
-                &include_bytes!("../testing-plugins/Oblivion/Data/Blank.esm")[0x4C..0x70];
+            let data = &include_bytes!("../testing-plugins/Oblivion/Data/Blank.esm")[0x4C..0x70];
 
             let record = Record::parse(data, GameId::Oblivion, false).unwrap().1;
 
@@ -277,12 +466,12 @@ mod tests {
         }
 
         #[test]
-        fn parse_form_id_should_return_the_form_id() {
+        fn parse_record_id_should_return_the_form_id() {
             let data = &include_bytes!("../testing-plugins/Oblivion/Data/Blank.esm")[0x4C..0x70];
 
-            let form_id = Record::parse_form_id(data, GameId::Oblivion).unwrap().1;
+            let form_id = Record::parse_record_id(data, GameId::Oblivion).unwrap().1;
 
-            assert_eq!(0xCF0, form_id.unwrap().get());
+            assert_eq!(0xCF0, form_id.unwrap().form_id().unwrap().get());
         }
     }
 
@@ -315,8 +504,7 @@ mod tests {
 
         #[test]
         fn parse_should_set_non_zero_form_id_for_non_header_records() {
-            let data =
-                &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esp")[0x53..0xEF];
+            let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esp")[0x53..0xEF];
 
             let record = Record::parse(data, GameId::Skyrim, false).unwrap().1;
 
@@ -324,12 +512,12 @@ mod tests {
         }
 
         #[test]
-        fn parse_form_id_should_return_the_form_id() {
+        fn parse_record_id_should_return_the_form_id() {
             let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esp")[0x53..0xEF];
 
-            let form_id = Record::parse_form_id(data, GameId::Skyrim).unwrap().1;
+            let form_id = Record::parse_record_id(data, GameId::Skyrim).unwrap().1;
 
-            assert_eq!(0xCEC, form_id.unwrap().get());
+            assert_eq!(0xCEC, form_id.unwrap().form_id().unwrap().get());
         }
     }
 

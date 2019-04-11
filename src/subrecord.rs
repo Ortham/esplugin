@@ -27,8 +27,8 @@ use std::io::Read;
 #[cfg(feature = "compressed-fields")]
 use flate2::read::DeflateDecoder;
 
-use nom::{le_u8, le_u16, le_u32};
 use nom::IResult;
+use nom::{le_u16, le_u32, le_u8};
 
 use game_id::GameId;
 
@@ -89,6 +89,38 @@ impl Subrecord {
     }
 }
 
+pub struct SubrecordRef<'a> {
+    subrecord_type: [u8; 4],
+    data: &'a [u8],
+}
+
+impl<'a> SubrecordRef<'a> {
+    pub fn new(
+        input: &'a [u8],
+        game_id: GameId,
+        data_length_override: u32,
+    ) -> IResult<&'a [u8], SubrecordRef<'a>> {
+        let (remaining_input, (subrecord_type, data)) =
+            try_parse!(input, apply!(parse, game_id, data_length_override));
+
+        Ok((
+            remaining_input,
+            SubrecordRef {
+                subrecord_type,
+                data,
+            },
+        ))
+    }
+
+    pub fn subrecord_type(&'a self) -> &[u8; 4] {
+        &self.subrecord_type
+    }
+
+    pub fn data(&self) -> &'a [u8] {
+        self.data
+    }
+}
+
 fn parse(
     input: &[u8],
     game_id: GameId,
@@ -103,7 +135,10 @@ fn parse(
     }
 }
 
-named!(subrecord_type<[u8; 4]>, count_fixed!(u8, le_u8, SUBRECORD_TYPE_LENGTH));
+named!(
+    subrecord_type<[u8; 4]>,
+    count_fixed!(u8, le_u8, SUBRECORD_TYPE_LENGTH)
+);
 
 named!(morrowind_subrecord(&[u8]) -> ([u8; 4], &[u8]),
     do_parse!(
@@ -166,6 +201,16 @@ mod tests {
             assert_eq!(b"DATA", &subrecord.subrecord_type);
             assert_eq!(&TES3_DATA_SUBRECORD[8..], subrecord.data.as_slice());
         }
+
+        #[test]
+        fn subrecord_ref_new_should_parse_a_subrecord_correctly() {
+            let subrecord = SubrecordRef::new(TES3_DATA_SUBRECORD, GameId::Morrowind, 0)
+                .unwrap()
+                .1;
+
+            assert_eq!(b"DATA", subrecord.subrecord_type());
+            assert_eq!(&TES3_DATA_SUBRECORD[8..], subrecord.data());
+        }
     }
 
     mod nonmorrowind {
@@ -222,6 +267,16 @@ mod tests {
 
             assert_eq!(b"CNAM", &subrecord.subrecord_type);
             assert_eq!(&TES4_CNAM_SUBRECORD[6..10], subrecord.data.as_slice());
+        }
+
+        #[test]
+        fn subrecord_ref_new_should_parse_a_subrecord_correctly() {
+            let subrecord = SubrecordRef::new(TES4_CNAM_SUBRECORD, GameId::Skyrim, 0)
+                .unwrap()
+                .1;
+
+            assert_eq!(b"CNAM", subrecord.subrecord_type());
+            assert_eq!(&TES4_CNAM_SUBRECORD[6..], subrecord.data());
         }
 
         #[test]

@@ -39,14 +39,40 @@ use form_id::HashedFormId;
 use game_id::GameId;
 use group::Group;
 use record::Record;
+use record_id::{NamespacedId, RecordId};
 
 // 1 MB is around the file size at which memory-mapping becomes more performant.
 const MIN_MMAP_FILE_SIZE: u64 = 1_000_000;
 
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+enum RecordIds {
+    None,
+    FormIds(Vec<HashedFormId>),
+    NamespacedIds(Vec<NamespacedId>),
+}
+
+impl From<Vec<NamespacedId>> for RecordIds {
+    fn from(record_ids: Vec<NamespacedId>) -> RecordIds {
+        RecordIds::NamespacedIds(record_ids)
+    }
+}
+
+impl From<Vec<HashedFormId>> for RecordIds {
+    fn from(form_ids: Vec<HashedFormId>) -> RecordIds {
+        RecordIds::FormIds(form_ids)
+    }
+}
+
+impl Default for RecordIds {
+    fn default() -> RecordIds {
+        RecordIds::None
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
 struct PluginData {
     header_record: Record,
-    form_ids: Vec<HashedFormId>,
+    record_ids: RecordIds,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
@@ -231,44 +257,36 @@ impl Plugin {
     }
 
     pub fn count_override_records(&self) -> usize {
-        self.data
-            .form_ids
-            .iter()
-            .filter(|f| f.is_overridden_record())
-            .count()
+        if let RecordIds::FormIds(form_ids) = &self.data.record_ids {
+            form_ids.iter().filter(|f| f.is_overridden_record()).count()
+        } else {
+            0
+        }
     }
 
     pub fn overlaps_with(&self, other: &Self) -> bool {
-        let form_ids = &self.data.form_ids;
-        let other_form_ids = &other.data.form_ids;
-
-        let mut index = 0;
-        let mut other_index = 0;
-
-        while index != form_ids.len() && other_index != other_form_ids.len() {
-            if form_ids[index] < other_form_ids[other_index] {
-                index += 1;
-            } else {
-                if other_form_ids[other_index] == form_ids[index] {
-                    return true;
-                }
-                other_index += 1;
-            }
+        use self::RecordIds::*;
+        match (&self.data.record_ids, &other.data.record_ids) {
+            (FormIds(left), FormIds(right)) => sorted_slices_intersect(&left, &right),
+            (NamespacedIds(left), NamespacedIds(right)) => sorted_slices_intersect(&left, &right),
+            _ => false,
         }
-
-        false
     }
 
     // A valid light master is one for which all the new records it adds have
     // object indices in the range 0x800 to 0xFFF.
     pub fn is_valid_as_light_master(&self) -> bool {
         match self.game_id {
-            GameId::Fallout4 | GameId::SkyrimSE => self
-                .data
-                .form_ids
-                .iter()
-                .filter(|f| !f.is_overridden_record())
-                .all(HashedFormId::valid_in_light_master),
+            GameId::Fallout4 | GameId::SkyrimSE => {
+                match &self.data.record_ids {
+                    RecordIds::None => true,
+                    RecordIds::FormIds(form_ids) => form_ids
+                        .iter()
+                        .filter(|f| !f.is_overridden_record())
+                        .all(HashedFormId::valid_in_light_master),
+                    RecordIds::NamespacedIds(_) => false, // this should never happen.
+                }
+            }
             _ => false,
         }
     }
@@ -287,6 +305,23 @@ impl Plugin {
     fn is_light_master_flag_set(&self) -> bool {
         self.data.header_record.header().flags() & 0x200 != 0
     }
+}
+
+fn sorted_slices_intersect<T: PartialOrd>(left: &[T], right: &[T]) -> bool {
+    let mut left_index = 0;
+    let mut right_index = 0;
+
+    while left_index != left.len() && right_index != right.len() {
+        if left[left_index] < right[right_index] {
+            left_index += 1;
+        } else if left[left_index] > right[right_index] {
+            right_index += 1;
+        } else {
+            return true;
+        }
+    }
+
+    false
 }
 
 fn hashed_form_ids(form_ids: &[u32], filename: &str, masters: &[String]) -> Vec<HashedFormId> {
@@ -329,14 +364,47 @@ fn parse_form_ids<'a>(input: &'a [u8], game_id: GameId) -> IResult<&'a [u8], Vec
     let mut form_ids = Vec::new();
     let mut remaining_input = input;
 
-    if game_id != GameId::Morrowind {
-        while !remaining_input.is_empty() {
-            let (input, _) = Group::parse_for_form_ids(remaining_input, game_id, &mut form_ids)?;
-            remaining_input = input;
-        }
+    while !remaining_input.is_empty() {
+        let (input, _) = Group::parse_for_form_ids(remaining_input, game_id, &mut form_ids)?;
+        remaining_input = input;
     }
 
     Ok((remaining_input, form_ids))
+}
+
+fn parse_morrowind_record_ids<'a>(input: &'a [u8]) -> IResult<&'a [u8], RecordIds> {
+    let mut record_ids = Vec::new();
+    let mut remaining_input = input;
+
+    while !remaining_input.is_empty() {
+        let (input, record_id) = Record::parse_record_id(remaining_input, GameId::Morrowind)?;
+        remaining_input = input;
+
+        if let Some(RecordId::NamespacedId(record_id)) = record_id {
+            record_ids.push(record_id);
+        }
+    }
+
+    Ok((remaining_input, record_ids.into()))
+}
+
+fn parse_record_ids<'a>(
+    input: &'a [u8],
+    game_id: GameId,
+    header_record: &Record,
+    filename: &str,
+) -> IResult<&'a [u8], RecordIds> {
+    if game_id == GameId::Morrowind {
+        parse_morrowind_record_ids(input)
+    } else {
+        let masters = masters(&header_record)
+            .map_err(|_| nom::Err::Error(nom::Context::Code(input, ErrorKind::Custom(1))))?;
+
+        let (remaining_input, form_ids) = parse_form_ids(input, game_id)?;
+        let form_ids = hashed_form_ids(&form_ids, filename, &masters).into();
+
+        Ok((remaining_input, form_ids))
+    }
 }
 
 fn parse_plugin<'a>(
@@ -352,23 +420,18 @@ fn parse_plugin<'a>(
             input1,
             PluginData {
                 header_record,
-                form_ids: Vec::new(),
+                record_ids: RecordIds::None,
             },
         ));
     }
 
-    let (input2, form_ids) = try_parse!(input1, apply!(parse_form_ids, game_id));
-
-    let masters = masters(&header_record)
-        .map_err(|_| nom::Err::Error(nom::Context::Code(input, ErrorKind::Custom(1))))?;
-
-    let form_ids = hashed_form_ids(&form_ids, filename, &masters);
+    let (input2, record_ids) = parse_record_ids(input1, game_id, &header_record, filename)?;
 
     Ok((
         input2,
         PluginData {
             header_record,
-            form_ids,
+            record_ids,
         },
     ))
 }
@@ -388,6 +451,23 @@ mod tests {
             );
 
             assert!(plugin.parse_file(false).is_ok());
+
+            match plugin.data.record_ids {
+                RecordIds::NamespacedIds(ids) => assert_eq!(10, ids.len()),
+                _ => panic!("Expected namespaced record IDs"),
+            }
+        }
+
+        #[test]
+        fn parse_file_header_only_should_not_store_record_ids() {
+            let mut plugin = Plugin::new(
+                GameId::Skyrim,
+                Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
+            );
+
+            assert!(plugin.parse_file(true).is_ok());
+
+            assert_eq!(RecordIds::None, plugin.data.record_ids);
         }
 
         #[test]
@@ -490,6 +570,35 @@ mod tests {
         }
 
         #[test]
+        fn count_override_records_should_return_0_even_when_override_records_are_present() {
+            let mut plugin = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank - Master Dependent.esm"),
+            );
+
+            assert!(plugin.parse_file(false).is_ok());
+            assert_eq!(0, plugin.count_override_records());
+        }
+
+        #[test]
+        fn overlaps_with_should_detect_when_two_plugins_have_a_record_with_the_same_id() {
+            let mut plugin1 = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+            );
+            let mut plugin2 = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank - Different.esm"),
+            );
+
+            assert!(plugin1.parse_file(false).is_ok());
+            assert!(plugin2.parse_file(false).is_ok());
+
+            assert!(plugin1.overlaps_with(&plugin1));
+            assert!(!plugin1.overlaps_with(&plugin2));
+        }
+
+        #[test]
         fn is_valid_as_light_master_should_always_be_false() {
             let mut plugin = Plugin::new(
                 GameId::Morrowind,
@@ -548,7 +657,10 @@ mod tests {
 
             assert!(plugin.parse_file(false).is_ok());
 
-            assert_eq!(plugin.data.form_ids.len(), 10);
+            match plugin.data.record_ids {
+                RecordIds::FormIds(ids) => assert_eq!(10, ids.len()),
+                _ => panic!("Expected hashed FormIDs"),
+            }
         }
 
         #[test]
@@ -560,7 +672,7 @@ mod tests {
 
             assert!(plugin.parse_file(true).is_ok());
 
-            assert_eq!(0, plugin.data.form_ids.len());
+            assert_eq!(RecordIds::None, plugin.data.record_ids);
         }
 
         #[test]
