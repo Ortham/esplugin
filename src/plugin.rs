@@ -443,6 +443,9 @@ mod tests {
     mod morrowind {
         use super::super::*;
 
+        use std::collections::HashSet;
+        use std::iter::FromIterator;
+
         #[test]
         fn parse_file_should_succeed() {
             let mut plugin = Plugin::new(
@@ -454,6 +457,24 @@ mod tests {
 
             match plugin.data.record_ids {
                 RecordIds::NamespacedIds(ids) => assert_eq!(10, ids.len()),
+                _ => panic!("Expected namespaced record IDs"),
+            }
+        }
+
+        #[test]
+        fn plugin_parse_should_read_a_unique_id_for_each_record() {
+            let mut plugin = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+            );
+
+            assert!(plugin.parse_file(false).is_ok());
+
+            match plugin.data.record_ids {
+                RecordIds::NamespacedIds(ids) => {
+                    let set: HashSet<NamespacedId> = HashSet::from_iter(ids.iter().cloned());
+                    assert_eq!(set.len(), ids.len());
+                }
                 _ => panic!("Expected namespaced record IDs"),
             }
         }
@@ -567,6 +588,22 @@ mod tests {
             assert!(plugin.record_and_group_count().is_none());
             assert!(plugin.parse_file(true).is_ok());
             assert_eq!(10, plugin.record_and_group_count().unwrap());
+        }
+
+        #[test]
+        fn record_and_group_count_should_match_record_ids_length() {
+            let mut plugin = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+            );
+
+            assert!(plugin.record_and_group_count().is_none());
+            assert!(plugin.parse_file(false).is_ok());
+            assert_eq!(10, plugin.record_and_group_count().unwrap());
+            match plugin.data.record_ids {
+                RecordIds::NamespacedIds(ids) => assert_eq!(10, ids.len()),
+                _ => panic!("Expected namespaced record IDs"),
+            }
         }
 
         #[test]

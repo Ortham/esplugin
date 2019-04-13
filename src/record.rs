@@ -89,9 +89,10 @@ impl Record {
                 try_parse!(remaining_input, take!(header.size_of_subrecords));
 
             // Header is parsed, now parse subrecords until the id subrecord has been found.
-            let mappers = get_record_id_subrecord_mappers(&header.record_type);
-            if !mappers.is_empty() {
-                let data = try_parse!(subrecords_data, apply!(parse_id_subrecords, mappers)).1;
+            let types = record_id_subrecord_types(header.record_type);
+            if !types.is_empty() {
+                let subrecords = try_parse!(subrecords_data, apply!(parse_id_subrecords, types)).1;
+                let data = record_id_subrecord_mapper(header.record_type, &subrecords);
 
                 let namespaced_id = data.map(|data| {
                     RecordId::NamespacedId(NamespacedId::new(&header.record_type, data))
@@ -125,44 +126,87 @@ impl Record {
     }
 }
 
-fn map_scpt_id_data(data: &[u8]) -> Option<&[u8]> {
-    if data.len() > 32 {
-        Some(&data[..32])
+fn map_scpt_id_data<'a>(subrecords: &[SubrecordRef<'a>]) -> Option<&'a [u8]> {
+    subrecords
+        .first()
+        .map(SubrecordRef::data)
+        .filter(|d| d.len() > 32)
+        .map(|d| &d[..32])
+}
+
+fn map_generic_id_data<'a>(subrecords: &[SubrecordRef<'a>]) -> Option<&'a [u8]> {
+    subrecords.first().map(SubrecordRef::data)
+}
+
+fn map_cell_id_data<'a>(subrecords: &[SubrecordRef<'a>]) -> Option<&'a [u8]> {
+    // Cell logic: if an exterior cell, use the data subrecord, otherwise
+    // use the name. However, name appears before cell, so need to collect
+    // both before deciding.
+    if subrecords.len() != 2
+        || subrecords[0].subrecord_type() != b"NAME"
+        || subrecords[1].subrecord_type() != b"DATA"
+    {
+        return None;
+    }
+
+    let name = subrecords[0].data();
+    let data = subrecords[1].data();
+
+    if data.len() == 12 && data[0] & 0x01 == 0 {
+        Some(&data[4..])
+    } else if name.len() > 1 {
+        Some(name)
     } else {
         None
     }
 }
 
-fn map_cell_name_id_data(data: &[u8]) -> Option<&[u8]> {
-    if data.len() > 1 {
-        Some(data)
+fn map_pgrd_id_data<'a>(subrecords: &[SubrecordRef<'a>]) -> Option<&'a [u8]> {
+    // PGRD logic: use data subrecord if grid coord is not empty, otherwise
+    // use name. data comes before name.
+    if subrecords.len() != 2
+        || subrecords[0].subrecord_type() != b"DATA"
+        || subrecords[1].subrecord_type() != b"NAME"
+    {
+        return None;
+    }
+
+    let data = subrecords[0].data();
+    let name = subrecords[1].data();
+
+    if data.len() > 8 && &data[..8] != &[0; 8] {
+        Some(&data[..8])
     } else {
-        None
+        Some(name)
     }
 }
 
-fn map_generic_id_data(data: &[u8]) -> Option<&[u8]> {
-    Some(data)
+fn record_id_subrecord_mapper<'a>(
+    record_type: [u8; 4],
+    subrecords: &[SubrecordRef<'a>],
+) -> Option<&'a [u8]> {
+    match &record_type {
+        b"CELL" => map_cell_id_data(subrecords),
+        b"PGRD" => map_pgrd_id_data(subrecords),
+        b"SCPT" => map_scpt_id_data(subrecords),
+        _ => map_generic_id_data(subrecords),
+    }
 }
 
-fn get_record_id_subrecord_mappers<'a>(
-    record_type: &[u8],
-) -> Vec<(&[u8], &dyn Fn(&'a [u8]) -> Option<&'a [u8]>)> {
-    match record_type {
+fn record_id_subrecord_types(record_type: [u8; 4]) -> Vec<&'static [u8; 4]> {
+    match &record_type {
         b"GMST" | b"GLOB" | b"CLAS" | b"FACT" | b"RACE" | b"SOUN" | b"REGN" | b"BSGN" | b"LTEX"
         | b"STAT" | b"DOOR" | b"MISC" | b"WEAP" | b"CONT" | b"SPEL" | b"CREA" | b"BODY"
         | b"LIGH" | b"ENCH" | b"NPC_" | b"ARMO" | b"CLOT" | b"REPA" | b"ACTI" | b"APPA"
-        | b"LOCK" | b"PROB" | b"INGR" | b"BOOK" | b"ALCH" | b"LEVI" | b"LEVC" | b"PGRD"
-        | b"DIAL" => vec![(b"NAME", &map_generic_id_data)],
-        b"SKIL" | b"MGEF" => vec![(b"INDX", &map_generic_id_data)],
-        b"SNDG" => vec![(b"SNAM", &map_generic_id_data)],
-        b"INFO" => vec![(b"INAM", &map_generic_id_data)],
-        b"LAND" => vec![(b"INTV", &map_generic_id_data)],
-        b"SCPT" => vec![(b"SCHD", &map_scpt_id_data)],
-        b"CELL" => vec![
-            (b"NAME", &map_cell_name_id_data),
-            (b"REGN", &map_generic_id_data),
-        ],
+        | b"LOCK" | b"PROB" | b"INGR" | b"BOOK" | b"ALCH" | b"LEVI" | b"LEVC" | b"SNDG"
+        | b"DIAL" => vec![b"NAME"],
+        b"SKIL" | b"MGEF" => vec![b"INDX"],
+        // INFO handling is a little inaccurate, as identical INFO records can
+        // appear after different DIAL records and still be different records.
+        b"INFO" => vec![b"INAM"],
+        b"LAND" => vec![b"INTV"],
+        b"SCPT" => vec![b"SCHD"],
+        b"CELL" | b"PGRD" => vec![b"DATA", b"NAME"],
         b"TES3" | _ => Vec::new(),
     }
 }
@@ -255,31 +299,30 @@ fn parse_subrecords(
 /// skips to the end of the record and returns.
 fn parse_id_subrecords<'a>(
     input: &'a [u8],
-    mut subrecord_mappers: Vec<(&[u8], &dyn Fn(&'a [u8]) -> Option<&'a [u8]>)>,
-) -> IResult<&'a [u8], Option<&'a [u8]>> {
+    mut target_subrecord_types: Vec<&[u8; 4]>,
+) -> IResult<&'a [u8], Vec<SubrecordRef<'a>>> {
     let mut remaining_input: &[u8] = input;
+    let mut subrecords = Vec::with_capacity(target_subrecord_types.len());
 
     while !remaining_input.is_empty() {
-        if subrecord_mappers.is_empty() {
+        if target_subrecord_types.is_empty() {
             break;
         }
         let (input2, subrecord) = try_parse!(
             remaining_input,
             apply!(SubrecordRef::new, GameId::Morrowind, 0)
         );
-        if let Ok(index) =
-            subrecord_mappers.binary_search_by(|m| m.0.cmp(subrecord.subrecord_type()))
-        {
-            let data = subrecord_mappers[index].1(subrecord.data());
-            if let Some(_) = data {
-                return Ok((remaining_input, data));
-            }
-            subrecord_mappers.swap_remove(index);
-        }
         remaining_input = input2;
+        if let Some(index) = target_subrecord_types
+            .iter()
+            .position(|m| m == &subrecord.subrecord_type())
+        {
+            subrecords.push(subrecord);
+            target_subrecord_types.swap_remove(index);
+        }
     }
 
-    Ok((remaining_input, None))
+    Ok((remaining_input, subrecords))
 }
 
 #[cfg(test)]
@@ -339,97 +382,198 @@ mod tests {
         }
 
         #[test]
-        fn get_record_id_subrecord_mappers_should_use_name_data_for_most_record_types() {
-            let mappers = get_record_id_subrecord_mappers(b"GMST");
-            assert_eq!(1, mappers.len());
-            assert_eq!(b"NAME", mappers[0].0);
-            assert_eq!(Some(b"".as_ref()), mappers[0].1(b""));
-            assert_eq!(Some(b" ".as_ref()), mappers[0].1(b" "));
-            assert_eq!(Some(b"testdata".as_ref()), mappers[0].1(b"testdata"));
+        fn record_id_subrecord_types_should_use_name_data_for_most_record_types() {
+            let types = record_id_subrecord_types(*b"GMST");
+            assert_eq!(vec![b"NAME"], types);
         }
 
         #[test]
-        fn get_record_id_subrecord_mappers_should_use_indx_data_for_skil_and_mgef_records() {
-            let mappers = get_record_id_subrecord_mappers(b"SKIL");
-            assert_eq!(1, mappers.len());
-            assert_eq!(b"INDX", mappers[0].0);
-            assert_eq!(Some(b"".as_ref()), mappers[0].1(b""));
-            assert_eq!(Some(b" ".as_ref()), mappers[0].1(b" "));
-            assert_eq!(Some(b"testdata".as_ref()), mappers[0].1(b"testdata"));
-
-            let mappers = get_record_id_subrecord_mappers(b"MGEF");
-            assert_eq!(1, mappers.len());
-            assert_eq!(b"INDX", mappers[0].0);
-            assert_eq!(Some(b"".as_ref()), mappers[0].1(b""));
-            assert_eq!(Some(b" ".as_ref()), mappers[0].1(b" "));
-            assert_eq!(Some(b"testdata".as_ref()), mappers[0].1(b"testdata"));
+        fn record_id_subrecord_types_should_use_indx_data_for_skil_records() {
+            let types = record_id_subrecord_types(*b"SKIL");
+            assert_eq!(vec![b"INDX"], types);
         }
 
         #[test]
-        fn get_record_id_subrecord_mappers_should_use_snam_data_for_sndg_records() {
-            let mappers = get_record_id_subrecord_mappers(b"SNDG");
-            assert_eq!(1, mappers.len());
-            assert_eq!(b"SNAM", mappers[0].0);
-            assert_eq!(Some(b"".as_ref()), mappers[0].1(b""));
-            assert_eq!(Some(b" ".as_ref()), mappers[0].1(b" "));
-            assert_eq!(Some(b"testdata".as_ref()), mappers[0].1(b"testdata"));
+        fn record_id_subrecord_types_should_use_indx_data_for_mgef_records() {
+            let types = record_id_subrecord_types(*b"MGEF");
+            assert_eq!(vec![b"INDX"], types);
         }
 
         #[test]
-        fn get_record_id_subrecord_mappers_should_use_inam_data_for_info_records() {
-            let mappers = get_record_id_subrecord_mappers(b"INFO");
-            assert_eq!(1, mappers.len());
-            assert_eq!(b"INAM", mappers[0].0);
-            assert_eq!(Some(b"".as_ref()), mappers[0].1(b""));
-            assert_eq!(Some(b" ".as_ref()), mappers[0].1(b" "));
-            assert_eq!(Some(b"testdata".as_ref()), mappers[0].1(b"testdata"));
+        fn record_id_subrecord_types_should_use_inam_data_for_info_records() {
+            let types = record_id_subrecord_types(*b"INFO");
+            assert_eq!(vec![b"INAM"], types);
         }
 
         #[test]
-        fn get_record_id_subrecord_mappers_should_use_intv_data_for_land_records() {
-            let mappers = get_record_id_subrecord_mappers(b"LAND");
-            assert_eq!(1, mappers.len());
-            assert_eq!(b"INTV", mappers[0].0);
-            assert_eq!(Some(b"".as_ref()), mappers[0].1(b""));
-            assert_eq!(Some(b" ".as_ref()), mappers[0].1(b" "));
-            assert_eq!(Some(b"testdata".as_ref()), mappers[0].1(b"testdata"));
+        fn record_id_subrecord_types_should_use_intv_data_for_land_records() {
+            let types = record_id_subrecord_types(*b"LAND");
+            assert_eq!(vec![b"INTV"], types);
         }
 
         #[test]
-        fn get_record_id_subrecord_mappers_should_use_schd_data_for_scpt_records() {
-            let mappers = get_record_id_subrecord_mappers(b"SCPT");
-            assert_eq!(1, mappers.len());
-            assert_eq!(b"SCHD", mappers[0].0);
-            assert_eq!(None, mappers[0].1(b"testdata"));
-            assert_eq!(Some([0u8; 32].as_ref()), mappers[0].1([0u8; 35].as_ref()));
+        fn record_id_subrecord_types_should_use_schd_data_for_scpt_records() {
+            let types = record_id_subrecord_types(*b"SCPT");
+            assert_eq!(vec![b"SCHD"], types);
         }
 
         #[test]
-        fn get_record_id_subrecord_mappers_should_use_name_and_regn_data_for_cell_records() {
-            let mappers = get_record_id_subrecord_mappers(b"CELL");
-            assert_eq!(2, mappers.len());
+        fn record_id_subrecord_types_should_use_data_and_name_data_for_cell_records() {
+            let types = record_id_subrecord_types(*b"CELL");
+            assert_eq!(vec![b"DATA", b"NAME"], types);
+        }
 
-            assert_eq!(b"NAME", mappers[0].0);
-            assert_eq!(None, mappers[0].1(b""));
-            assert_eq!(None, mappers[0].1(b" "));
-            assert_eq!(Some(b"testdata".as_ref()), mappers[0].1(b"testdata"));
-
-            assert_eq!(b"REGN", mappers[1].0);
-            assert_eq!(Some(b"".as_ref()), mappers[1].1(b""));
-            assert_eq!(Some(b" ".as_ref()), mappers[1].1(b" "));
-            assert_eq!(Some(b"testdata".as_ref()), mappers[1].1(b"testdata"));
+        #[test]
+        fn record_id_subrecord_types_should_use_data_and_name_data_for_pgrd_records() {
+            let types = record_id_subrecord_types(*b"PGRD");
+            assert_eq!(vec![b"DATA", b"NAME"], types);
         }
 
         #[test]
         fn get_record_id_subrecord_mappers_should_return_an_empty_vec_for_the_tes3_record() {
-            let mappers = get_record_id_subrecord_mappers(b"TES3");
-            assert!(mappers.is_empty());
+            let types = record_id_subrecord_types(*b"TES3");
+            assert!(types.is_empty());
         }
 
         #[test]
         fn get_record_id_subrecord_mappers_should_return_an_empty_vec_for_unrecognised_types() {
-            let mappers = get_record_id_subrecord_mappers(b"DUMY");
-            assert!(mappers.is_empty());
+            let types = record_id_subrecord_types(*b"DUMY");
+            assert!(types.is_empty());
+        }
+
+        #[test]
+        fn record_id_subrecord_mapper_should_get_first_subrecords_data_for_most_record_types() {
+            let input = &[
+                0x4E, 0x41, 0x4D, 0x45, 0x11, 0x00, 0x00, 0x00, 0x73, 0x4D, 0x6F, 0x6E, 0x74, 0x68,
+                0x4D, 0x6F, 0x72, 0x6E, 0x69, 0x6E, 0x67, 0x73, 0x74, 0x61, 0x72,
+            ];
+            let subrecords = &[SubrecordRef::new(input, GameId::Morrowind, 0).unwrap().1];
+
+            let data = record_id_subrecord_mapper(*b"GMST", subrecords);
+            assert_eq!(&input[8..], data.unwrap());
+        }
+
+        #[test]
+        fn record_id_subrecord_mapper_should_get_first_32_bytes_of_first_subrecords_data_for_scpt_records(
+        ) {
+            let input = &[
+                0x53, 0x43, 0x48, 0x44, 0x21, 0x00, 0x00, 0x00, 0x41, 0x62, 0x65, 0x62, 0x61, 0x61,
+                0x6C, 0x41, 0x74, 0x74, 0x61, 0x63, 0x6B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            ];
+            let subrecords = &[SubrecordRef::new(input, GameId::Morrowind, 0).unwrap().1];
+            let data = record_id_subrecord_mapper(*b"SCPT", subrecords);
+
+            assert_eq!(&input[8..40], data.unwrap());
+
+            let input = &[
+                0x53, 0x43, 0x48, 0x44, 0x0E, 0x00, 0x00, 0x00, 0x41, 0x62, 0x65, 0x62, 0x61, 0x61,
+                0x6C, 0x41, 0x74, 0x74, 0x61, 0x63, 0x6B, 0x00,
+            ];
+            let subrecords = &[SubrecordRef::new(input, GameId::Morrowind, 0).unwrap().1];
+            let data = record_id_subrecord_mapper(*b"SCPT", subrecords);
+
+            assert!(data.is_none());
+        }
+
+        #[test]
+        fn record_id_subrecord_mapper_should_use_data_for_exterior_cell_records() {
+            let input = &[
+                0x4E, 0x41, 0x4D, 0x45, 0x09, 0x00, 0x00, 0x00, 0x42, 0x61, 0x6C, 0x20, 0x46, 0x65,
+                0x6C, 0x6C, 0x00, 0x44, 0x41, 0x54, 0x41, 0x0C, 0x00, 0x00, 0x00, 0x46, 0x00, 0x00,
+                0x00, 0x08, 0x00, 0x00, 0x00, 0xF4, 0xFF, 0xFF, 0xFF,
+            ];
+            let subrecords = &[
+                SubrecordRef::new(&input[..17], GameId::Morrowind, 0)
+                    .unwrap()
+                    .1,
+                SubrecordRef::new(&input[17..], GameId::Morrowind, 0)
+                    .unwrap()
+                    .1,
+            ];
+            let data = record_id_subrecord_mapper(*b"CELL", subrecords);
+
+            assert_eq!(&input[29..], data.unwrap());
+        }
+
+        #[test]
+        fn record_id_subrecord_mapper_should_use_name_for_interior_cell_records() {
+            let input = &[
+                0x4E, 0x41, 0x4D, 0x45, 0x09, 0x00, 0x00, 0x00, 0x42, 0x61, 0x6C, 0x20, 0x46, 0x65,
+                0x6C, 0x6C, 0x00, 0x44, 0x41, 0x54, 0x41, 0x0C, 0x00, 0x00, 0x00, 0x47, 0x00, 0x00,
+                0x00, 0x08, 0x00, 0x00, 0x00, 0xF4, 0xFF, 0xFF, 0xFF,
+            ];
+            let subrecords = &[
+                SubrecordRef::new(&input[..17], GameId::Morrowind, 0)
+                    .unwrap()
+                    .1,
+                SubrecordRef::new(&input[17..], GameId::Morrowind, 0)
+                    .unwrap()
+                    .1,
+            ];
+            let data = record_id_subrecord_mapper(*b"CELL", subrecords);
+
+            assert_eq!(&input[8..17], data.unwrap());
+        }
+
+        #[test]
+        fn record_id_subrecord_mapper_should_return_none_for_interior_cell_records_with_no_name() {
+            let input = &[
+                0x4E, 0x41, 0x4D, 0x45, 0x01, 0x00, 0x00, 0x00, 0x00, 0x44, 0x41, 0x54, 0x41, 0x0C,
+                0x00, 0x00, 0x00, 0x47, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0xF4, 0xFF, 0xFF,
+                0xFF,
+            ];
+            let subrecords = &[
+                SubrecordRef::new(&input[..17], GameId::Morrowind, 0)
+                    .unwrap()
+                    .1,
+                SubrecordRef::new(&input[9..], GameId::Morrowind, 0)
+                    .unwrap()
+                    .1,
+            ];
+            let data = record_id_subrecord_mapper(*b"CELL", subrecords);
+
+            assert!(data.is_none());
+        }
+
+        #[test]
+        fn record_id_subrecord_mapper_should_use_data_for_exterior_pgrd_records() {
+            let input = &[
+                0x44, 0x41, 0x54, 0x41, 0x0C, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0xF4, 0xFF,
+                0xFF, 0xFF, 0x00, 0x04, 0x37, 0x00, 0x4E, 0x41, 0x4D, 0x45, 0x09, 0x00, 0x00, 0x00,
+                0x42, 0x61, 0x6C, 0x20, 0x46, 0x65, 0x6C, 0x6C, 0x00,
+            ];
+            let subrecords = &[
+                SubrecordRef::new(&input[..20], GameId::Morrowind, 0)
+                    .unwrap()
+                    .1,
+                SubrecordRef::new(&input[20..], GameId::Morrowind, 0)
+                    .unwrap()
+                    .1,
+            ];
+            let data = record_id_subrecord_mapper(*b"PGRD", subrecords);
+
+            assert_eq!(&input[8..16], data.unwrap());
+        }
+
+        #[test]
+        fn record_id_subrecord_mapper_should_use_name_for_interior_pgrd_records() {
+            let input = &[
+                0x44, 0x41, 0x54, 0x41, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x04, 0x37, 0x00, 0x4E, 0x41, 0x4D, 0x45, 0x09, 0x00, 0x00, 0x00,
+                0x42, 0x61, 0x6C, 0x20, 0x46, 0x65, 0x6C, 0x6C, 0x00,
+            ];
+            let subrecords = &[
+                SubrecordRef::new(&input[..20], GameId::Morrowind, 0)
+                    .unwrap()
+                    .1,
+                SubrecordRef::new(&input[20..], GameId::Morrowind, 0)
+                    .unwrap()
+                    .1,
+            ];
+            let data = record_id_subrecord_mapper(*b"PGRD", subrecords);
+
+            assert_eq!(&input[28..], data.unwrap());
         }
     }
 

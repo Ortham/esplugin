@@ -77,6 +77,11 @@ pub enum Namespace {
     Sound,
     Global,
     Region,
+    Skill,
+    MagicEffect,
+    Land,
+    PathGrid,
+    Dialog,
     Other,
 }
 
@@ -93,6 +98,11 @@ impl From<&[u8; 4]> for Namespace {
             b"SOUN" => Sound,
             b"GLOB" => Global,
             b"REGN" => Region,
+            b"SKIL" => Skill,
+            b"MGEF" => MagicEffect,
+            b"LAND" => Land,
+            b"PGRD" => PathGrid,
+            b"DIAL" => Dialog,
             _ => Other,
         }
     }
@@ -103,10 +113,9 @@ mod tests {
     use super::*;
 
     const OTHER_RECORD_TYPES: &[&[u8; 4]] = &[
-        b"ACTI", b"ALCH", b"APPA", b"ARMO", b"BODY", b"BOOK", b"CLOT", b"CONT", b"CREA", b"DIAL",
-        b"DOOR", b"ENCH", b"GMST", b"INFO", b"INGR", b"LAND", b"LEVC", b"LEVI", b"LIGH", b"LOCK",
-        b"LTEX", b"MGEF", b"MISC", b"NPC_", b"PGRD", b"PROB", b"REPA", b"SKIL", b"SNDG", b"SPEL",
-        b"STAT", b"TES3", b"WEAP",
+        b"ACTI", b"ALCH", b"APPA", b"ARMO", b"BODY", b"BOOK", b"CLOT", b"CONT", b"CREA", b"DOOR",
+        b"ENCH", b"GMST", b"INFO", b"INGR", b"LEVC", b"LEVI", b"LIGH", b"LOCK", b"LTEX", b"MISC",
+        b"NPC_", b"PROB", b"REPA", b"SNDG", b"SPEL", b"STAT", b"TES3", b"WEAP",
     ];
 
     #[test]
@@ -120,6 +129,11 @@ mod tests {
         assert_eq!(Namespace::Sound, b"SOUN".into());
         assert_eq!(Namespace::Global, b"GLOB".into());
         assert_eq!(Namespace::Region, b"REGN".into());
+        assert_eq!(Namespace::Skill, b"SKIL".into());
+        assert_eq!(Namespace::MagicEffect, b"MGEF".into());
+        assert_eq!(Namespace::Land, b"LAND".into());
+        assert_eq!(Namespace::PathGrid, b"PGRD".into());
+        assert_eq!(Namespace::Dialog, b"DIAL".into());
     }
 
     #[test]
