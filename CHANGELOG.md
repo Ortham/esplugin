@@ -2,6 +2,20 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [2.1.2] - 2019-04-24
+
+### Fixed
+
+- `Plugin::overlaps_with()` now detects overlaps between Morrowind plugins. It
+  would previously always return `false` for all pairs of Morrowind plugins
+  because it was checking for record FormIDs present in both plugins, but
+  Morrowind records don't have FormIDs. Instead, record IDs are calculated from
+  record data and used for the same purpose.
+- `Plugin::count_override_records()` now always returns `0` for Morrowind
+  plugins, as it's impossible to tell which records a plugin contains are new
+  and which are overrides without comparing against its masters. The function
+  would previously return the total number of records in the plugin.
+
 ## [2.1.1] - 2018-10-22
 
 ### Fixed

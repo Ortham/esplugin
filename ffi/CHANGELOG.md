@@ -2,6 +2,12 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [2.1.2] - 2019-04-24
+
+### Changed
+
+- Updated to esplugin v2.1.2.
+
 ## [2.1.1] - 2018-10-22
 
 ### Changed
