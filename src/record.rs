@@ -95,7 +95,7 @@ impl Record {
                 let data = record_id_subrecord_mapper(header.record_type, &subrecords);
 
                 let namespaced_id = data.map(|data| {
-                    RecordId::NamespacedId(NamespacedId::new(&header.record_type, data))
+                    RecordId::NamespacedId(NamespacedId::new(header.record_type, data))
                 });
 
                 Ok((remaining_input, namespaced_id))
@@ -174,7 +174,7 @@ fn map_pgrd_id_data<'a>(subrecords: &[SubrecordRef<'a>]) -> Option<&'a [u8]> {
     let data = subrecords[0].data();
     let name = subrecords[1].data();
 
-    if data.len() > 8 && &data[..8] != &[0; 8] {
+    if data.len() > 8 && data[..8] != [0; 8] {
         Some(&data[..8])
     } else {
         Some(name)

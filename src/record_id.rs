@@ -51,7 +51,7 @@ pub struct NamespacedId {
 }
 
 impl NamespacedId {
-    pub fn new(record_type: &[u8; 4], id_data: &[u8]) -> Self {
+    pub fn new(record_type: [u8; 4], id_data: &[u8]) -> Self {
         let mut hasher = DefaultHasher::new();
         id_data.hash(&mut hasher);
 
@@ -85,10 +85,10 @@ pub enum Namespace {
     Other,
 }
 
-impl From<&[u8; 4]> for Namespace {
-    fn from(record_type: &[u8; 4]) -> Namespace {
+impl From<[u8; 4]> for Namespace {
+    fn from(record_type: [u8; 4]) -> Namespace {
         use self::Namespace::*;
-        match record_type {
+        match &record_type {
             b"RACE" => Race,
             b"CLAS" => Class,
             b"BSGN" => Birthsign,
@@ -119,37 +119,37 @@ mod tests {
     ];
 
     #[test]
-    fn namespace_from_str_should_namespace_race_class_bsgn_scpt_cell_fact_soun_glob_and_regn() {
-        assert_eq!(Namespace::Race, b"RACE".into());
-        assert_eq!(Namespace::Class, b"CLAS".into());
-        assert_eq!(Namespace::Birthsign, b"BSGN".into());
-        assert_eq!(Namespace::Script, b"SCPT".into());
-        assert_eq!(Namespace::Cell, b"CELL".into());
-        assert_eq!(Namespace::Faction, b"FACT".into());
-        assert_eq!(Namespace::Sound, b"SOUN".into());
-        assert_eq!(Namespace::Global, b"GLOB".into());
-        assert_eq!(Namespace::Region, b"REGN".into());
-        assert_eq!(Namespace::Skill, b"SKIL".into());
-        assert_eq!(Namespace::MagicEffect, b"MGEF".into());
-        assert_eq!(Namespace::Land, b"LAND".into());
-        assert_eq!(Namespace::PathGrid, b"PGRD".into());
-        assert_eq!(Namespace::Dialog, b"DIAL".into());
+    fn namespace_from_array_should_namespace_race_class_bsgn_scpt_cell_fact_soun_glob_and_regn() {
+        assert_eq!(Namespace::Race, (*b"RACE").into());
+        assert_eq!(Namespace::Class, (*b"CLAS").into());
+        assert_eq!(Namespace::Birthsign, (*b"BSGN").into());
+        assert_eq!(Namespace::Script, (*b"SCPT").into());
+        assert_eq!(Namespace::Cell, (*b"CELL").into());
+        assert_eq!(Namespace::Faction, (*b"FACT").into());
+        assert_eq!(Namespace::Sound, (*b"SOUN").into());
+        assert_eq!(Namespace::Global, (*b"GLOB").into());
+        assert_eq!(Namespace::Region, (*b"REGN").into());
+        assert_eq!(Namespace::Skill, (*b"SKIL").into());
+        assert_eq!(Namespace::MagicEffect, (*b"MGEF").into());
+        assert_eq!(Namespace::Land, (*b"LAND").into());
+        assert_eq!(Namespace::PathGrid, (*b"PGRD").into());
+        assert_eq!(Namespace::Dialog, (*b"DIAL").into());
     }
 
     #[test]
-    fn namespace_from_str_should_put_unrecognised_record_types_into_other_namespace() {
-        assert_eq!(Namespace::Other, b"    ".into());
-        assert_eq!(Namespace::Other, b"DUMY".into());
+    fn namespace_from_array_should_put_unrecognised_record_types_into_other_namespace() {
+        assert_eq!(Namespace::Other, (*b"    ").into());
+        assert_eq!(Namespace::Other, (*b"DUMY").into());
 
         for record_type in OTHER_RECORD_TYPES {
-            assert_eq!(Namespace::Other, (*record_type).into());
+            assert_eq!(Namespace::Other, (**record_type).into());
         }
     }
 
     #[test]
     fn namespaced_id_new_should_hash_id_data_and_map_record_type_to_namespace() {
         let data = vec![1, 2, 3, 4];
-        let record_id = NamespacedId::new(b"BOOK", &data);
+        let record_id = NamespacedId::new(*b"BOOK", &data);
 
         let mut hasher = DefaultHasher::new();
         data.hash(&mut hasher);

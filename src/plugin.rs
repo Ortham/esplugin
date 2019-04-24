@@ -151,8 +151,8 @@ impl Plugin {
     pub fn filename(&self) -> Option<String> {
         self.path
             .file_name()
-            .and_then(|filename| filename.to_str())
-            .map(|filename| filename.to_string())
+            .and_then(std::ffi::OsStr::to_str)
+            .map(std::string::ToString::to_string)
     }
 
     pub fn masters(&self) -> Result<Vec<String>, Error> {
@@ -170,8 +170,8 @@ impl Plugin {
                 let file_stem = self
                     .path
                     .file_stem()
-                    .and_then(|file_stem| file_stem.to_str())
-                    .map(|f| f.to_lowercase());
+                    .and_then(std::ffi::OsStr::to_str)
+                    .map(str::to_lowercase);
 
                 match file_stem {
                     Some(file_stem) => file_stem.ends_with(extension),
