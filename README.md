@@ -3,6 +3,7 @@ esplugin
 
 [![Build status](https://ci.appveyor.com/api/projects/status/ukb7ns50fskawwsh/branch/master?svg=true)](https://ci.appveyor.com/project/Ortham/esplugin/branch/master)
 [![Travis Build Status](https://travis-ci.org/Ortham/esplugin.svg?branch=master)](https://travis-ci.org/Ortham/esplugin)
+[![Coverage Status](https://coveralls.io/repos/github/Ortham/esplugin/badge.svg?branch=master)](https://coveralls.io/github/Ortham/esplugin?branch=master)
 [![dependency status](https://deps.rs/repo/github/Ortham/esplugin/status.svg)](https://deps.rs/repo/github/Ortham/esplugin)
 [![docs](https://docs.rs/esplugin/badge.svg)](https://docs.rs/crate/esplugin)
 

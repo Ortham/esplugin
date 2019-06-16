@@ -11,6 +11,7 @@ license = "GPL-3.0"
 
 [badges]
 travis-ci = { repository = "Ortham/esplugin" }
+coveralls = { repository = "Ortham/esplugin" }
 
 [dependencies]
 byteorder = "1.2.0"
