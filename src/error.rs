@@ -33,8 +33,8 @@ pub enum Error {
     DecodeError(Cow<'static, str>),
 }
 
-impl<I> From<Err<I>> for Error {
-    fn from(error: Err<I>) -> Self {
+impl<E> From<Err<E>> for Error {
+    fn from(error: Err<E>) -> Self {
         match error {
             Err::Incomplete(_) => Error::ParsingIncomplete,
             _ => Error::ParsingError,

@@ -16,23 +16,28 @@
  * You should have received a copy of the GNU General Public License
  * along with esplugin. If not, see <http://www.gnu.org/licenses/>.
  */
+use std::convert::TryInto;
 use std::io;
 use std::num::NonZeroU32;
 
 use byteorder::{ByteOrder, LittleEndian};
+use nom::bytes::complete::take;
+use nom::combinator::{cond, map};
+use nom::number::complete::le_u32;
+use nom::sequence::{delimited, pair, terminated, tuple};
 use nom::IResult;
-use nom::{le_u32, le_u8};
 
 use error::Error;
 use game_id::GameId;
 use record_id::{NamespacedId, RecordId};
-use subrecord::{parse_subrecord_data_as_u32, Subrecord, SubrecordRef};
+use subrecord::{parse_subrecord_data_as_u32, Subrecord, SubrecordRef, SubrecordType};
 
 const RECORD_TYPE_LENGTH: usize = 4;
+pub type RecordType = [u8; 4];
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
 pub struct RecordHeader {
-    record_type: [u8; 4],
+    record_type: RecordType,
     flags: u32,
     form_id: Option<NonZeroU32>,
     size_of_subrecords: u32,
@@ -84,14 +89,14 @@ impl Record {
 
     pub fn parse_record_id(input: &[u8], game_id: GameId) -> IResult<&[u8], Option<RecordId>> {
         if game_id == GameId::Morrowind {
-            let (remaining_input, header) = try_parse!(input, apply!(record_header, game_id));
+            let (remaining_input, header) = record_header(input, game_id)?;
             let (remaining_input, subrecords_data) =
-                try_parse!(remaining_input, take!(header.size_of_subrecords));
+                take(header.size_of_subrecords)(remaining_input)?;
 
             // Header is parsed, now parse subrecords until the id subrecord has been found.
             let types = record_id_subrecord_types(header.record_type);
             if !types.is_empty() {
-                let subrecords = try_parse!(subrecords_data, apply!(parse_id_subrecords, types)).1;
+                let subrecords = parse_id_subrecords(subrecords_data, types)?.1;
                 let data = record_id_subrecord_mapper(header.record_type, &subrecords);
 
                 let namespaced_id = data.map(|data| {
@@ -103,17 +108,24 @@ impl Record {
                 Ok((remaining_input, None))
             }
         } else {
-            do_parse!(
-                input,
-                take!(RECORD_TYPE_LENGTH)
-                    >> size_of_subrecords: le_u32
-                    >> take!(4)
-                    >> form_id: le_u32
-                    >> take!(4)
-                    >> cond!(game_id != GameId::Oblivion, take!(4))
-                    >> take!(size_of_subrecords)
-                    >> (NonZeroU32::new(form_id).map(RecordId::FormId))
-            )
+            let parser = tuple((
+                delimited(take(RECORD_TYPE_LENGTH), le_u32, take(4usize)),
+                terminated(le_u32, take(4usize)),
+            ));
+
+            let (remaining_input, (size_of_subrecords, form_id)) = parser(input)?;
+
+            let parser = pair(
+                cond(game_id != GameId::Oblivion, take(4usize)),
+                take(size_of_subrecords),
+            );
+
+            let (remaining_input, _) = parser(remaining_input)?;
+
+            Ok((
+                remaining_input,
+                NonZeroU32::new(form_id).map(RecordId::FormId),
+            ))
         }
     }
 
@@ -182,7 +194,7 @@ fn map_pgrd_id_data<'a>(subrecords: &[SubrecordRef<'a>]) -> Option<&'a [u8]> {
 }
 
 fn record_id_subrecord_mapper<'a>(
-    record_type: [u8; 4],
+    record_type: RecordType,
     subrecords: &[SubrecordRef<'a>],
 ) -> Option<&'a [u8]> {
     match &record_type {
@@ -193,7 +205,7 @@ fn record_id_subrecord_mapper<'a>(
     }
 }
 
-fn record_id_subrecord_types(record_type: [u8; 4]) -> Vec<&'static [u8; 4]> {
+fn record_id_subrecord_types(record_type: RecordType) -> Vec<&'static SubrecordType> {
     match &record_type {
         b"GMST" | b"GLOB" | b"CLAS" | b"FACT" | b"RACE" | b"SOUN" | b"REGN" | b"BSGN" | b"LTEX"
         | b"STAT" | b"DOOR" | b"MISC" | b"WEAP" | b"CONT" | b"SPEL" | b"CREA" | b"BODY"
@@ -219,49 +231,47 @@ fn header_length(game_id: GameId) -> usize {
     }
 }
 
-named!(
-    record_type<[u8; 4]>,
-    count_fixed!(u8, le_u8, RECORD_TYPE_LENGTH)
-);
+fn record_type(input: &[u8]) -> IResult<&[u8], RecordType> {
+    map(take(RECORD_TYPE_LENGTH), |s: &[u8]| {
+        s.try_into()
+            .expect("record type slice should be the required length")
+    })(input)
+}
 
-named_args!(record_header(game_id: GameId) <RecordHeader>,
-    do_parse!(
-        record_type: record_type >>
-        size_of_subrecords: le_u32 >>
-        cond!(game_id == GameId::Morrowind, take!(4)) >>
-        flags: le_u32 >>
-        form_id: cond!(game_id != GameId::Morrowind, le_u32) >>
-        cond!(game_id != GameId::Morrowind, take!(4)) >>
-        cond!(game_id != GameId::Morrowind && game_id != GameId::Oblivion, take!(4)) >>
-
-        (RecordHeader {
+fn record_header(input: &[u8], game_id: GameId) -> IResult<&[u8], RecordHeader> {
+    map(
+        tuple((
+            record_type,
+            le_u32,
+            cond(game_id == GameId::Morrowind, take(4usize)),
+            le_u32,
+            cond(game_id != GameId::Morrowind, le_u32),
+            cond(game_id != GameId::Morrowind, take(4usize)),
+            cond(
+                game_id != GameId::Morrowind && game_id != GameId::Oblivion,
+                take(4usize),
+            ),
+        )),
+        |(record_type, size_of_subrecords, _, flags, form_id, _, _)| RecordHeader {
             record_type,
             flags,
             form_id: form_id.and_then(NonZeroU32::new),
             size_of_subrecords,
-        })
-    )
-);
+        },
+    )(input)
+}
 
 fn record(input: &[u8], game_id: GameId, skip_subrecords: bool) -> IResult<&[u8], Record> {
-    let (input1, header) = try_parse!(input, apply!(record_header, game_id));
-    let (input2, subrecords_data) = try_parse!(input1, take!(header.size_of_subrecords));
+    let (remaining_input, header) = record_header(input, game_id)?;
+    let (remaining_input, subrecords_data) = take(header.size_of_subrecords)(remaining_input)?;
 
     let subrecords: Vec<Subrecord> = if !skip_subrecords {
-        try_parse!(
-            subrecords_data,
-            apply!(
-                parse_subrecords,
-                game_id,
-                header.are_subrecords_compressed()
-            )
-        )
-        .1
+        parse_subrecords(subrecords_data, game_id, header.are_subrecords_compressed())?.1
     } else {
         Vec::new()
     };
 
-    Ok((input2, Record { header, subrecords }))
+    Ok((remaining_input, Record { header, subrecords }))
 }
 
 fn parse_subrecords(
@@ -274,15 +284,9 @@ fn parse_subrecords(
     let mut large_subrecord_size: u32 = 0;
 
     while !input1.is_empty() {
-        let (input2, subrecord) = try_parse!(
-            input1,
-            apply!(
-                Subrecord::new,
-                game_id,
-                large_subrecord_size,
-                are_compressed
-            )
-        );
+        let (input2, subrecord) =
+            Subrecord::new(input1, game_id, large_subrecord_size, are_compressed)?;
+
         if subrecord.subrecord_type() == b"XXXX" {
             large_subrecord_size = parse_subrecord_data_as_u32(input1)?.1;
         } else {
@@ -299,7 +303,7 @@ fn parse_subrecords(
 /// skips to the end of the record and returns.
 fn parse_id_subrecords<'a>(
     input: &'a [u8],
-    mut target_subrecord_types: Vec<&[u8; 4]>,
+    mut target_subrecord_types: Vec<&SubrecordType>,
 ) -> IResult<&'a [u8], Vec<SubrecordRef<'a>>> {
     let mut remaining_input: &[u8] = input;
     let mut subrecords = Vec::with_capacity(target_subrecord_types.len());
@@ -308,10 +312,7 @@ fn parse_id_subrecords<'a>(
         if target_subrecord_types.is_empty() {
             break;
         }
-        let (input2, subrecord) = try_parse!(
-            remaining_input,
-            apply!(SubrecordRef::new, GameId::Morrowind, 0)
-        );
+        let (input2, subrecord) = SubrecordRef::new(remaining_input, GameId::Morrowind, 0)?;
         remaining_input = input2;
         if let Some(index) = target_subrecord_types
             .iter()

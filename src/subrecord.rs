@@ -19,6 +19,7 @@
 
 extern crate nom;
 
+use std::convert::TryInto;
 #[cfg(feature = "compressed-fields")]
 use std::io;
 #[cfg(feature = "compressed-fields")]
@@ -27,16 +28,21 @@ use std::io::Read;
 #[cfg(feature = "compressed-fields")]
 use flate2::read::DeflateDecoder;
 
+use nom::bytes::complete::take;
+use nom::combinator::map;
+use nom::multi::length_data;
+use nom::number::complete::{le_u16, le_u32};
+use nom::sequence::{pair, preceded, separated_pair, tuple};
 use nom::IResult;
-use nom::{le_u16, le_u32, le_u8};
 
 use game_id::GameId;
 
 const SUBRECORD_TYPE_LENGTH: usize = 4;
+pub type SubrecordType = [u8; 4];
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
 pub struct Subrecord {
-    subrecord_type: [u8; 4],
+    subrecord_type: SubrecordType,
     data: Vec<u8>,
     is_compressed: bool,
 }
@@ -80,7 +86,7 @@ impl Subrecord {
         Ok(decompressed_data)
     }
 
-    pub fn subrecord_type(&self) -> &[u8; 4] {
+    pub fn subrecord_type(&self) -> &SubrecordType {
         &self.subrecord_type
     }
 
@@ -90,7 +96,7 @@ impl Subrecord {
 }
 
 pub struct SubrecordRef<'a> {
-    subrecord_type: [u8; 4],
+    subrecord_type: SubrecordType,
     data: &'a [u8],
 }
 
@@ -101,7 +107,7 @@ impl<'a> SubrecordRef<'a> {
         data_length_override: u32,
     ) -> IResult<&'a [u8], SubrecordRef<'a>> {
         let (remaining_input, (subrecord_type, data)) =
-            try_parse!(input, apply!(parse, game_id, data_length_override));
+            parse(input, game_id, data_length_override)?;
 
         Ok((
             remaining_input,
@@ -112,7 +118,7 @@ impl<'a> SubrecordRef<'a> {
         ))
     }
 
-    pub fn subrecord_type(&'a self) -> &[u8; 4] {
+    pub fn subrecord_type(&'a self) -> &SubrecordType {
         &self.subrecord_type
     }
 
@@ -125,7 +131,7 @@ fn parse(
     input: &[u8],
     game_id: GameId,
     data_length_override: u32,
-) -> IResult<&[u8], ([u8; 4], &[u8])> {
+) -> IResult<&[u8], (SubrecordType, &[u8])> {
     if game_id == GameId::Morrowind {
         morrowind_subrecord(input)
     } else if data_length_override != 0 {
@@ -135,41 +141,27 @@ fn parse(
     }
 }
 
-named!(
-    subrecord_type<[u8; 4]>,
-    count_fixed!(u8, le_u8, SUBRECORD_TYPE_LENGTH)
-);
+fn subrecord_type(input: &[u8]) -> IResult<&[u8], SubrecordType> {
+    map(take(SUBRECORD_TYPE_LENGTH), |s: &[u8]| {
+        s.try_into()
+            .expect("subrecord type slice should be the required length")
+    })(input)
+}
 
-named!(morrowind_subrecord(&[u8]) -> ([u8; 4], &[u8]),
-    do_parse!(
-        subrecord_type: subrecord_type >>
-        data: length_bytes!(le_u32) >>
+fn morrowind_subrecord(input: &[u8]) -> IResult<&[u8], (SubrecordType, &[u8])> {
+    tuple((subrecord_type, length_data(le_u32)))(input)
+}
 
-        ((subrecord_type, data))
-    )
-);
+fn simple_subrecord(input: &[u8]) -> IResult<&[u8], (SubrecordType, &[u8])> {
+    tuple((subrecord_type, length_data(le_u16)))(input)
+}
 
-named!(simple_subrecord(&[u8]) -> ([u8; 4], &[u8]),
-    do_parse!(
-        subrecord_type: subrecord_type >>
-        data: length_bytes!(le_u16) >>
-
-        ((subrecord_type, data))
-    )
-);
-
-named_args!(presized_subrecord(data_length: u32) <([u8; 4], &[u8])>,
-    do_parse!(
-        subrecord_type: subrecord_type >>
-        le_u16 >>
-        data: take!(data_length) >>
-
-        ((subrecord_type, data))
-    )
-);
+fn presized_subrecord(input: &[u8], data_length: u32) -> IResult<&[u8], (SubrecordType, &[u8])> {
+    separated_pair(subrecord_type, le_u16, take(data_length))(input)
+}
 
 pub fn parse_subrecord_data_as_u32(input: &[u8]) -> IResult<&[u8], u32> {
-    do_parse!(input, subrecord_type >> le_u16 >> data: le_u32 >> (data))
+    preceded(pair(subrecord_type, le_u16), le_u32)(input)
 }
 
 #[cfg(test)]

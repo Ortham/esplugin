@@ -19,7 +19,12 @@
 
 use std::mem;
 
-use nom::{le_u32, IResult};
+use nom::bytes::complete::{tag, take};
+use nom::combinator::{map, peek};
+use nom::multi::length_data;
+use nom::number::complete::le_u32;
+use nom::sequence::delimited;
+use nom::IResult;
 
 use game_id::GameId;
 use record::Record;
@@ -36,13 +41,10 @@ impl Group {
         game_id: GameId,
         form_ids: &mut Vec<u32>,
     ) -> IResult<&'a [u8], ()> {
-        do_parse!(
-            input,
-            length_value!(
-                apply!(parse_header, game_id),
-                apply!(parse_records, game_id, form_ids)
-            ) >> ()
-        )
+        let (remaining_input, records_data) = length_data(parse_header(game_id))(input)?;
+        parse_records(records_data, game_id, form_ids)?;
+
+        Ok((remaining_input, ()))
     }
 }
 
@@ -53,17 +55,17 @@ fn get_header_length_to_skip(game_id: GameId) -> u8 {
     }
 }
 
-fn parse_header(input: &[u8], game_id: GameId) -> IResult<&[u8], u32> {
-    let skip_length = get_header_length_to_skip(game_id);
-    let group_header_length = GROUP_TYPE.len() as u8 + mem::size_of::<u32>() as u8 + skip_length;
+fn parse_header(game_id: GameId) -> impl Fn(&[u8]) -> IResult<&[u8], u32> {
+    move |input| {
+        let skip_length = get_header_length_to_skip(game_id);
+        let group_header_length =
+            GROUP_TYPE.len() as u8 + mem::size_of::<u32>() as u8 + skip_length;
 
-    do_parse!(
-        input,
-        tag!(GROUP_TYPE)
-            >> group_size: le_u32
-            >> take!(skip_length)
-            >> (group_size - u32::from(group_header_length))
-    )
+        map(
+            delimited(tag(GROUP_TYPE), le_u32, take(skip_length)),
+            move |group_size| group_size - u32::from(group_header_length),
+        )(input)
+    }
 }
 
 fn parse_records<'a>(
@@ -74,14 +76,13 @@ fn parse_records<'a>(
     let mut input1 = input;
 
     while !input1.is_empty() {
-        let (_, next_type) = try_parse!(input1, peek!(take!(GROUP_TYPE.len())));
+        let (_, next_type) = peek(take(GROUP_TYPE.len()))(input1)?;
 
         if next_type == GROUP_TYPE {
-            let (input2, _) =
-                try_parse!(input1, apply!(Group::parse_for_form_ids, game_id, form_ids));
+            let (input2, _) = Group::parse_for_form_ids(input1, game_id, form_ids)?;
             input1 = input2;
         } else {
-            let (input2, record_id) = try_parse!(input1, apply!(Record::parse_record_id, game_id));
+            let (input2, record_id) = Record::parse_record_id(input1, game_id)?;
             input1 = input2;
             if let Some(RecordId::FormId(form_id)) = record_id {
                 form_ids.push(form_id.get());

@@ -17,7 +17,7 @@ coveralls = { repository = "Ortham/esplugin" }
 byteorder = "1.2.0"
 encoding = "0.2.33"
 memmap = "0.7.0"
-nom = "4.0.0"
+nom = "5.0.0"
 unicase = "2.0.0"
 flate2 = { version = "1.0.1", optional = true }
 

@@ -28,7 +28,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use encoding::all::WINDOWS_1252;
 use encoding::{DecoderTrap, Encoding};
 
-use nom::{self, ErrorKind, IResult};
+use nom::{self, IResult};
 
 use memmap::Mmap;
 
@@ -397,8 +397,10 @@ fn parse_record_ids<'a>(
     if game_id == GameId::Morrowind {
         parse_morrowind_record_ids(input)
     } else {
+        // Map to the Alpha error kind even though it's misleading, because it
+        // doesn't actually matter what is chosen, the detail is discarded.
         let masters = masters(&header_record)
-            .map_err(|_| nom::Err::Error(nom::Context::Code(input, ErrorKind::Custom(1))))?;
+            .map_err(|_| nom::Err::Error((input, nom::error::ErrorKind::Alpha)))?;
 
         let (remaining_input, form_ids) = parse_form_ids(input, game_id)?;
         let form_ids = hashed_form_ids(&form_ids, filename, &masters).into();
@@ -413,7 +415,7 @@ fn parse_plugin<'a>(
     filename: &str,
     load_header_only: bool,
 ) -> IResult<&'a [u8], PluginData> {
-    let (input1, header_record) = try_parse!(input, apply!(Record::parse, game_id, false));
+    let (input1, header_record) = Record::parse(input, game_id, false)?;
 
     if load_header_only {
         return Ok((
