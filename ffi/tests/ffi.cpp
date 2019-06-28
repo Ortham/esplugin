@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <cstring>
 
-#include "esplugin.hpp"
+#include "esplugin.h"
 
 void test_game_id_values() {
   printf("testing ESP_GAME_* values...\n");
