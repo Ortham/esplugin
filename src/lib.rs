@@ -20,7 +20,6 @@
 extern crate encoding;
 extern crate memmap;
 extern crate nom;
-extern crate unicase;
 
 #[cfg(feature = "compressed-fields")]
 extern crate flate2;

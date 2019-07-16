@@ -19,7 +19,6 @@
 
 use std::fs::File;
 use std::io::{BufReader, Read};
-use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::str;
 
@@ -30,8 +29,6 @@ use nom::{self, IResult};
 
 use memmap::Mmap;
 
-use unicase::eq;
-
 use error::Error;
 use form_id::HashedFormId;
 use game_id::GameId;
@@ -41,6 +38,36 @@ use record_id::{NamespacedId, RecordId};
 
 // 1 MB is around the file size at which memory-mapping becomes more performant.
 const MIN_MMAP_FILE_SIZE: u64 = 1_000_000;
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+enum FileExtension {
+    ESM,
+    ESL,
+}
+
+impl PartialEq<&std::borrow::Cow<'_, str>> for FileExtension {
+    fn eq(&self, other: &&std::borrow::Cow<'_, str>) -> bool {
+        const ESM: &str = "esm";
+        const ESL: &str = "esl";
+
+        // Lowercasing strings isn't generally a good way to compare them, but
+        // here the strings are of the correct length and they're being compared
+        // against ASCII literals.
+        match self {
+            FileExtension::ESM => other.len() == ESM.len() && other.to_lowercase() == ESM,
+            FileExtension::ESL => other.len() == ESL.len() && other.to_lowercase() == ESL,
+        }
+    }
+}
+
+fn is_ghost_file_extension(extension: &std::borrow::Cow<'_, str>) -> bool {
+    const GHOST: &str = "ghost";
+
+    // Generally not a good idea to lowercase strings for case-insensitive
+    // comparison, but this is ASCII, and we're checking that the string is of
+    // the correct length first, so lowercasing won't be expensive.
+    extension.len() == GHOST.len() && extension.to_lowercase() == GHOST
+}
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 enum RecordIds {
@@ -157,23 +184,21 @@ impl Plugin {
         masters(&self.data.header_record)
     }
 
-    fn has_extension(&self, extension: &str) -> bool {
-        if extension.is_empty() {
-            return false;
-        }
-
-        match self.path.extension() {
-            Some(x) if eq(x.to_string_lossy().deref(), &extension[1..]) => true,
-            Some(x) if eq(x.to_string_lossy().deref(), "ghost") => {
-                let file_stem = self
+    fn has_extension(&self, extension: FileExtension) -> bool {
+        let path_extension = self.path.extension().map(|e| e.to_string_lossy());
+        match path_extension {
+            Some(ref e) if extension == e => true,
+            Some(ref e) if is_ghost_file_extension(e) => {
+                let path_extension = self
                     .path
                     .file_stem()
-                    .and_then(std::ffi::OsStr::to_str)
-                    .map(str::to_lowercase);
+                    .map(Path::new)
+                    .and_then(|p| p.extension())
+                    .map(|e| e.to_string_lossy());
 
-                match file_stem {
-                    Some(file_stem) => file_stem.ends_with(extension),
-                    None => false,
+                match path_extension {
+                    Some(ref e) if extension == e => true,
+                    _ => false,
                 }
             }
             _ => false,
@@ -182,11 +207,11 @@ impl Plugin {
 
     pub fn is_master_file(&self) -> bool {
         match self.game_id {
-            GameId::Morrowind => self.has_extension(".esm"),
+            GameId::Morrowind => self.has_extension(FileExtension::ESM),
             GameId::Fallout4 | GameId::SkyrimSE => {
                 self.is_master_flag_set()
-                    || self.has_extension(".esm")
-                    || self.has_extension(".esl")
+                    || self.has_extension(FileExtension::ESM)
+                    || self.has_extension(FileExtension::ESL)
             }
             _ => self.is_master_flag_set(),
         }
@@ -195,7 +220,7 @@ impl Plugin {
     pub fn is_light_master_file(&self) -> bool {
         match self.game_id {
             GameId::Fallout4 | GameId::SkyrimSE => {
-                self.is_light_master_flag_set() || self.has_extension(".esl")
+                self.is_light_master_flag_set() || self.has_extension(FileExtension::ESL)
             }
             _ => false,
         }
@@ -244,7 +269,6 @@ impl Plugin {
             GameId::Morrowind => 296,
             _ => 4,
         };
-
 
         self.data
             .header_record
@@ -1217,16 +1241,6 @@ mod tests {
         let plugin = Plugin::new(GameId::Skyrim, Path::new("Blank.esp.ghost"));
 
         assert_eq!("Blank.esp.ghost", plugin.filename().unwrap());
-    }
-
-    #[test]
-    fn has_extension_should_be_false_if_passed_an_empty_string() {
-        let plugin = Plugin::new(
-            GameId::Skyrim,
-            Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
-        );
-
-        assert!(!plugin.has_extension(""));
     }
 
     #[test]
