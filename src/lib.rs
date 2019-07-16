@@ -17,7 +17,7 @@
  * along with esplugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-extern crate encoding;
+extern crate encoding_rs;
 extern crate memmap;
 extern crate nom;
 

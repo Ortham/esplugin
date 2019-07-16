@@ -22,8 +22,7 @@ use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::str;
 
-use encoding::all::WINDOWS_1252;
-use encoding::{DecoderTrap, Encoding};
+use encoding_rs::WINDOWS_1252;
 
 use nom::{self, IResult};
 
@@ -247,9 +246,9 @@ impl Plugin {
                 let data = &subrecord.data()[description_offset..(subrecord.data().len() - 1)];
 
                 return WINDOWS_1252
-                    .decode(data, DecoderTrap::Strict)
-                    .map(Some)
-                    .map_err(Error::DecodeError);
+                    .decode_without_bom_handling_and_without_replacement(data)
+                    .map(|s| Some(s.to_string()))
+                    .ok_or_else(|| Error::DecodeError("invalid sequence".into()));
             }
         }
 
@@ -376,8 +375,9 @@ fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
         .map(|s| &s.data()[0..(s.data().len() - 1)])
         .map(|d| {
             WINDOWS_1252
-                .decode(d, DecoderTrap::Strict)
-                .map_err(Error::DecodeError)
+                .decode_without_bom_handling_and_without_replacement(d)
+                .map(|s| s.to_string())
+                .ok_or_else(|| Error::DecodeError("invalid sequence".into()))
         })
         .collect::<Result<Vec<String>, Error>>()
 }
