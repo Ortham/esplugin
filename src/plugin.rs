@@ -23,8 +23,6 @@ use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::str;
 
-use byteorder::{ByteOrder, LittleEndian};
-
 use encoding::all::WINDOWS_1252;
 use encoding::{DecoderTrap, Encoding};
 
@@ -239,21 +237,21 @@ impl Plugin {
             .subrecords()
             .iter()
             .find(|s| s.subrecord_type() == b"HEDR" && s.data().len() > 3)
-            .map(|s| LittleEndian::read_f32(&s.data()[..4]))
+            .map(|s| crate::le_slice_to_f32(&s.data()))
     }
-
     pub fn record_and_group_count(&self) -> Option<u32> {
         let count_offset = match self.game_id {
             GameId::Morrowind => 296,
             _ => 4,
         };
 
+
         self.data
             .header_record
             .subrecords()
             .iter()
             .find(|s| s.subrecord_type() == b"HEDR" && s.data().len() > count_offset)
-            .map(|s| LittleEndian::read_u32(&s.data()[count_offset..count_offset + 4]))
+            .map(|s| crate::le_slice_to_u32(&s.data()[count_offset..]))
     }
 
     pub fn count_override_records(&self) -> usize {

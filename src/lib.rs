@@ -17,7 +17,6 @@
  * along with esplugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-extern crate byteorder;
 extern crate encoding;
 extern crate memmap;
 extern crate nom;
@@ -25,6 +24,8 @@ extern crate unicase;
 
 #[cfg(feature = "compressed-fields")]
 extern crate flate2;
+
+use std::convert::TryInto;
 
 pub use error::Error;
 pub use game_id::GameId;
@@ -38,3 +39,16 @@ mod plugin;
 mod record;
 mod record_id;
 mod subrecord;
+
+fn le_slice_to_u32(input: &[u8]) -> u32 {
+    let int_bytes = &input[..std::mem::size_of::<u32>()];
+    u32::from_le_bytes(
+        int_bytes
+            .try_into()
+            .expect("slice to contain enough bytes to read a u32"),
+    )
+}
+
+fn le_slice_to_f32(input: &[u8]) -> f32 {
+    f32::from_bits(le_slice_to_u32(input))
+}

@@ -20,7 +20,6 @@ use std::convert::TryInto;
 use std::io;
 use std::num::NonZeroU32;
 
-use byteorder::{ByteOrder, LittleEndian};
 use nom::bytes::complete::take;
 use nom::combinator::{cond, map};
 use nom::number::complete::le_u32;
@@ -72,7 +71,7 @@ impl Record {
             return Err(Error::ParsingError);
         }
 
-        let size_of_subrecords = LittleEndian::read_u32(&content[4..]) as usize;
+        let size_of_subrecords = crate::le_slice_to_u32(&content[4..]) as usize;
         if size_of_subrecords > 0 {
             let mut subrecords = vec![0; size_of_subrecords];
             reader.read_exact(&mut subrecords)?;
