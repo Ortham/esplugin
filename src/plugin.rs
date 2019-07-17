@@ -26,17 +26,12 @@ use encoding_rs::WINDOWS_1252;
 
 use nom::{self, IResult};
 
-use memmap::Mmap;
-
 use error::Error;
 use form_id::HashedFormId;
 use game_id::GameId;
 use group::Group;
 use record::Record;
 use record_id::{NamespacedId, RecordId};
-
-// 1 MB is around the file size at which memory-mapping becomes more performant.
-const MIN_MMAP_FILE_SIZE: u64 = 1_000_000;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum FileExtension {
@@ -133,28 +128,18 @@ impl Plugin {
             let content = Record::read_and_validate(&mut reader, self.game_id, self.header_type())?;
             self.parse(&content, load_header_only)
         } else {
-            let file_size = file.metadata().map(|m| m.len()).unwrap_or(0);
-
-            if file_size > MIN_MMAP_FILE_SIZE {
-                let mmap = unsafe { Mmap::map(&file)? };
-
-                if &mmap[0..4] != self.header_type() {
-                    Err(Error::ParsingError)
-                } else {
-                    self.parse(&mmap, false)
-                }
-            } else {
-                let mut content = vec![0; 4];
-                reader.read_exact(&mut content)?;
-                if &content[0..4] != self.header_type() {
-                    return Err(Error::ParsingError);
-                }
-
-                content.reserve(file_size as usize - 3);
-                reader.read_to_end(&mut content)?;
-
-                self.parse(&content, false)
+            let mut content = vec![0; 4];
+            reader.read_exact(&mut content)?;
+            if &content[0..4] != self.header_type() {
+                return Err(Error::ParsingError);
             }
+
+            // The offset of 4 is to account for the bytes already read.
+            let file_size = file.metadata().map(|m| m.len() + 1).unwrap_or(4);
+            content.reserve_exact(file_size as usize - 4);
+            reader.read_to_end(&mut content)?;
+
+            self.parse(&content, false)
         }
     }
 

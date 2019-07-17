@@ -18,7 +18,6 @@
  */
 
 extern crate encoding_rs;
-extern crate memmap;
 extern crate nom;
 
 #[cfg(feature = "compressed-fields")]
