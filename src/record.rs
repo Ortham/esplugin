@@ -86,26 +86,83 @@ impl Record {
         record(input, game_id, skip_subrecords)
     }
 
+    pub fn read<R: std::io::Read>(
+        reader: &mut R,
+        game_id: GameId,
+        skip_subrecords: bool,
+    ) -> Result<Record, Error> {
+        let mut header_bytes: Vec<u8> = vec![0; header_length(game_id)];
+        reader.read_exact(&mut header_bytes)?;
+
+        let header = all_consuming(record_header(&header_bytes, game_id))?;
+
+        let mut subrecord_bytes: Vec<u8> = vec![0; header.size_of_subrecords as usize];
+        reader.read_exact(&mut subrecord_bytes)?;
+
+        let subrecords: Vec<Subrecord> = if !skip_subrecords {
+            all_consuming(parse_subrecords(
+                &subrecord_bytes,
+                game_id,
+                header.are_subrecords_compressed(),
+            ))?
+        } else {
+            Vec::new()
+        };
+
+        Ok(Record { header, subrecords })
+    }
+
+    pub fn read_record_id<R: io::BufRead + io::Seek>(
+        reader: &mut R,
+        game_id: GameId,
+        mut header_buffer: &mut [u8],
+        header_already_read: bool,
+    ) -> Result<(u32, Option<RecordId>), Error> {
+        let header_length_read = if !header_already_read {
+            let header_length = header_length(game_id);
+
+            header_buffer = &mut header_buffer[..header_length];
+            reader.read_exact(&mut header_buffer)?;
+            header_length
+        } else {
+            0
+        };
+
+        let header = all_consuming(record_header(&header_buffer, game_id))?;
+
+        if game_id == GameId::Morrowind {
+            let mut subrecords_data = vec![0; header.size_of_subrecords as usize];
+            reader.read_exact(&mut subrecords_data)?;
+
+            let bytes_read = header_length_read as u32 + header.size_of_subrecords;
+
+            let (_, record_id) = parse_morrowind_record_id(&subrecords_data, &header)?;
+            Ok((bytes_read, record_id))
+        } else {
+            // Seeking discards the current buffer, so only do so if the data
+            // to be skipped doesn't fit in the buffer anyway.
+            let buffer = reader.fill_buf()?;
+            if header.size_of_subrecords as usize > buffer.len() {
+                reader.seek(io::SeekFrom::Current(i64::from(header.size_of_subrecords)))?;
+            } else {
+                reader.consume(header.size_of_subrecords as usize);
+            }
+
+            Ok((
+                header_length_read as u32 + header.size_of_subrecords,
+                header.form_id.map(RecordId::FormId),
+            ))
+        }
+    }
+
     pub fn parse_record_id(input: &[u8], game_id: GameId) -> IResult<&[u8], Option<RecordId>> {
         if game_id == GameId::Morrowind {
             let (remaining_input, header) = record_header(input, game_id)?;
             let (remaining_input, subrecords_data) =
                 take(header.size_of_subrecords)(remaining_input)?;
 
-            // Header is parsed, now parse subrecords until the id subrecord has been found.
-            let types = record_id_subrecord_types(header.record_type);
-            if !types.is_empty() {
-                let subrecords = parse_id_subrecords(subrecords_data, types)?.1;
-                let data = record_id_subrecord_mapper(header.record_type, &subrecords);
-
-                let namespaced_id = data.map(|data| {
-                    RecordId::NamespacedId(NamespacedId::new(header.record_type, data))
-                });
-
-                Ok((remaining_input, namespaced_id))
-            } else {
-                Ok((remaining_input, None))
-            }
+            let (_, record_id) = parse_morrowind_record_id(subrecords_data, &header)?;
+            Ok((remaining_input, record_id))
         } else {
             let parser = tuple((
                 delimited(take(RECORD_TYPE_LENGTH), le_u32, take(4usize)),
@@ -132,8 +189,46 @@ impl Record {
         &self.header
     }
 
+    pub fn header_type(&self) -> RecordType {
+        self.header.record_type
+    }
+
     pub fn subrecords(&self) -> &[Subrecord] {
         &self.subrecords
+    }
+}
+
+fn parse_morrowind_record_id<'a>(
+    subrecords_data: &'a [u8],
+    header: &RecordHeader,
+) -> IResult<&'a [u8], Option<RecordId>> {
+    let types = record_id_subrecord_types(header.record_type);
+    if !types.is_empty() {
+        let (remaining_input, subrecords) = parse_id_subrecords(subrecords_data, types)?;
+        let data = record_id_subrecord_mapper(header.record_type, &subrecords);
+
+        let namespaced_id =
+            data.map(|data| RecordId::NamespacedId(NamespacedId::new(header.record_type, data)));
+
+        Ok((remaining_input, namespaced_id))
+    } else {
+        Ok((subrecords_data, None))
+    }
+}
+
+fn all_consuming<I, T, E>(result: IResult<I, T, E>) -> Result<T, nom::Err<E>>
+where
+    I: nom::InputLength,
+    E: nom::error::ParseError<I>,
+{
+    let (remaining_input, value) = result?;
+    if remaining_input.input_len() == 0 {
+        Ok(value)
+    } else {
+        Err(nom::Err::Error(E::from_error_kind(
+            remaining_input,
+            nom::error::ErrorKind::Eof,
+        )))
     }
 }
 

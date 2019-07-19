@@ -16,16 +16,16 @@
  * You should have received a copy of the GNU General Public License
  * along with esplugin. If not, see <http://www.gnu.org/licenses/>.
  */
-
-use std::mem;
+use std::io::{BufRead, Seek};
 
 use nom::bytes::complete::{tag, take};
-use nom::combinator::{map, peek};
+use nom::combinator::{all_consuming, map, peek};
 use nom::multi::length_data;
 use nom::number::complete::le_u32;
 use nom::sequence::delimited;
 use nom::IResult;
 
+use error::Error;
 use game_id::GameId;
 use record::Record;
 use record_id::RecordId;
@@ -41,10 +41,40 @@ impl Group {
         game_id: GameId,
         form_ids: &mut Vec<u32>,
     ) -> IResult<&'a [u8], ()> {
-        let (remaining_input, records_data) = length_data(parse_header(game_id))(input)?;
+        let group_header_length = group_or_record_header_length(game_id);
+        let skip_length = get_header_length_to_skip(game_id);
+
+        let (remaining_input, records_data) =
+            length_data(parse_header(group_header_length, skip_length))(input)?;
         parse_records(records_data, game_id, form_ids)?;
 
         Ok((remaining_input, ()))
+    }
+
+    pub fn read_form_ids<R: BufRead + Seek>(
+        reader: &mut R,
+        game_id: GameId,
+        form_ids: &mut Vec<u32>,
+        header_buffer: &mut [u8],
+    ) -> Result<(), Error> {
+        let group_header_length = group_or_record_header_length(game_id);
+        let skip_length = get_header_length_to_skip(game_id);
+
+        let mut header_bytes = &mut header_buffer[..usize::from(group_header_length)];
+        reader.read_exact(&mut header_bytes)?;
+
+        let (_, size_of_records) =
+            all_consuming(parse_header(group_header_length, skip_length))(&header_bytes)?;
+
+        read_records(reader, game_id, form_ids, header_buffer, size_of_records)
+    }
+}
+
+// Groups and records have the same header length in any game that has both.
+fn group_or_record_header_length(game_id: GameId) -> u8 {
+    match game_id {
+        GameId::Oblivion => 20,
+        _ => 24,
     }
 }
 
@@ -55,17 +85,52 @@ fn get_header_length_to_skip(game_id: GameId) -> u8 {
     }
 }
 
-fn parse_header(game_id: GameId) -> impl Fn(&[u8]) -> IResult<&[u8], u32> {
+fn parse_header(group_header_length: u8, skip_length: u8) -> impl Fn(&[u8]) -> IResult<&[u8], u32> {
     move |input| {
-        let skip_length = get_header_length_to_skip(game_id);
-        let group_header_length =
-            GROUP_TYPE.len() as u8 + mem::size_of::<u32>() as u8 + skip_length;
-
         map(
             delimited(tag(GROUP_TYPE), le_u32, take(skip_length)),
             move |group_size| group_size - u32::from(group_header_length),
         )(input)
     }
+}
+
+fn read_records<R: BufRead + Seek>(
+    reader: &mut R,
+    game_id: GameId,
+    form_ids: &mut Vec<u32>,
+    header_buffer: &mut [u8],
+    size_of_records: u32,
+) -> Result<(), Error> {
+    let group_header_length = group_or_record_header_length(game_id);
+    let skip_length = get_header_length_to_skip(game_id);
+    let parse_header = parse_header(group_header_length, skip_length);
+
+    let header_length = usize::from(group_header_length);
+    let mut bytes_read = 0;
+
+    while bytes_read < size_of_records {
+        // Read the next group/record header.
+        let mut header_bytes = &mut header_buffer[..header_length];
+        reader.read_exact(&mut header_bytes)?;
+        bytes_read += header_bytes.len() as u32;
+
+        if &header_bytes[..GROUP_TYPE.len()] == GROUP_TYPE {
+            let (_, size_of_records) = all_consuming(&parse_header)(header_bytes)?;
+
+            read_records(reader, game_id, form_ids, header_buffer, size_of_records)?;
+            bytes_read += size_of_records;
+        } else {
+            let (record_bytes_read, record_id) =
+                Record::read_record_id(reader, game_id, header_bytes, true)?;
+            bytes_read += record_bytes_read;
+
+            if let Some(RecordId::FormId(form_id)) = record_id {
+                form_ids.push(form_id.get());
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn parse_records<'a>(

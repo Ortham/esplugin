@@ -18,7 +18,7 @@
  */
 
 use std::fs::File;
-use std::io::{BufReader, Read};
+use std::io::{BufRead, BufReader, Seek};
 use std::path::{Path, PathBuf};
 use std::str;
 
@@ -121,6 +121,28 @@ impl Plugin {
         }
     }
 
+    fn read<R: BufRead + Seek>(
+        &mut self,
+        mut reader: R,
+        load_header_only: bool,
+        expected_header_type: &'static [u8],
+    ) -> Result<(), Error> {
+        match self.filename() {
+            None => Err(Error::NoFilename),
+            Some(filename) => {
+                self.data = read_plugin(
+                    &mut reader,
+                    self.game_id,
+                    &filename,
+                    load_header_only,
+                    expected_header_type,
+                )?;
+
+                Ok(())
+            }
+        }
+    }
+
     pub fn parse_open_file(&mut self, file: File, load_header_only: bool) -> Result<(), Error> {
         let mut reader = BufReader::new(&file);
 
@@ -128,18 +150,7 @@ impl Plugin {
             let content = Record::read_and_validate(&mut reader, self.game_id, self.header_type())?;
             self.parse(&content, load_header_only)
         } else {
-            let mut content = vec![0; 4];
-            reader.read_exact(&mut content)?;
-            if &content[0..4] != self.header_type() {
-                return Err(Error::ParsingError);
-            }
-
-            // The offset of 4 is to account for the bytes already read.
-            let file_size = file.metadata().map(|m| m.len() + 1).unwrap_or(4);
-            content.reserve_exact(file_size as usize - 4);
-            reader.read_to_end(&mut content)?;
-
-            self.parse(&content, false)
+            self.read(reader, load_header_only, self.header_type())
         }
     }
 
@@ -379,6 +390,17 @@ fn parse_form_ids<'a>(input: &'a [u8], game_id: GameId) -> IResult<&'a [u8], Vec
     Ok((remaining_input, form_ids))
 }
 
+fn read_form_ids<R: BufRead + Seek>(reader: &mut R, game_id: GameId) -> Result<Vec<u32>, Error> {
+    let mut form_ids = Vec::new();
+    let mut header_buf = [0; 24]; // 24 bytes is the largest group/record header size.
+
+    while !reader.fill_buf()?.is_empty() {
+        Group::read_form_ids(reader, game_id, &mut form_ids, &mut header_buf)?;
+    }
+
+    Ok(form_ids)
+}
+
 fn parse_morrowind_record_ids<'a>(input: &'a [u8]) -> IResult<&'a [u8], RecordIds> {
     let mut record_ids = Vec::new();
     let mut remaining_input = input;
@@ -393,6 +415,22 @@ fn parse_morrowind_record_ids<'a>(input: &'a [u8]) -> IResult<&'a [u8], RecordId
     }
 
     Ok((remaining_input, record_ids.into()))
+}
+
+fn read_morrowind_record_ids<R: BufRead + Seek>(reader: &mut R) -> Result<RecordIds, Error> {
+    let mut record_ids = Vec::new();
+    let mut header_buf = [0; 16]; // Morrowind record headers are 16 bytes long.
+
+    while !reader.fill_buf()?.is_empty() {
+        let (_, record_id) =
+            Record::read_record_id(reader, GameId::Morrowind, &mut header_buf, false)?;
+
+        if let Some(RecordId::NamespacedId(record_id)) = record_id {
+            record_ids.push(record_id);
+        }
+    }
+
+    Ok(record_ids.into())
 }
 
 fn parse_record_ids<'a>(
@@ -413,6 +451,24 @@ fn parse_record_ids<'a>(
         let form_ids = hashed_form_ids(&form_ids, filename, &masters).into();
 
         Ok((remaining_input, form_ids))
+    }
+}
+
+fn read_record_ids<R: BufRead + Seek>(
+    reader: &mut R,
+    game_id: GameId,
+    header_record: &Record,
+    filename: &str,
+) -> Result<RecordIds, Error> {
+    if game_id == GameId::Morrowind {
+        read_morrowind_record_ids(reader)
+    } else {
+        let masters = masters(&header_record)?;
+
+        let form_ids = read_form_ids(reader, game_id)?;
+        let form_ids = hashed_form_ids(&form_ids, filename, &masters).into();
+
+        Ok(form_ids)
     }
 }
 
@@ -443,6 +499,34 @@ fn parse_plugin<'a>(
             record_ids,
         },
     ))
+}
+
+fn read_plugin<R: BufRead + Seek>(
+    reader: &mut R,
+    game_id: GameId,
+    filename: &str,
+    load_header_only: bool,
+    expected_header_type: &'static [u8],
+) -> Result<PluginData, Error> {
+    let header_record = Record::read(reader, game_id, false)?;
+
+    if header_record.header_type() != expected_header_type {
+        return Err(Error::ParsingError);
+    }
+
+    if load_header_only {
+        return Ok(PluginData {
+            header_record,
+            record_ids: RecordIds::None,
+        });
+    }
+
+    let record_ids = read_record_ids(reader, game_id, &header_record, filename)?;
+
+    Ok(PluginData {
+        header_record,
+        record_ids,
+    })
 }
 
 #[cfg(test)]
