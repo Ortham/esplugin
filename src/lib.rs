@@ -25,9 +25,9 @@ extern crate flate2;
 
 use std::convert::TryInto;
 
-pub use error::Error;
-pub use game_id::GameId;
-pub use plugin::Plugin;
+pub use crate::error::Error;
+pub use crate::game_id::GameId;
+pub use crate::plugin::Plugin;
 
 mod error;
 mod form_id;

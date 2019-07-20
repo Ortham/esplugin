@@ -25,10 +25,10 @@ use nom::number::complete::le_u32;
 use nom::sequence::delimited;
 use nom::IResult;
 
-use error::Error;
-use game_id::GameId;
-use record::Record;
-use record_id::RecordId;
+use crate::error::Error;
+use crate::game_id::GameId;
+use crate::record::Record;
+use crate::record_id::RecordId;
 
 const GROUP_TYPE: &[u8] = b"GRUP";
 

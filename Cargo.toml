@@ -8,6 +8,7 @@ repository = "https://github.com/Ortham/esplugin.git"
 readme = "README.md"
 categories = ["games", "parsing"]
 license = "GPL-3.0"
+edition = "2018"
 
 [badges]
 travis-ci = { repository = "Ortham/esplugin" }

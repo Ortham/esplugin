@@ -35,7 +35,7 @@ use nom::number::complete::{le_u16, le_u32};
 use nom::sequence::{pair, preceded, separated_pair, tuple};
 use nom::IResult;
 
-use game_id::GameId;
+use crate::game_id::GameId;
 
 const SUBRECORD_TYPE_LENGTH: usize = 4;
 pub type SubrecordType = [u8; 4];

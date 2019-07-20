@@ -26,12 +26,12 @@ use encoding_rs::WINDOWS_1252;
 
 use nom::{self, IResult};
 
-use error::Error;
-use form_id::HashedFormId;
-use game_id::GameId;
-use group::Group;
-use record::Record;
-use record_id::{NamespacedId, RecordId};
+use crate::error::Error;
+use crate::form_id::HashedFormId;
+use crate::game_id::GameId;
+use crate::group::Group;
+use crate::record::Record;
+use crate::record_id::{NamespacedId, RecordId};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum FileExtension {

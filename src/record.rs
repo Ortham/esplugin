@@ -26,10 +26,10 @@ use nom::number::complete::le_u32;
 use nom::sequence::{delimited, pair, terminated, tuple};
 use nom::IResult;
 
-use error::Error;
-use game_id::GameId;
-use record_id::{NamespacedId, RecordId};
-use subrecord::{parse_subrecord_data_as_u32, Subrecord, SubrecordRef, SubrecordType};
+use crate::error::Error;
+use crate::game_id::GameId;
+use crate::record_id::{NamespacedId, RecordId};
+use crate::subrecord::{parse_subrecord_data_as_u32, Subrecord, SubrecordRef, SubrecordType};
 
 const RECORD_TYPE_LENGTH: usize = 4;
 pub type RecordType = [u8; 4];
