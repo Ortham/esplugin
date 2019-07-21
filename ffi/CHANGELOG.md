@@ -2,6 +2,22 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [3.0.0] - 2019-07-21
+
+### Changed
+
+- `u8` and `u32` are now used in place of the deprecated `libc::uint8_t` and
+  `libc::uint32_t` types. The latter were aliases of the former, so this should
+  have no impact on usage.
+- Updated to cbindgen v0.9.
+- Updated to esplugin v2.2.0.
+
+### Removed
+
+- The included cbindgen config and `ffi-headers` feature no longer generate an
+  `esplugin.hpp`. Instead, the `esplugin.h` header can now be used by C and
+  C++ projects.
+
 ## [2.1.2] - 2019-04-24
 
 ### Changed

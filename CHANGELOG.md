@@ -2,6 +2,29 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [3.0.0] - 2019-07-21
+
+### Changed
+
+- The `Error::DecodeError` variant no longer has any fields.
+- The `Error::ParsingError` variant is now
+  `Error::ParsingError(Vec<u8>, ParsingErrorKind)` to provide more detail about
+  why parsing failed.
+- Replaced the encoding dependency with encoding_rs, as the former is
+  unmaintained.
+- Updated to nom v5.0.0.
+
+### Removed
+
+- The byteorder dependency, as Rust standard library additions have
+  made it unnecessary.
+- The unicase dependency as Unicode-aware case-insensitive string
+  comparison was not strictly required.
+- The memmap dependency. Its use was unsafe, but this was not exposed
+  correctly. The performance gained from reading memory-mapped files was
+  outweighed by the negative impact on usability that exposing the unsafety
+  correctly would have. There is now no use of `unsafe` in esplugin itself.
+
 ## [2.1.2] - 2019-04-24
 
 ### Fixed
