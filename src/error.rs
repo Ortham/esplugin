@@ -28,15 +28,18 @@ pub enum Error {
     IoError(io::Error),
     NoFilename,
     ParsingIncomplete,
-    ParsingError,
+    ParsingError(Vec<u8>, ParsingErrorKind),
     DecodeError,
 }
 
-impl<E> From<Err<E>> for Error {
-    fn from(error: Err<E>) -> Self {
+impl From<Err<(&[u8], nom::error::ErrorKind)>> for Error {
+    fn from(error: Err<(&[u8], nom::error::ErrorKind)>) -> Self {
         match error {
             Err::Incomplete(_) => Error::ParsingIncomplete,
-            _ => Error::ParsingError,
+            Err::Error((input, kind)) | Err::Failure((input, kind)) => Error::ParsingError(
+                input.to_vec(),
+                ParsingErrorKind::GenericParserError(kind.description().to_string()),
+            ),
         }
     }
 }
@@ -49,11 +52,15 @@ impl From<io::Error> for Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
+        match self {
             Error::IoError(ref x) => x.fmt(f),
             Error::NoFilename => write!(f, "The plugin path has no filename part"),
             Error::ParsingIncomplete => write!(f, "More input was expected by the plugin parser"),
-            Error::ParsingError => write!(f, "An error was encountered while parsing a plugin"),
+            Error::ParsingError(input, kind) => write!(
+                f,
+                "An error was encountered while parsing the plugin content {:02X?}: {}",
+                input, kind
+            ),
             Error::DecodeError => write!(
                 f,
                 "Plugin string content could not be decoded from Windows-1252"
@@ -68,7 +75,7 @@ impl error::Error for Error {
             Error::IoError(ref x) => x.description(),
             Error::NoFilename => "The plugin path has no filename part",
             Error::ParsingIncomplete => "More input was expected by the plugin parser",
-            Error::ParsingError => "An error was encountered while parsing a plugin",
+            Error::ParsingError(_, _) => "An error was encountered while parsing the plugin",
             Error::DecodeError => "Plugin string content could not be decoded from Windows-1252",
         }
     }
@@ -77,6 +84,32 @@ impl error::Error for Error {
         match self {
             Error::IoError(x) => Some(x),
             _ => None,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ParsingErrorKind {
+    /// The Vec<u8> field is the expected record type.
+    UnexpectedRecordType(Vec<u8>),
+    /// The usize field is the expected minimum data length.
+    SubrecordDataTooShort(usize),
+    /// The String field is the name of the parser that errored.
+    GenericParserError(String),
+}
+
+impl fmt::Display for ParsingErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ParsingErrorKind::UnexpectedRecordType(v) => {
+                write!(f, "Expected record type {:02X?}", v)
+            }
+            ParsingErrorKind::SubrecordDataTooShort(s) => write!(
+                f,
+                "Subrecord data field too short, expected at least {} bytes",
+                s
+            ),
+            ParsingErrorKind::GenericParserError(e) => write!(f, "Error in parser: {}", e),
         }
     }
 }

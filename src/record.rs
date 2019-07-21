@@ -26,7 +26,7 @@ use nom::number::complete::le_u32;
 use nom::sequence::{delimited, pair, terminated, tuple};
 use nom::IResult;
 
-use crate::error::Error;
+use crate::error::{Error, ParsingErrorKind};
 use crate::game_id::GameId;
 use crate::record_id::{NamespacedId, RecordId};
 use crate::subrecord::{parse_subrecord_data_as_u32, Subrecord, SubrecordRef, SubrecordType};
@@ -68,7 +68,11 @@ impl Record {
         reader.read_exact(&mut content)?;
 
         if &content[0..4] != expected_type {
-            return Err(Error::ParsingError);
+            // Take a copy of 16 bytes so the output includes the FormID.
+            return Err(Error::ParsingError(
+                content[..16].to_vec(),
+                ParsingErrorKind::UnexpectedRecordType(expected_type.to_vec()),
+            ));
         }
 
         let size_of_subrecords = crate::le_slice_to_u32(&content[4..]) as usize;
@@ -779,6 +783,7 @@ mod tests {
 
         let result = Record::read_and_validate(&mut reader, GameId::Skyrim, b"TES3");
         assert!(result.is_err());
+        assert_eq!("An error was encountered while parsing the plugin content [54, 45, 53, 34, 3E, 00, 00, 00, 01, 00, 00, 00, 00, 00, 00, 00]: Expected record type [54, 45, 53, 33]", result.unwrap_err().to_string());
     }
 
     #[test]

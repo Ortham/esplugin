@@ -26,7 +26,7 @@ use encoding_rs::WINDOWS_1252;
 
 use nom::{self, IResult};
 
-use crate::error::Error;
+use crate::error::{Error, ParsingErrorKind};
 use crate::form_id::HashedFormId;
 use crate::game_id::GameId;
 use crate::group::Group;
@@ -236,7 +236,10 @@ impl Plugin {
         for subrecord in self.data.header_record.subrecords() {
             if subrecord.subrecord_type() == target_subrecord_type {
                 if subrecord.data().len() <= description_offset {
-                    return Err(Error::ParsingError);
+                    return Err(Error::ParsingError(
+                        subrecord.data().to_vec(),
+                        ParsingErrorKind::SubrecordDataTooShort(description_offset),
+                    ));
                 }
 
                 let data = &subrecord.data()[description_offset..(subrecord.data().len() - 1)];
@@ -511,7 +514,10 @@ fn read_plugin<R: BufRead + Seek>(
     let header_record = Record::read(reader, game_id, false)?;
 
     if header_record.header_type() != expected_header_type {
-        return Err(Error::ParsingError);
+        return Err(Error::ParsingError(
+            (&header_record.header_type()).to_vec(),
+            ParsingErrorKind::UnexpectedRecordType(expected_header_type.to_vec()),
+        ));
     }
 
     if load_header_only {
@@ -1241,7 +1247,12 @@ mod tests {
     fn parse_file_should_error_if_plugin_is_not_valid() {
         let mut plugin = Plugin::new(GameId::Skyrim, Path::new("README.md"));
 
-        assert!(plugin.parse_file(false).is_err());
+        let result = plugin.parse_file(false);
+        assert!(result.is_err());
+        assert_eq!(
+            "failed to fill whole buffer",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[test]
@@ -1253,7 +1264,9 @@ mod tests {
             Path::new("testing-plugins/Skyrim/Data/Invalid.esm"),
         );
 
-        assert!(plugin.parse_file(true).is_err());
+        let result = plugin.parse_file(true);
+        assert!(result.is_err());
+        assert_eq!("An error was encountered while parsing the plugin content [00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00]: Expected record type [54, 45, 53, 34]", result.unwrap_err().to_string());
     }
 
     #[test]
@@ -1265,7 +1278,9 @@ mod tests {
             Path::new("testing-plugins/Skyrim/Data/Invalid.esm"),
         );
 
-        assert!(plugin.parse_file(false).is_err());
+        let result = plugin.parse_file(false);
+        assert!(result.is_err());
+        assert_eq!("An error was encountered while parsing the plugin content [00, 00, 00, 00]: Expected record type [54, 45, 53, 34]", result.unwrap_err().to_string());
     }
 
     #[test]
@@ -1355,7 +1370,10 @@ mod tests {
         data[0x15] = 0;
 
         assert!(plugin.parse(&data, true).is_ok());
-        assert!(plugin.description().is_err());
+
+        let result = plugin.description();
+        assert!(result.is_err());
+        assert_eq!("An error was encountered while parsing the plugin content [9A, 99, 99, 3F, 01, 00, 00, 00]: Subrecord data field too short, expected at least 40 bytes", result.unwrap_err().to_string());
     }
 
     #[test]
