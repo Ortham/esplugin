@@ -17,7 +17,6 @@
  * along with esplugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::borrow::Cow;
 use std::error;
 use std::fmt;
 use std::io;
@@ -30,7 +29,7 @@ pub enum Error {
     NoFilename,
     ParsingIncomplete,
     ParsingError,
-    DecodeError(Cow<'static, str>),
+    DecodeError,
 }
 
 impl<E> From<Err<E>> for Error {
@@ -48,12 +47,6 @@ impl From<io::Error> for Error {
     }
 }
 
-impl From<Cow<'static, str>> for Error {
-    fn from(error: Cow<'static, str>) -> Self {
-        Error::DecodeError(error)
-    }
-}
-
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
@@ -61,7 +54,7 @@ impl fmt::Display for Error {
             Error::NoFilename => write!(f, "The plugin path has no filename part"),
             Error::ParsingIncomplete => write!(f, "More input was expected by the plugin parser"),
             Error::ParsingError => write!(f, "An error was encountered while parsing a plugin"),
-            Error::DecodeError(_) => write!(
+            Error::DecodeError => write!(
                 f,
                 "Plugin string content could not be decoded from Windows-1252"
             ),
@@ -76,7 +69,7 @@ impl error::Error for Error {
             Error::NoFilename => "The plugin path has no filename part",
             Error::ParsingIncomplete => "More input was expected by the plugin parser",
             Error::ParsingError => "An error was encountered while parsing a plugin",
-            Error::DecodeError(_) => "Plugin string content could not be decoded from Windows-1252",
+            Error::DecodeError => "Plugin string content could not be decoded from Windows-1252",
         }
     }
 

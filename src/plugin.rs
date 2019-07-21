@@ -244,7 +244,7 @@ impl Plugin {
                 return WINDOWS_1252
                     .decode_without_bom_handling_and_without_replacement(data)
                     .map(|s| Some(s.to_string()))
-                    .ok_or_else(|| Error::DecodeError("invalid sequence".into()));
+                    .ok_or(Error::DecodeError);
             }
         }
 
@@ -373,7 +373,7 @@ fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
             WINDOWS_1252
                 .decode_without_bom_handling_and_without_replacement(d)
                 .map(|s| s.to_string())
-                .ok_or_else(|| Error::DecodeError("invalid sequence".into()))
+                .ok_or(Error::DecodeError)
         })
         .collect::<Result<Vec<String>, Error>>()
 }
