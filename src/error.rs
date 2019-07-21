@@ -80,13 +80,10 @@ impl error::Error for Error {
         }
     }
 
-    fn cause(&self) -> Option<&error::Error> {
-        match *self {
-            Error::IoError(ref x) => Some(x),
-            Error::NoFilename
-            | Error::ParsingIncomplete
-            | Error::ParsingError
-            | Error::DecodeError(_) => None,
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match self {
+            Error::IoError(x) => Some(x),
+            _ => None,
         }
     }
 }
