@@ -39,6 +39,12 @@ enum FileExtension {
     ESL,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum PluginEntry {
+    Record(Record),
+    Group(Group),
+}
+
 impl PartialEq<&std::borrow::Cow<'_, str>> for FileExtension {
     fn eq(&self, other: &&std::borrow::Cow<'_, str>) -> bool {
         const ESM: &str = "esm";
@@ -92,6 +98,7 @@ impl Default for RecordIds {
 struct PluginData {
     header_record: Record,
     record_ids: RecordIds,
+    entries: Vec<PluginEntry>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
@@ -365,6 +372,10 @@ impl Plugin {
     fn is_light_flag_set(&self) -> bool {
         self.data.header_record.header().flags() & 0x200 != 0
     }
+
+    pub fn get_entries(&self) -> &Vec<PluginEntry> {
+        &self.data.entries
+    }
 }
 
 fn sorted_slices_intersect<T: PartialOrd>(left: &[T], right: &[T]) -> bool {
@@ -467,6 +478,19 @@ fn parse_morrowind_record_ids<'a>(input: &'a [u8]) -> IResult<&'a [u8], RecordId
     Ok((remaining_input, record_ids.into()))
 }
 
+fn parse_morrowind_records<'a>(input: &'a [u8]) -> IResult<&'a [u8], Vec<PluginEntry>> {
+    let mut records = Vec::new();
+    let mut remaining_input = input;
+
+    while !remaining_input.is_empty() {
+        let (input, record) = Record::parse(remaining_input, GameId::Morrowind, false)?;
+        remaining_input = input;
+        records.push(PluginEntry::Record(record));
+    }
+
+    Ok((remaining_input, records))
+}
+
 fn read_morrowind_record_ids<R: BufRead + Seek>(reader: &mut R) -> Result<RecordIds, Error> {
     let mut record_ids = Vec::new();
     let mut header_buf = [0; 16]; // Morrowind record headers are 16 bytes long.
@@ -483,6 +507,35 @@ fn read_morrowind_record_ids<R: BufRead + Seek>(reader: &mut R) -> Result<Record
     record_ids.sort();
 
     Ok(record_ids.into())
+}
+
+fn read_morrowind_records<R: BufRead + Seek>(reader: &mut R) -> Result<Vec<PluginEntry>, Error> {
+    let mut records = Vec::new();
+
+    while !reader.fill_buf()?.is_empty() {
+        let record = Record::read(reader, GameId::Morrowind, false)?;
+
+        records.push(PluginEntry::Record(record));
+    }
+
+    Ok(records)
+}
+
+fn parse_record_ids_from_entries(game_id: GameId, entries: &[PluginEntry]) -> RecordIds {
+    let mut record_ids = Vec::new();
+    for entry in entries {
+        match entry {
+            PluginEntry::Record(record) => {
+                let record_id = record.parse_record_id_from_self(game_id);
+
+                if let Some(RecordId::NamespacedId(record_id)) = record_id {
+                    record_ids.push(record_id);
+                }
+            }
+            _ => unimplemented!(),
+        }
+    }
+    record_ids.into()
 }
 
 fn parse_record_ids<'a>(
@@ -507,6 +560,17 @@ fn parse_record_ids<'a>(
     }
 }
 
+fn parse_entries<'a>(
+    input: &'a [u8],
+    game_id: GameId,
+) -> IResult<&'a [u8], Vec<PluginEntry>> {
+    if game_id == GameId::Morrowind {
+        parse_morrowind_records(input)
+    } else {
+        unimplemented!()
+    }
+}
+
 fn read_record_ids<R: BufRead + Seek>(
     reader: &mut R,
     game_id: GameId,
@@ -525,6 +589,17 @@ fn read_record_ids<R: BufRead + Seek>(
     }
 }
 
+fn read_entries<R: BufRead + Seek>(
+    reader: &mut R,
+    game_id: GameId,
+) -> Result<Vec<PluginEntry>, Error> {
+    if game_id == GameId::Morrowind {
+        read_morrowind_records(reader)
+    } else {
+        unimplemented!()
+    }
+}
+
 fn parse_plugin<'a>(
     input: &'a [u8],
     game_id: GameId,
@@ -539,17 +614,26 @@ fn parse_plugin<'a>(
             PluginData {
                 header_record,
                 record_ids: RecordIds::None,
+                entries: vec![],
             },
         ));
     }
 
-    let (input2, record_ids) = parse_record_ids(input1, game_id, &header_record, filename)?;
+    let (input2, entries, record_ids) = if game_id == GameId::Morrowind {
+        let (input2, entries) = parse_entries(input1, game_id)?;
+        let record_ids = parse_record_ids_from_entries(game_id, &entries);
+        (input2, entries, record_ids)
+    } else {
+        let (input2, record_ids) = parse_record_ids(input1, game_id, &header_record, filename)?;
+        (input2, vec![], record_ids)
+    };
 
     Ok((
         input2,
         PluginData {
             header_record,
             record_ids,
+            entries,
         },
     ))
 }
@@ -574,14 +658,23 @@ fn read_plugin<R: BufRead + Seek>(
         return Ok(PluginData {
             header_record,
             record_ids: RecordIds::None,
+            entries: vec![],
         });
     }
 
-    let record_ids = read_record_ids(reader, game_id, &header_record, filename)?;
+    let (entries, record_ids) = if game_id == GameId::Morrowind {
+        let entries = read_entries(reader, game_id)?;
+        let record_ids = parse_record_ids_from_entries(game_id, &entries);
+        (entries, record_ids)
+    } else {
+        let record_ids = read_record_ids(reader, game_id, &header_record, filename)?;
+        (vec![], record_ids)
+    };
 
     Ok(PluginData {
         header_record,
         record_ids,
+        entries,
     })
 }
 

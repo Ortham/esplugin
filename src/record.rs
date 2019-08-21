@@ -19,6 +19,7 @@
 use std::convert::TryInto;
 use std::io;
 use std::num::NonZeroU32;
+use std::string::FromUtf8Error;
 
 use nom::bytes::complete::take;
 use nom::combinator::{cond, map};
@@ -49,6 +50,10 @@ impl RecordHeader {
 
     pub fn flags(&self) -> u32 {
         self.flags
+    }
+
+    pub fn record_type(&self) -> Result<String, FromUtf8Error> {
+        String::from_utf8(self.record_type.to_vec())
     }
 }
 
@@ -140,7 +145,7 @@ impl Record {
 
             let bytes_read = header_length_read as u32 + header.size_of_subrecords;
 
-            let (_, record_id) = parse_morrowind_record_id(&subrecords_data, &header)?;
+            let (_, record_id) = parse_morrowind_record_id_from_input(&subrecords_data, &header)?;
             Ok((bytes_read, record_id))
         } else {
             // Seeking discards the current buffer, so only do so if the data
@@ -165,7 +170,7 @@ impl Record {
             let (remaining_input, subrecords_data) =
                 take(header.size_of_subrecords)(remaining_input)?;
 
-            let (_, record_id) = parse_morrowind_record_id(subrecords_data, &header)?;
+            let (_, record_id) = parse_morrowind_record_id_from_input(subrecords_data, &header)?;
             Ok((remaining_input, record_id))
         } else {
             let mut parser = tuple((
@@ -189,6 +194,29 @@ impl Record {
         }
     }
 
+    pub fn parse_record_id_from_self(&self, game_id: GameId) -> Option<RecordId> {
+        if game_id == GameId::Morrowind {
+            let types = record_id_subrecord_types(self.header.record_type);
+            if !types.is_empty() {
+                let subrecordrefs: Vec<SubrecordRef> = self
+                    .subrecords
+                    .iter()
+                    .filter(|x| types.contains(&x.subrecord_type()))
+                    .map(|x| SubrecordRef::from_subrecord(x))
+                    .collect::<Vec<SubrecordRef>>();
+                let data = record_id_subrecord_mapper(self.header.record_type, &subrecordrefs);
+
+                data.map(|data| {
+                    RecordId::NamespacedId(NamespacedId::new(self.header.record_type, data))
+                })
+            } else {
+                None
+            }
+        } else {
+            unimplemented!()
+        }
+    }
+
     pub fn header(&self) -> &RecordHeader {
         &self.header
     }
@@ -202,7 +230,7 @@ impl Record {
     }
 }
 
-fn parse_morrowind_record_id<'a>(
+fn parse_morrowind_record_id_from_input<'a>(
     subrecords_data: &'a [u8],
     header: &RecordHeader,
 ) -> IResult<&'a [u8], Option<RecordId>> {

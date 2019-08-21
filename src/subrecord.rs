@@ -24,6 +24,7 @@ use std::convert::TryInto;
 use std::io;
 #[cfg(feature = "compressed-fields")]
 use std::io::Read;
+use std::string::FromUtf8Error;
 
 #[cfg(feature = "compressed-fields")]
 use flate2::read::DeflateDecoder;
@@ -93,6 +94,10 @@ impl Subrecord {
     pub fn data(&self) -> &[u8] {
         &self.data
     }
+
+    pub fn typ(&self) -> Result<String, FromUtf8Error> {
+        String::from_utf8(self.subrecord_type.to_vec())
+    }
 }
 
 pub struct SubrecordRef<'a> {
@@ -116,6 +121,13 @@ impl<'a> SubrecordRef<'a> {
                 data,
             },
         ))
+    }
+
+    pub fn from_subrecord(subrecord: &'a Subrecord) -> SubrecordRef<'a> {
+        SubrecordRef {
+            subrecord_type: *subrecord.subrecord_type(),
+            data: &subrecord.data,
+        }
     }
 
     pub fn subrecord_type(&'a self) -> &SubrecordType {
