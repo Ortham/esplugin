@@ -408,6 +408,10 @@ impl Plugin {
         self.data.header_record.header().flags() & 0x200 != 0
     }
 
+    pub fn get_header_record(&self) -> &Record {
+        &self.data.header_record
+    }
+
     pub fn get_entries(&self) -> &Vec<PluginEntry> {
         &self.data.entries
     }
