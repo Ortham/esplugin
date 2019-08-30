@@ -161,6 +161,23 @@ void test_esp_plugin_is_empty() {
   esp_plugin_free(plugin);
 }
 
+void test_esp_plugin_record_and_group_count() {
+  printf("testing esp_plugin_record_and_group_count()...\n");
+  Plugin * plugin;
+  auto return_code = esp_plugin_new(&plugin, ESP_GAME_SKYRIM, "../../testing-plugins/Skyrim/Data/Blank.esm");
+  assert(return_code == ESP_OK);
+
+  return_code = esp_plugin_parse(plugin, true);
+  assert(return_code == ESP_OK);
+
+  uint32_t count;
+  return_code = esp_plugin_record_and_group_count(plugin, &count);
+  assert(return_code == ESP_OK);
+  assert(count == 15);
+
+  esp_plugin_free(plugin);
+}
+
 void test_esp_plugin_count_override_records() {
   printf("testing esp_plugin_count_override_records()...\n");
   Plugin * plugin;
@@ -225,6 +242,7 @@ int main() {
   test_esp_plugin_description();
   test_esp_plugin_header_version();
   test_esp_plugin_is_empty();
+  test_esp_plugin_record_and_group_count();
   test_esp_plugin_count_override_records();
   test_esp_plugin_do_records_overlap();
   test_esp_plugin_is_valid_as_light_master();

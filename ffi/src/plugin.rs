@@ -247,6 +247,25 @@ pub unsafe extern "C" fn esp_plugin_is_empty(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn esp_plugin_record_and_group_count(
+    plugin_ptr: *const Plugin,
+    count: *mut u32,
+) -> u32 {
+    panic::catch_unwind(|| {
+        if plugin_ptr.is_null() || count.is_null() {
+            ESP_ERROR_NULL_POINTER
+        } else {
+            let plugin = &*plugin_ptr;
+
+            *count = plugin.record_and_group_count().unwrap_or(0);
+
+            ESP_OK
+        }
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn esp_plugin_count_override_records(
     plugin_ptr: *const Plugin,
     count: *mut size_t,
