@@ -2,6 +2,13 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [3.1.0] - 2019-08-30
+
+### Added
+
+- `esp_plugin_record_and_group_count()`, which wraps
+  `esplugin::Plugin::record_and_group_count()`.
+
 ## [3.0.0] - 2019-07-21
 
 ### Changed
