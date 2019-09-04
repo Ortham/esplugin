@@ -19,7 +19,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         let mut plugin = Plugin::new(GAME_ID, Path::new(PLUGIN_TO_PARSE));
 
         b.iter(|| {
-            assert!(plugin.parse_file(true).is_ok());
+            assert!(plugin.parse_file(true, false).is_ok());
         });
     });
 
@@ -27,7 +27,15 @@ fn criterion_benchmark(c: &mut Criterion) {
         let mut plugin = Plugin::new(GAME_ID, Path::new(PLUGIN_TO_PARSE));
 
         b.iter(|| {
-            assert!(plugin.parse_file(false).is_ok());
+            assert!(plugin.parse_file(false, false).is_ok());
+        });
+    });
+
+    c.bench_function("Plugin.parse_file() full with records", |b| {
+        let mut plugin = Plugin::new(GAME_ID, Path::new(PLUGIN_TO_PARSE));
+
+        b.iter(|| {
+            assert!(plugin.parse_file(false, true).is_ok());
         });
     });
 
