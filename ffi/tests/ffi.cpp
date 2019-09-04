@@ -212,6 +212,24 @@ void test_esp_plugin_do_records_overlap() {
   esp_plugin_free(plugin);
 }
 
+void test_esp_plugin_records_overlap_size() {
+  printf("testing esp_plugin_records_overlap_size()...\n");
+  Plugin * plugin;
+  auto return_code = esp_plugin_new(&plugin, ESP_GAME_SKYRIM, "../../testing-plugins/Skyrim/Data/Blank.esm");
+  assert(return_code == ESP_OK);
+
+  return_code = esp_plugin_parse(plugin, false);
+  assert(return_code == ESP_OK);
+
+  size_t overlap_size;
+  Plugin* plugins[2] = { plugin, plugin };
+  return_code = esp_plugin_records_overlap_size(plugin, plugins, 2, &overlap_size);
+  assert(return_code == ESP_OK);
+  assert(overlap_size == 10);
+
+  esp_plugin_free(plugin);
+}
+
 void test_esp_plugin_is_valid_as_light_master() {
   printf("testing esp_plugin_is_valid_as_light_master()...\n");
   Plugin * plugin;
@@ -245,6 +263,7 @@ int main() {
   test_esp_plugin_record_and_group_count();
   test_esp_plugin_count_override_records();
   test_esp_plugin_do_records_overlap();
+  test_esp_plugin_records_overlap_size();
   test_esp_plugin_is_valid_as_light_master();
 
   printf("SUCCESS\n");

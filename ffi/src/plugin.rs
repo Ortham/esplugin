@@ -306,6 +306,35 @@ pub unsafe extern "C" fn esp_plugin_do_records_overlap(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn esp_plugin_records_overlap_size(
+    plugin_ptr: *const Plugin,
+    other_plugins_ptr: *const *const Plugin,
+    other_plugins_ptr_count: size_t,
+    overlap_size: *mut size_t,
+) -> u32 {
+    panic::catch_unwind(|| {
+        if plugin_ptr.is_null() || other_plugins_ptr.is_null() || overlap_size.is_null() {
+            ESP_ERROR_NULL_POINTER
+        } else {
+            let plugin = &*plugin_ptr;
+            let other_plugins: Option<Vec<&Plugin>> =
+                std::slice::from_raw_parts(other_plugins_ptr, other_plugins_ptr_count)
+                    .iter()
+                    .map(|pointer| pointer.as_ref())
+                    .collect();
+
+            if let Some(other_plugins) = other_plugins {
+                *overlap_size = plugin.overlap_size(&other_plugins);
+                ESP_OK
+            } else {
+                ESP_ERROR_NULL_POINTER
+            }
+        }
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn esp_plugin_is_valid_as_light_master(
     plugin_ptr: *const Plugin,
     is_valid: *mut bool,

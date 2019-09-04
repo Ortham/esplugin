@@ -262,6 +262,7 @@ impl Plugin {
             .find(|s| s.subrecord_type() == b"HEDR" && s.data().len() > 3)
             .map(|s| crate::le_slice_to_f32(&s.data()))
     }
+
     pub fn record_and_group_count(&self) -> Option<u32> {
         let count_offset = match self.game_id {
             GameId::Morrowind => 296,
@@ -290,6 +291,35 @@ impl Plugin {
             (FormIds(left), FormIds(right)) => sorted_slices_intersect(&left, &right),
             (NamespacedIds(left), NamespacedIds(right)) => sorted_slices_intersect(&left, &right),
             _ => false,
+        }
+    }
+
+    /// Count the number of records that appear in this plugin and one or more
+    /// the others passed. If more than one other contains the same record, it
+    /// is only counted once.
+    pub fn overlap_size(&self, others: &[&Self]) -> usize {
+        use self::RecordIds::*;
+
+        match &self.data.record_ids {
+            FormIds(ids) => ids
+                .iter()
+                .filter(|id| {
+                    others.iter().any(|other| match &other.data.record_ids {
+                        FormIds(master_ids) => master_ids.binary_search(id).is_ok(),
+                        _ => false,
+                    })
+                })
+                .count(),
+            NamespacedIds(ids) => ids
+                .iter()
+                .filter(|id| {
+                    others.iter().any(|other| match &other.data.record_ids {
+                        NamespacedIds(master_ids) => master_ids.binary_search(id).is_ok(),
+                        _ => false,
+                    })
+                })
+                .count(),
+            None => 0,
         }
     }
 
@@ -417,6 +447,8 @@ fn parse_morrowind_record_ids<'a>(input: &'a [u8]) -> IResult<&'a [u8], RecordId
         }
     }
 
+    record_ids.sort();
+
     Ok((remaining_input, record_ids.into()))
 }
 
@@ -432,6 +464,8 @@ fn read_morrowind_record_ids<R: BufRead + Seek>(reader: &mut R) -> Result<Record
             record_ids.push(record_id);
         }
     }
+
+    record_ids.sort();
 
     Ok(record_ids.into())
 }
@@ -735,6 +769,85 @@ mod tests {
         }
 
         #[test]
+        fn overlap_size_should_only_count_each_record_once() {
+            let mut plugin1 = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+            );
+            let mut plugin2 = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank - Master Dependent.esm"),
+            );
+
+            assert!(plugin1.parse_file(false).is_ok());
+            assert!(plugin2.parse_file(false).is_ok());
+
+            assert_eq!(4, plugin1.overlap_size(&[&plugin2, &plugin2]));
+        }
+
+        #[test]
+        fn overlap_size_should_check_against_all_given_plugins() {
+            let mut plugin1 = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+            );
+            let mut plugin2 = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esp"),
+            );
+            let mut plugin3 = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank - Master Dependent.esm"),
+            );
+
+            assert!(plugin1.parse_file(false).is_ok());
+            assert!(plugin2.parse_file(false).is_ok());
+            assert!(plugin3.parse_file(false).is_ok());
+
+            assert_eq!(4, plugin1.overlap_size(&[&plugin2, &plugin3]));
+        }
+
+        #[test]
+        fn overlap_size_should_return_0_if_plugins_have_not_been_parsed() {
+            let mut plugin1 = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+            );
+            let mut plugin2 = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank - Master Dependent.esm"),
+            );
+
+            assert_eq!(0, plugin1.overlap_size(&[&plugin2]));
+
+            assert!(plugin1.parse_file(false).is_ok());
+
+            assert_eq!(0, plugin1.overlap_size(&[&plugin2]));
+
+            assert!(plugin2.parse_file(false).is_ok());
+
+            assert_ne!(0, plugin1.overlap_size(&[&plugin2]));
+        }
+
+        #[test]
+        fn overlap_size_should_return_0_when_there_is_no_overlap() {
+            let mut plugin1 = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+            );
+            let mut plugin2 = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esp"),
+            );
+
+            assert!(plugin1.parse_file(false).is_ok());
+            assert!(plugin2.parse_file(false).is_ok());
+
+            assert!(!plugin1.overlaps_with(&plugin2));
+            assert_eq!(0, plugin1.overlap_size(&[&plugin2]));
+        }
+
+        #[test]
         fn is_valid_as_light_master_should_always_be_false() {
             let mut plugin = Plugin::new(
                 GameId::Morrowind,
@@ -931,6 +1044,85 @@ mod tests {
 
             assert!(plugin1.overlaps_with(&plugin1));
             assert!(!plugin1.overlaps_with(&plugin2));
+        }
+
+        #[test]
+        fn overlap_size_should_only_count_each_record_once() {
+            let mut plugin1 = Plugin::new(
+                GameId::Skyrim,
+                Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
+            );
+            let mut plugin2 = Plugin::new(
+                GameId::Skyrim,
+                Path::new("testing-plugins/Skyrim/Data/Blank - Master Dependent.esm"),
+            );
+
+            assert!(plugin1.parse_file(false).is_ok());
+            assert!(plugin2.parse_file(false).is_ok());
+
+            assert_eq!(4, plugin1.overlap_size(&[&plugin2, &plugin2]));
+        }
+
+        #[test]
+        fn overlap_size_should_check_against_all_given_plugins() {
+            let mut plugin1 = Plugin::new(
+                GameId::Skyrim,
+                Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
+            );
+            let mut plugin2 = Plugin::new(
+                GameId::Skyrim,
+                Path::new("testing-plugins/Skyrim/Data/Blank.esp"),
+            );
+            let mut plugin3 = Plugin::new(
+                GameId::Skyrim,
+                Path::new("testing-plugins/Skyrim/Data/Blank - Master Dependent.esp"),
+            );
+
+            assert!(plugin1.parse_file(false).is_ok());
+            assert!(plugin2.parse_file(false).is_ok());
+            assert!(plugin3.parse_file(false).is_ok());
+
+            assert_eq!(2, plugin1.overlap_size(&[&plugin2, &plugin3]));
+        }
+
+        #[test]
+        fn overlap_size_should_return_0_if_plugins_have_not_been_parsed() {
+            let mut plugin1 = Plugin::new(
+                GameId::Skyrim,
+                Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
+            );
+            let mut plugin2 = Plugin::new(
+                GameId::Skyrim,
+                Path::new("testing-plugins/Skyrim/Data/Blank - Master Dependent.esm"),
+            );
+
+            assert_eq!(0, plugin1.overlap_size(&[&plugin2]));
+
+            assert!(plugin1.parse_file(false).is_ok());
+
+            assert_eq!(0, plugin1.overlap_size(&[&plugin2]));
+
+            assert!(plugin2.parse_file(false).is_ok());
+
+            assert_ne!(0, plugin1.overlap_size(&[&plugin2]));
+        }
+
+        #[test]
+        fn overlap_size_should_return_0_when_there_is_no_overlap() {
+            let mut plugin1 = Plugin::new(
+                GameId::Skyrim,
+                Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
+            );
+            let mut plugin2 = Plugin::new(
+                GameId::Skyrim,
+                Path::new("testing-plugins/Skyrim/Data/Blank.esp"),
+            );
+
+            assert!(plugin1.parse_file(false).is_ok());
+            assert!(plugin2.parse_file(false).is_ok());
+
+            assert!(!plugin1.overlaps_with(&plugin2));
+            assert_eq!(0, plugin1.overlap_size(&[&plugin2]));
         }
 
         #[test]
