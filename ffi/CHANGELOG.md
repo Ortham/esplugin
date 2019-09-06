@@ -2,6 +2,18 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [3.2.0] - 2019-09-06
+
+### Added
+
+- `esp_plugin_records_overlap_size()`, which wraps `Plugin::overlap_size()`,
+  for counting how many of the plugin's records are also present in the given
+  plugins.
+
+### Changed
+
+- Updated to esplugin v3.2.0.
+
 ## [3.1.0] - 2019-08-30
 
 ### Added

@@ -2,6 +2,18 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [3.2.0] - 2019-09-06
+
+### Added
+
+- `Plugin::overlap_size()` for counting how many of the plugin's records are
+  also present in the given plugins.
+
+### Fixed
+
+- `Plugin::overlaps_with()` could fail to detect an overlap between Morrowind
+  plugins.
+
 ## [3.0.0] - 2019-07-21
 
 ### Changed
