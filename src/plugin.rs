@@ -1614,4 +1614,48 @@ mod tests {
 
         assert_eq!(form_ids, other_form_ids);
     }
+
+    #[test]
+    fn hash_should_treat_plugin_names_case_insensitively_like_windows() {
+        // \u03a1 is greek rho uppercase 'Ρ'
+        // \u03c1 is greek rho lowercase 'ρ'
+        // \u03f1 is greek rho 'ϱ'
+        // \u0130 is turkish 'İ'
+        // \u0131 is turkish 'ı'
+
+        // I and i are the same, but İ and ı are different to them and each
+        // other.
+        assert_eq!(hash("i"), hash("I"));
+        assert_ne!(hash("\u{0130}"), hash("i"));
+        assert_ne!(hash("\u{0131}"), hash("i"));
+        assert_ne!(hash("\u{0131}"), hash("\u{0130}"));
+
+        // Windows filesystem treats Ρ and ρ as the same, but ϱ is different.
+        assert_eq!(hash("\u{03a1}"), hash("\u{03c1}"));
+        assert_ne!(hash("\u{03a1}"), hash("\u{03f1}"));
+
+        // hash uses str::to_lowercase() internally, because unlike
+        // str::to_uppercase() it has the desired behaviour. The asserts below
+        // demonstrate that.
+
+        // Check how greek rho Ρ case transforms.
+        assert_eq!("\u{03c1}", "\u{03a1}".to_lowercase());
+        assert_eq!("\u{03a1}", "\u{03a1}".to_uppercase());
+
+        // Check how greek rho ρ case transforms.
+        assert_eq!("\u{03c1}", "\u{03c1}".to_lowercase());
+        assert_eq!("\u{03a1}", "\u{03c1}".to_uppercase());
+
+        // Check how greek rho ϱ case transforms.
+        assert_eq!("\u{03f1}", "\u{03f1}".to_lowercase());
+        assert_eq!("\u{03a1}", "\u{03f1}".to_uppercase());
+
+        // Check how turkish İ case transforms.
+        assert_eq!("i\u{0307}", "\u{0130}".to_lowercase());
+        assert_eq!("\u{0130}", "\u{0130}".to_uppercase());
+
+        // Check how turkish ı case transforms.
+        assert_eq!("\u{0131}", "\u{0131}".to_lowercase());
+        assert_eq!("I", "\u{0131}".to_uppercase());
+    }
 }
