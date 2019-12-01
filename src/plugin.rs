@@ -374,13 +374,18 @@ fn sorted_slices_intersect<T: PartialOrd>(left: &[T], right: &[T]) -> bool {
     false
 }
 
-fn hashed_form_ids(form_ids: &[u32], filename: &str, masters: &[String]) -> Vec<HashedFormId> {
+fn hashed_form_ids(
+    form_ids: &[u32],
+    game_id: GameId,
+    filename: &str,
+    masters: &[String],
+) -> Vec<HashedFormId> {
     let hashed_filename = hash(filename);
     let hashed_masters: Vec<_> = masters.iter().map(|m| hash(&m)).collect();
 
     let mut form_ids: Vec<_> = form_ids
         .iter()
-        .map(|form_id| HashedFormId::new(hashed_filename, &hashed_masters, *form_id))
+        .map(|form_id| HashedFormId::new(game_id, hashed_filename, &hashed_masters, *form_id))
         .collect();
 
     form_ids.sort();
@@ -485,7 +490,7 @@ fn parse_record_ids<'a>(
             .map_err(|_| nom::Err::Error((input, nom::error::ErrorKind::Alpha)))?;
 
         let (remaining_input, form_ids) = parse_form_ids(input, game_id)?;
-        let form_ids = hashed_form_ids(&form_ids, filename, &masters).into();
+        let form_ids = hashed_form_ids(&form_ids, game_id, filename, &masters).into();
 
         Ok((remaining_input, form_ids))
     }
@@ -503,7 +508,7 @@ fn read_record_ids<R: BufRead + Seek>(
         let masters = masters(&header_record)?;
 
         let form_ids = read_form_ids(reader, game_id)?;
-        let form_ids = hashed_form_ids(&form_ids, filename, &masters).into();
+        let form_ids = hashed_form_ids(&form_ids, game_id, filename, &masters).into();
 
         Ok(form_ids)
     }
@@ -1607,10 +1612,11 @@ mod tests {
         let raw_form_ids = vec![0x0000_0001, 0x0100_0002];
 
         let masters = vec!["tést.esm".to_string()];
-        let form_ids = hashed_form_ids(&raw_form_ids, "Blàñk.esp", &masters);
+        let form_ids = hashed_form_ids(&raw_form_ids, GameId::Oblivion, "Blàñk.esp", &masters);
 
         let other_masters = vec!["TÉST.ESM".to_string()];
-        let other_form_ids = hashed_form_ids(&raw_form_ids, "BLÀÑK.ESP", &other_masters);
+        let other_form_ids =
+            hashed_form_ids(&raw_form_ids, GameId::Oblivion, "BLÀÑK.ESP", &other_masters);
 
         assert_eq!(form_ids, other_form_ids);
     }
