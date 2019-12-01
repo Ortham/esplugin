@@ -2,6 +2,16 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [3.3.0] - 2019-12-01
+
+### Changed
+
+- The range of FormIDs that are recognised as valid in light masters has been
+  extended for Fallout 4 plugins, from between `0x800` and `0xFFF` inclusive to
+  between `0x001` and `0xFFF` inclusive, to reflect the extended range supported
+  by Fallout 4 v1.10.162.0.0. The valid range for Skyrim Special Edition plugins
+  is unchanged.
+
 ## [3.2.0] - 2019-09-06
 
 ### Added
