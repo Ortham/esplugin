@@ -31,6 +31,6 @@ test_script:
   - cargo build --manifest-path ffi/Cargo.toml --features ffi-headers
   - ps: mkdir ffi/build
   - cd ffi/build
-  - cmake .. -G "Visual Studio 15 2017 Win64"
+  - cmake .. -G "Visual Studio 15 2017"
   - cmake --build .
   - ctest
