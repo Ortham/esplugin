@@ -5,8 +5,7 @@ cache: cargo
 install:
   - rustup component add rustfmt
   - rustfmt --version
-  - curl -fsSL https://github.com/xd009642/tarpaulin/releases/download/0.8.6/cargo-tarpaulin-0.8.6-travis.tar.gz | tar xz
-  - mv cargo-tarpaulin ~/.cargo/bin/
+  - cargo install cargo-tarpaulin --version 0.10.2
 
 before_script:
   - wget https://github.com/Ortham/testing-plugins/archive/1.4.0.tar.gz
