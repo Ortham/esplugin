@@ -8,12 +8,12 @@ cache:
 
 install:
   - appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
-  - rustup-init -yv
+  - rustup-init --profile=minimal -yv
   - set PATH=%PATH%;%USERPROFILE%\.cargo\bin
   - rustc -vV
   - cargo -vV
 
-  - rustup component add rustfmt-preview
+  - rustup component add rustfmt
   - rustfmt --version
 
   - ps: (New-Object Net.WebClient).DownloadFile('https://github.com/Ortham/testing-plugins/archive/1.4.0.zip', "$env:APPVEYOR_BUILD_FOLDER\1.4.0.zip")
