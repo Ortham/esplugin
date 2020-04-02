@@ -70,16 +70,6 @@ impl fmt::Display for Error {
 }
 
 impl error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Error::IoError(ref x) => x.description(),
-            Error::NoFilename => "The plugin path has no filename part",
-            Error::ParsingIncomplete => "More input was expected by the plugin parser",
-            Error::ParsingError(_, _) => "An error was encountered while parsing the plugin",
-            Error::DecodeError => "Plugin string content could not be decoded from Windows-1252",
-        }
-    }
-
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
             Error::IoError(x) => Some(x),
