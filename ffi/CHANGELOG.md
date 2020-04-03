@@ -2,6 +2,13 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [3.3.1] - 2020-04-03
+
+### Changed
+
+- Updated to cbindgen v0.13.
+- Updated to esplugin v3.3.1.
+
 ## [3.3.0] - 2019-12-01
 
 ### Changed

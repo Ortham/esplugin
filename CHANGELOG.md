@@ -2,6 +2,13 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [3.3.1] - 2020-04-03
+
+### Changed
+
+- Removed the `std::error::Error::description()` implementation on `Error`, to
+  avoid CMake build errors due to the deprecation warning for `description()`.
+
 ## [3.3.0] - 2019-12-01
 
 ### Changed
