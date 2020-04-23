@@ -546,6 +546,7 @@ fn parse_record_ids_from_entries(game_id: GameId, entries: &[PluginEntry]) -> Re
             _ => unimplemented!(),
         }
     }
+    record_ids.sort();
     record_ids.into()
 }
 
