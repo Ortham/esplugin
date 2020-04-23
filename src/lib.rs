@@ -27,7 +27,7 @@ use std::convert::TryInto;
 
 pub use crate::error::Error;
 pub use crate::game_id::GameId;
-pub use crate::plugin::{Plugin, PluginEntry};
+pub use crate::plugin::{ParseMode, Plugin, PluginEntry};
 pub use crate::record::{Record, RecordHeader};
 pub use crate::subrecord::Subrecord;
 
