@@ -23,7 +23,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         });
     });
 
-    c.bench_function("Plugin.parse_file() full", |b| {
+    c.bench_function("Plugin.parse_file() record ids", |b| {
         let mut plugin = Plugin::new(GAME_ID, Path::new(PLUGIN_TO_PARSE));
 
         b.iter(|| {
