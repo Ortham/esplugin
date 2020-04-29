@@ -484,6 +484,28 @@ mod tests {
         }
 
         #[test]
+        fn parse_record_id_from_self_should_return_none_for_tes3_header() {
+            let data =
+                &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
+
+            let record = Record::parse(data, GameId::Morrowind, false).unwrap().1;
+            let form_id = record.parse_record_id_from_self(GameId::Morrowind);
+
+            assert!(form_id.is_none());
+        }
+
+        #[test]
+        fn parse_record_id_from_self_should_return_some_namespaced_id_for_gmst() {
+            let data =
+                &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[0x144..0x16F];
+
+            let record = Record::parse(data, GameId::Morrowind, false).unwrap().1;
+            let form_id = record.parse_record_id_from_self(GameId::Morrowind);
+
+            assert!(form_id.unwrap().namespaced_id().is_some());
+        }
+
+        #[test]
         fn parse_record_id_should_return_none_for_tes3_header() {
             let data =
                 &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];

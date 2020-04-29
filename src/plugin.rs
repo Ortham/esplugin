@@ -713,6 +713,21 @@ mod tests {
         }
 
         #[test]
+        fn parse_file_should_succeed_mode_all() {
+            let mut plugin = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+            );
+
+            assert!(plugin.parse_file(ParseMode::All).is_ok());
+
+            match plugin.data.record_ids {
+                RecordIds::NamespacedIds(ids) => assert_eq!(10, ids.len()),
+                _ => panic!("Expected namespaced record IDs"),
+            }
+        }
+
+        #[test]
         fn plugin_parse_should_read_a_unique_id_for_each_record() {
             let mut plugin = Plugin::new(
                 GameId::Morrowind,
@@ -727,6 +742,45 @@ mod tests {
                     assert_eq!(set.len(), ids.len());
                 }
                 _ => panic!("Expected namespaced record IDs"),
+            }
+        }
+
+        #[test]
+        fn plugin_parse_should_read_a_unique_id_for_each_record_mode_all() {
+            let mut plugin = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+            );
+
+            assert!(plugin.parse_file(ParseMode::All).is_ok());
+
+            match plugin.data.record_ids {
+                RecordIds::NamespacedIds(ids) => {
+                    let set: HashSet<NamespacedId> = HashSet::from_iter(ids.iter().cloned());
+                    assert_eq!(set.len(), ids.len());
+                }
+                _ => panic!("Expected namespaced record IDs"),
+            }
+        }
+
+        #[test]
+        fn plugin_parse_should_read_all_records_mode_all() {
+            let mut plugin = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+            );
+
+            assert!(plugin.parse_file(ParseMode::All).is_ok());
+            assert_eq!(10, plugin.get_entries().len());
+
+            for entry in plugin.get_entries() {
+                match entry {
+                    PluginEntry::Record(record) => {
+                        assert_eq!(record.header_type(), *b"GMST");
+                        assert_eq!(record.subrecords().len(), 2);
+                    }
+                    PluginEntry::Group(_) => panic!("Unexpected group in morrowind record"),
+                }
             }
         }
 
@@ -858,6 +912,23 @@ mod tests {
         }
 
         #[test]
+        fn record_and_group_count_should_match_record_ids_and_entries_length_mode_all() {
+            let mut plugin = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+            );
+
+            assert!(plugin.record_and_group_count().is_none());
+            assert!(plugin.parse_file(ParseMode::All).is_ok());
+            assert_eq!(10, plugin.record_and_group_count().unwrap());
+            assert_eq!(10, plugin.get_entries().len());
+            match plugin.data.record_ids {
+                RecordIds::NamespacedIds(ids) => assert_eq!(10, ids.len()),
+                _ => panic!("Expected namespaced record IDs"),
+            }
+        }
+
+        #[test]
         fn count_override_records_should_return_0_even_when_override_records_are_present() {
             let mut plugin = Plugin::new(
                 GameId::Morrowind,
@@ -865,6 +936,18 @@ mod tests {
             );
 
             assert!(plugin.parse_file(ParseMode::RecordIds).is_ok());
+            assert_eq!(0, plugin.count_override_records());
+        }
+
+        #[test]
+        fn count_override_records_should_return_0_even_when_override_records_are_present_mode_all()
+        {
+            let mut plugin = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank - Master Dependent.esm"),
+            );
+
+            assert!(plugin.parse_file(ParseMode::All).is_ok());
             assert_eq!(0, plugin.count_override_records());
         }
 
@@ -881,6 +964,43 @@ mod tests {
 
             assert!(plugin1.parse_file(ParseMode::RecordIds).is_ok());
             assert!(plugin2.parse_file(ParseMode::RecordIds).is_ok());
+
+            assert!(plugin1.overlaps_with(&plugin1));
+            assert!(!plugin1.overlaps_with(&plugin2));
+        }
+
+        #[test]
+        fn overlaps_with_should_detect_when_two_plugins_have_a_record_with_the_same_id_mode_all() {
+            let mut plugin1 = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+            );
+            let mut plugin2 = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank - Different.esm"),
+            );
+
+            assert!(plugin1.parse_file(ParseMode::All).is_ok());
+            assert!(plugin2.parse_file(ParseMode::All).is_ok());
+
+            assert!(plugin1.overlaps_with(&plugin1));
+            assert!(!plugin1.overlaps_with(&plugin2));
+        }
+
+        #[test]
+        fn overlaps_with_should_detect_when_two_plugins_have_a_record_with_the_same_id_mode_mixed()
+        {
+            let mut plugin1 = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+            );
+            let mut plugin2 = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank - Different.esm"),
+            );
+
+            assert!(plugin1.parse_file(ParseMode::RecordIds).is_ok());
+            assert!(plugin2.parse_file(ParseMode::All).is_ok());
 
             assert!(plugin1.overlaps_with(&plugin1));
             assert!(!plugin1.overlaps_with(&plugin2));
