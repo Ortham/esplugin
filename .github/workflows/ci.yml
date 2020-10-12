@@ -1,0 +1,99 @@
+name: CI
+
+on: [push, pull_request]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rustfmt:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install Rustfmt
+        run: |
+          rustup component add rustfmt
+          rustfmt --version
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+  windows:
+    runs-on: windows-2019
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Prepare test resources
+        run: |
+          (New-Object Net.WebClient).DownloadFile('https://github.com/WrinklyNinja/testing-plugins/archive/1.4.1.zip', "$PWD/1.4.1.zip")
+          7z x 1.4.1.zip
+          mv testing-plugins-1.4.1 testing-plugins
+      - name: Build and run tests
+        run: cargo test --all --all-features
+
+      # Need to rebuild the FFI wrapper so that its binary is given a filename
+      # without a hash.
+      - name: Build FFI wrapper
+        run: cargo build --manifest-path ffi/Cargo.toml --features ffi-headers
+
+      # Use bash because PowerShell doesn't fail if one command fails.
+      - name: Build and run C++ tests
+        shell: bash
+        run: |
+          mkdir ffi/build
+          cd ffi/build
+          cmake ..
+          cmake --build .
+          ctest
+  linux:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Tarpaulin
+        run: curl -sL https://github.com/xd009642/tarpaulin/releases/download/0.14.2/cargo-tarpaulin-0.14.2-travis.tar.gz | tar xvz -C $HOME/.cargo/bin
+
+      - name: Prepare test resources
+        run: |
+          wget https://github.com/WrinklyNinja/testing-plugins/archive/1.4.1.tar.gz
+          tar -xf 1.4.1.tar.gz
+          mv testing-plugins-1.4.1 testing-plugins
+      - name: Build and run tests with code coverage
+        run: cargo tarpaulin --workspace --features compressed-fields --out Lcov
+
+      - name: Upload code coverage to Coveralls
+        uses: coverallsapp/github-action@v1.1.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./lcov.info
+
+      # Need to rebuild the FFI wrapper so that its binary is given a filename
+      # without a hash.
+      - name: Build FFI wrapper
+        run: cargo build --manifest-path ffi/Cargo.toml --features ffi-headers
+
+      # Use bash because PowerShell doesn't fail if one command fails.
+      - name: Build and run C++ tests
+        shell: bash
+        run: |
+          mkdir ffi/build
+          cd ffi/build
+          cmake ..
+          cmake --build .
+          ctest
