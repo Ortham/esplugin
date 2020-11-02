@@ -32,13 +32,13 @@ pub enum Error {
     DecodeError,
 }
 
-impl From<Err<(&[u8], nom::error::ErrorKind)>> for Error {
-    fn from(error: Err<(&[u8], nom::error::ErrorKind)>) -> Self {
+impl From<Err<nom::error::Error<&[u8]>>> for Error {
+    fn from(error: Err<nom::error::Error<&[u8]>>) -> Self {
         match error {
             Err::Incomplete(_) => Error::ParsingIncomplete,
-            Err::Error((input, kind)) | Err::Failure((input, kind)) => Error::ParsingError(
-                input.to_vec(),
-                ParsingErrorKind::GenericParserError(kind.description().to_string()),
+            Err::Error(err) | Err::Failure(err) => Error::ParsingError(
+                err.input.to_vec(),
+                ParsingErrorKind::GenericParserError(err.code.description().to_string()),
             ),
         }
     }
