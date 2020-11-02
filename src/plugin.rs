@@ -486,8 +486,9 @@ fn parse_record_ids<'a>(
     } else {
         // Map to the Alpha error kind even though it's misleading, because it
         // doesn't actually matter what is chosen, the detail is discarded.
-        let masters = masters(&header_record)
-            .map_err(|_| nom::Err::Error((input, nom::error::ErrorKind::Alpha)))?;
+        let masters = masters(&header_record).map_err(|_| {
+            nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Alpha))
+        })?;
 
         let (remaining_input, form_ids) = parse_form_ids(input, game_id)?;
         let form_ids = hashed_form_ids(&form_ids, game_id, filename, &masters).into();

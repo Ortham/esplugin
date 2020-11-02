@@ -168,14 +168,14 @@ impl Record {
             let (_, record_id) = parse_morrowind_record_id(subrecords_data, &header)?;
             Ok((remaining_input, record_id))
         } else {
-            let parser = tuple((
+            let mut parser = tuple((
                 delimited(take(RECORD_TYPE_LENGTH), le_u32, take(4usize)),
                 terminated(le_u32, take(4usize)),
             ));
 
             let (remaining_input, (size_of_subrecords, form_id)) = parser(input)?;
 
-            let parser = pair(
+            let mut parser = pair(
                 cond(game_id != GameId::Oblivion, take(4usize)),
                 take(size_of_subrecords),
             );
