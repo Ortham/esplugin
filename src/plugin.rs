@@ -212,10 +212,15 @@ impl Plugin {
         }
     }
 
+    #[deprecated = "This has been renamed to Plugin::is_light_plugin() for clarity."]
     pub fn is_light_master_file(&self) -> bool {
+        self.is_light_plugin()
+    }
+
+    pub fn is_light_plugin(&self) -> bool {
         match self.game_id {
             GameId::Fallout4 | GameId::SkyrimSE => {
-                self.is_light_master_flag_set() || self.has_extension(FileExtension::ESL)
+                self.is_light_flag_set() || self.has_extension(FileExtension::ESL)
             }
             _ => false,
         }
@@ -323,9 +328,14 @@ impl Plugin {
         }
     }
 
-    // A valid light master is one for which all the new records it adds have
-    // object indices in the range 0x800 to 0xFFF.
+    #[deprecated = "This has been renamed to Plugin::is_valid_as_light_plugin() for clarity."]
     pub fn is_valid_as_light_master(&self) -> bool {
+        self.is_valid_as_light_plugin()
+    }
+
+    // A valid light plugin is one for which all the new records it adds have
+    // object indices in the range 0x800 to 0xFFF.
+    pub fn is_valid_as_light_plugin(&self) -> bool {
         match self.game_id {
             GameId::Fallout4 | GameId::SkyrimSE => {
                 match &self.data.record_ids {
@@ -333,7 +343,7 @@ impl Plugin {
                     RecordIds::FormIds(form_ids) => form_ids
                         .iter()
                         .filter(|f| !f.is_overridden_record())
-                        .all(HashedFormId::valid_in_light_master),
+                        .all(HashedFormId::is_valid_in_light_plugin),
                     RecordIds::NamespacedIds(_) => false, // this should never happen.
                 }
             }
@@ -352,7 +362,7 @@ impl Plugin {
         self.data.header_record.header().flags() & 0x1 != 0
     }
 
-    fn is_light_master_flag_set(&self) -> bool {
+    fn is_light_flag_set(&self) -> bool {
         self.data.header_record.header().flags() & 0x200 != 0
     }
 }
@@ -683,13 +693,13 @@ mod tests {
         }
 
         #[test]
-        fn is_light_master_file_should_be_false() {
+        fn is_light_plugin_should_be_false() {
             let plugin = Plugin::new(GameId::Morrowind, Path::new("Blank.esp"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
             let plugin = Plugin::new(GameId::Morrowind, Path::new("Blank.esm"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
             let plugin = Plugin::new(GameId::Morrowind, Path::new("Blank.esl"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
         }
 
         #[test]
@@ -854,13 +864,13 @@ mod tests {
         }
 
         #[test]
-        fn is_valid_as_light_master_should_always_be_false() {
+        fn is_valid_as_light_plugin_should_always_be_false() {
             let mut plugin = Plugin::new(
                 GameId::Morrowind,
                 Path::new("testing-plugins/Morrowind/Data Files/Blank - Master Dependent.esm"),
             );
             assert!(plugin.parse_file(false).is_ok());
-            assert!(!plugin.is_valid_as_light_master());
+            assert!(!plugin.is_valid_as_light_plugin());
         }
     }
 
@@ -868,13 +878,13 @@ mod tests {
         use super::super::*;
 
         #[test]
-        fn is_light_master_file_should_be_false() {
+        fn is_light_plugin_should_be_false() {
             let plugin = Plugin::new(GameId::Oblivion, Path::new("Blank.esp"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
             let plugin = Plugin::new(GameId::Oblivion, Path::new("Blank.esm"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
             let plugin = Plugin::new(GameId::Oblivion, Path::new("Blank.esl"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
         }
 
         #[test]
@@ -890,13 +900,13 @@ mod tests {
         }
 
         #[test]
-        fn is_valid_as_light_master_should_always_be_false() {
+        fn is_valid_as_light_plugin_should_always_be_false() {
             let mut plugin = Plugin::new(
                 GameId::Oblivion,
                 Path::new("testing-plugins/Oblivion/Data/Blank - Master Dependent.esm"),
             );
             assert!(plugin.parse_file(false).is_ok());
-            assert!(!plugin.is_valid_as_light_master());
+            assert!(!plugin.is_valid_as_light_plugin());
         }
     }
 
@@ -960,13 +970,13 @@ mod tests {
         }
 
         #[test]
-        fn is_light_master_file_should_be_false() {
+        fn is_light_plugin_should_be_false() {
             let plugin = Plugin::new(GameId::Skyrim, Path::new("Blank.esp"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
             let plugin = Plugin::new(GameId::Skyrim, Path::new("Blank.esm"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
             let plugin = Plugin::new(GameId::Skyrim, Path::new("Blank.esl"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
         }
 
         #[test]
@@ -1132,13 +1142,13 @@ mod tests {
         }
 
         #[test]
-        fn is_valid_as_light_master_should_always_be_false() {
+        fn is_valid_as_light_plugin_should_always_be_false() {
             let mut plugin = Plugin::new(
                 GameId::Skyrim,
                 Path::new("testing-plugins/Skyrim/Data/Blank - Master Dependent.esm"),
             );
             assert!(plugin.parse_file(false).is_ok());
-            assert!(!plugin.is_valid_as_light_master());
+            assert!(!plugin.is_valid_as_light_plugin());
         }
     }
 
@@ -1181,23 +1191,23 @@ mod tests {
         }
 
         #[test]
-        fn is_light_master_file_should_be_true_for_plugins_with_an_esl_file_extension() {
+        fn is_light_plugin_should_be_true_for_plugins_with_an_esl_file_extension() {
             let plugin = Plugin::new(GameId::SkyrimSE, Path::new("Blank.esp"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
             let plugin = Plugin::new(GameId::SkyrimSE, Path::new("Blank.esm"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
             let plugin = Plugin::new(GameId::SkyrimSE, Path::new("Blank.esl"));
-            assert!(plugin.is_light_master_file());
+            assert!(plugin.is_light_plugin());
         }
 
         #[test]
-        fn is_light_master_file_should_be_true_for_a_ghosted_esl_file() {
+        fn is_light_plugin_should_be_true_for_a_ghosted_esl_file() {
             let plugin = Plugin::new(GameId::SkyrimSE, Path::new("Blank.esl.ghost"));
-            assert!(plugin.is_light_master_file());
+            assert!(plugin.is_light_plugin());
         }
 
         #[test]
-        fn is_light_master_file_should_be_true_for_an_esp_file_with_the_light_master_flag_set() {
+        fn is_light_plugin_should_be_true_for_an_esp_file_with_the_light_flag_set() {
             use std::fs::copy;
             copy(
                 Path::new("testing-plugins/SkyrimSE/Data/Blank.esl"),
@@ -1210,12 +1220,12 @@ mod tests {
                 Path::new("testing-plugins/SkyrimSE/Data/Blank.esl.esp"),
             );
             assert!(plugin.parse_file(true).is_ok());
-            assert!(plugin.is_light_master_file());
+            assert!(plugin.is_light_plugin());
             assert!(!plugin.is_master_file());
         }
 
         #[test]
-        fn is_light_master_file_should_be_true_for_an_esm_file_with_the_light_master_flag_set() {
+        fn is_light_plugin_should_be_true_for_an_esm_file_with_the_light_flag_set() {
             use std::fs::copy;
             copy(
                 Path::new("testing-plugins/SkyrimSE/Data/Blank.esl"),
@@ -1228,7 +1238,7 @@ mod tests {
                 Path::new("testing-plugins/SkyrimSE/Data/Blank.esl.esm"),
             );
             assert!(plugin.parse_file(true).is_ok());
-            assert!(plugin.is_light_master_file());
+            assert!(plugin.is_light_plugin());
             assert!(plugin.is_master_file());
         }
 
@@ -1245,7 +1255,7 @@ mod tests {
         }
 
         #[test]
-        fn is_valid_as_light_master_should_be_true_if_the_plugin_has_no_form_ids_outside_the_valid_range(
+        fn is_valid_as_light_plugin_should_be_true_if_the_plugin_has_no_form_ids_outside_the_valid_range(
         ) {
             let mut plugin = Plugin::new(
                 GameId::SkyrimSE,
@@ -1253,11 +1263,11 @@ mod tests {
             );
             assert!(plugin.parse_file(false).is_ok());
 
-            assert!(plugin.is_valid_as_light_master());
+            assert!(plugin.is_valid_as_light_plugin());
         }
 
         #[test]
-        fn is_valid_as_light_master_should_be_true_if_the_plugin_has_an_override_form_id_outside_the_valid_range(
+        fn is_valid_as_light_plugin_should_be_true_if_the_plugin_has_an_override_form_id_outside_the_valid_range(
         ) {
             let mut plugin = Plugin::new(
                 GameId::SkyrimSE,
@@ -1272,11 +1282,11 @@ mod tests {
 
             assert!(plugin.parse(&bytes, false).is_ok());
 
-            assert!(plugin.is_valid_as_light_master());
+            assert!(plugin.is_valid_as_light_plugin());
         }
 
         #[test]
-        fn is_valid_as_light_master_should_be_false_if_the_plugin_has_a_new_form_id_less_than_0x800(
+        fn is_valid_as_light_plugin_should_be_false_if_the_plugin_has_a_new_form_id_less_than_0x800(
         ) {
             let mut plugin = Plugin::new(
                 GameId::SkyrimSE,
@@ -1291,11 +1301,11 @@ mod tests {
 
             assert!(plugin.parse(&bytes, false).is_ok());
 
-            assert!(!plugin.is_valid_as_light_master());
+            assert!(!plugin.is_valid_as_light_plugin());
         }
 
         #[test]
-        fn is_valid_as_light_master_should_be_false_if_the_plugin_has_a_new_form_id_greater_than_0xfff(
+        fn is_valid_as_light_plugin_should_be_false_if_the_plugin_has_a_new_form_id_greater_than_0xfff(
         ) {
             let mut plugin = Plugin::new(
                 GameId::SkyrimSE,
@@ -1310,7 +1320,7 @@ mod tests {
 
             assert!(plugin.parse(&bytes, false).is_ok());
 
-            assert!(!plugin.is_valid_as_light_master());
+            assert!(!plugin.is_valid_as_light_plugin());
         }
     }
 
@@ -1318,23 +1328,23 @@ mod tests {
         use super::super::*;
 
         #[test]
-        fn is_light_master_file_should_be_false() {
+        fn is_light_plugin_should_be_false() {
             let plugin = Plugin::new(GameId::Fallout3, Path::new("Blank.esp"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
             let plugin = Plugin::new(GameId::Fallout3, Path::new("Blank.esm"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
             let plugin = Plugin::new(GameId::Fallout3, Path::new("Blank.esl"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
         }
 
         #[test]
-        fn is_valid_as_light_master_should_always_be_false() {
+        fn is_valid_as_light_plugin_should_always_be_false() {
             let mut plugin = Plugin::new(
                 GameId::Fallout3,
                 Path::new("testing-plugins/Skyrim/Data/Blank - Master Dependent.esm"),
             );
             assert!(plugin.parse_file(false).is_ok());
-            assert!(!plugin.is_valid_as_light_master());
+            assert!(!plugin.is_valid_as_light_plugin());
         }
     }
 
@@ -1342,23 +1352,23 @@ mod tests {
         use super::super::*;
 
         #[test]
-        fn is_light_master_file_should_be_false() {
+        fn is_light_plugin_should_be_false() {
             let plugin = Plugin::new(GameId::FalloutNV, Path::new("Blank.esp"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
             let plugin = Plugin::new(GameId::FalloutNV, Path::new("Blank.esm"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
             let plugin = Plugin::new(GameId::FalloutNV, Path::new("Blank.esl"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
         }
 
         #[test]
-        fn is_valid_as_light_master_should_always_be_false() {
+        fn is_valid_as_light_plugin_should_always_be_false() {
             let mut plugin = Plugin::new(
                 GameId::FalloutNV,
                 Path::new("testing-plugins/Skyrim/Data/Blank - Master Dependent.esm"),
             );
             assert!(plugin.parse_file(false).is_ok());
-            assert!(!plugin.is_valid_as_light_master());
+            assert!(!plugin.is_valid_as_light_plugin());
         }
     }
 
@@ -1399,23 +1409,23 @@ mod tests {
         }
 
         #[test]
-        fn is_light_master_file_should_be_true_for_plugins_with_an_esl_file_extension() {
+        fn is_light_plugin_should_be_true_for_plugins_with_an_esl_file_extension() {
             let plugin = Plugin::new(GameId::Fallout4, Path::new("Blank.esp"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
             let plugin = Plugin::new(GameId::Fallout4, Path::new("Blank.esm"));
-            assert!(!plugin.is_light_master_file());
+            assert!(!plugin.is_light_plugin());
             let plugin = Plugin::new(GameId::Fallout4, Path::new("Blank.esl"));
-            assert!(plugin.is_light_master_file());
+            assert!(plugin.is_light_plugin());
         }
 
         #[test]
-        fn is_light_master_file_should_be_true_for_a_ghosted_esl_file() {
+        fn is_light_plugin_should_be_true_for_a_ghosted_esl_file() {
             let plugin = Plugin::new(GameId::Fallout4, Path::new("Blank.esl.ghost"));
-            assert!(plugin.is_light_master_file());
+            assert!(plugin.is_light_plugin());
         }
 
         #[test]
-        fn is_valid_as_light_master_should_be_true_if_the_plugin_has_no_form_ids_outside_the_valid_range(
+        fn is_valid_as_light_plugin_should_be_true_if_the_plugin_has_no_form_ids_outside_the_valid_range(
         ) {
             let mut plugin = Plugin::new(
                 GameId::Fallout4,
@@ -1423,7 +1433,7 @@ mod tests {
             );
             assert!(plugin.parse_file(false).is_ok());
 
-            assert!(plugin.is_valid_as_light_master());
+            assert!(plugin.is_valid_as_light_plugin());
         }
     }
 

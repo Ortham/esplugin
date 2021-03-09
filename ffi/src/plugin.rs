@@ -139,7 +139,7 @@ pub unsafe extern "C" fn esp_plugin_is_light_master(
         } else {
             let plugin = &*plugin_ptr;
 
-            *is_light_master = plugin.is_light_master_file();
+            *is_light_master = plugin.is_light_plugin();
 
             ESP_OK
         }
@@ -335,7 +335,16 @@ pub unsafe extern "C" fn esp_plugin_records_overlap_size(
 }
 
 #[no_mangle]
+#[deprecated = "This has been renamed to Plugin::is_valid_as_light_plugin() for clarity."]
 pub unsafe extern "C" fn esp_plugin_is_valid_as_light_master(
+    plugin_ptr: *const Plugin,
+    is_valid: *mut bool,
+) -> u32 {
+    esp_plugin_is_valid_as_light_plugin(plugin_ptr, is_valid)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn esp_plugin_is_valid_as_light_plugin(
     plugin_ptr: *const Plugin,
     is_valid: *mut bool,
 ) -> u32 {
@@ -345,7 +354,7 @@ pub unsafe extern "C" fn esp_plugin_is_valid_as_light_master(
         } else {
             let plugin = &*plugin_ptr;
 
-            *is_valid = plugin.is_valid_as_light_master();
+            *is_valid = plugin.is_valid_as_light_plugin();
 
             ESP_OK
         }

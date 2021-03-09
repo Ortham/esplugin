@@ -51,7 +51,7 @@ impl HashedFormId {
         }
     }
 
-    pub fn valid_in_light_master(&self) -> bool {
+    pub fn is_valid_in_light_plugin(&self) -> bool {
         match self.game_id {
             GameId::SkyrimSE => self.object_index >= 0x800 && self.object_index <= 0xFFF,
             GameId::Fallout4 => self.object_index >= 0x001 && self.object_index <= 0xFFF,
@@ -136,110 +136,110 @@ mod tests {
 
     #[allow(non_snake_case)]
     #[test]
-    fn valid_in_light_master_should_be_false_if_game_is_morrowind() {
+    fn is_valid_in_light_plugin_should_be_false_if_game_is_morrowind() {
         // Check every possible object ID, it's only takes a second or so.
         for index in 0..=0xFF_FFFF {
             let form_id = HashedFormId::new(GameId::Morrowind, PARENT_PLUGIN_NAME, MASTERS, index);
 
-            assert!(!form_id.valid_in_light_master());
+            assert!(!form_id.is_valid_in_light_plugin());
         }
     }
 
     #[allow(non_snake_case)]
     #[test]
-    fn valid_in_light_master_should_be_false_if_game_is_oblivion() {
+    fn is_valid_in_light_plugin_should_be_false_if_game_is_oblivion() {
         // Check every possible object ID, it's only takes a second or so.
         for index in 0..=0xFF_FFFF {
             let form_id = HashedFormId::new(GameId::Oblivion, PARENT_PLUGIN_NAME, MASTERS, index);
 
-            assert!(!form_id.valid_in_light_master());
+            assert!(!form_id.is_valid_in_light_plugin());
         }
     }
 
     #[allow(non_snake_case)]
     #[test]
-    fn valid_in_light_master_should_be_false_if_game_is_skyrim() {
+    fn is_valid_in_light_plugin_should_be_false_if_game_is_skyrim() {
         // Check every possible object ID, it's only takes a second or so.
         for index in 0..=0xFF_FFFF {
             let form_id = HashedFormId::new(GameId::Skyrim, PARENT_PLUGIN_NAME, MASTERS, index);
 
-            assert!(!form_id.valid_in_light_master());
+            assert!(!form_id.is_valid_in_light_plugin());
         }
     }
 
     #[allow(non_snake_case)]
     #[test]
-    fn valid_in_light_master_should_be_false_if_game_is_fallout_3() {
+    fn is_valid_in_light_plugin_should_be_false_if_game_is_fallout_3() {
         // Check every possible object ID, it's only takes a second or so.
         for index in 0..=0xFF_FFFF {
             let form_id = HashedFormId::new(GameId::Fallout3, PARENT_PLUGIN_NAME, MASTERS, index);
 
-            assert!(!form_id.valid_in_light_master());
+            assert!(!form_id.is_valid_in_light_plugin());
         }
     }
 
     #[allow(non_snake_case)]
     #[test]
-    fn valid_in_light_master_should_be_false_if_game_is_fallout_nv() {
+    fn is_valid_in_light_plugin_should_be_false_if_game_is_fallout_nv() {
         // Check every possible object ID, it's only takes a second or so.
         for index in 0..=0xFF_FFFF {
             let form_id = HashedFormId::new(GameId::FalloutNV, PARENT_PLUGIN_NAME, MASTERS, index);
 
-            assert!(!form_id.valid_in_light_master());
+            assert!(!form_id.is_valid_in_light_plugin());
         }
     }
 
     #[allow(non_snake_case)]
     #[test]
-    fn valid_in_light_master_should_be_true_if_game_is_skyrim_se_and_object_index_is_between_0x800_and_0xFFF_inclusive(
+    fn is_valid_in_light_plugin_should_be_true_if_game_is_skyrim_se_and_object_index_is_between_0x800_and_0xFFF_inclusive(
     ) {
         for index in 0x800..=0xFFF {
             let form_id = HashedFormId::new(GameId::SkyrimSE, PARENT_PLUGIN_NAME, MASTERS, index);
 
-            assert!(form_id.valid_in_light_master());
+            assert!(form_id.is_valid_in_light_plugin());
         }
     }
 
     #[allow(non_snake_case)]
     #[test]
-    fn valid_in_light_master_should_be_true_if_game_is_fallout_4_and_object_index_is_between_0x001_and_0xFFF_inclusive(
+    fn is_valid_in_light_plugin_should_be_true_if_game_is_fallout_4_and_object_index_is_between_0x001_and_0xFFF_inclusive(
     ) {
         for index in 0x001..=0xFFF {
             let form_id = HashedFormId::new(GameId::Fallout4, PARENT_PLUGIN_NAME, MASTERS, index);
 
-            assert!(form_id.valid_in_light_master());
+            assert!(form_id.is_valid_in_light_plugin());
         }
     }
 
     #[allow(non_snake_case)]
     #[test]
-    fn valid_in_light_master_should_be_false_if_game_is_skyrim_se_and_object_index_is_outwith_0x800_and_0xFFF_inclusive(
+    fn is_valid_in_light_plugin_should_be_false_if_game_is_skyrim_se_and_object_index_is_outwith_0x800_and_0xFFF_inclusive(
     ) {
         for index in 0..0x800 {
             let form_id = HashedFormId::new(GameId::SkyrimSE, PARENT_PLUGIN_NAME, MASTERS, index);
 
-            assert!(!form_id.valid_in_light_master());
+            assert!(!form_id.is_valid_in_light_plugin());
         }
 
         for index in 0x1000..=0xFF_FFFF {
             let form_id = HashedFormId::new(GameId::SkyrimSE, PARENT_PLUGIN_NAME, MASTERS, index);
 
-            assert!(!form_id.valid_in_light_master());
+            assert!(!form_id.is_valid_in_light_plugin());
         }
     }
 
     #[allow(non_snake_case)]
     #[test]
-    fn valid_in_light_master_should_be_false_if_game_is_fallout_4_and_object_index_is_outwith_0x001_and_0xFFF_inclusive(
+    fn is_valid_in_light_plugin_should_be_false_if_game_is_fallout_4_and_object_index_is_outwith_0x001_and_0xFFF_inclusive(
     ) {
         let form_id = HashedFormId::new(GameId::Fallout4, PARENT_PLUGIN_NAME, MASTERS, 0);
 
-        assert!(!form_id.valid_in_light_master());
+        assert!(!form_id.is_valid_in_light_plugin());
 
         for index in 0x1000..=0xFF_FFFF {
             let form_id = HashedFormId::new(GameId::Fallout4, PARENT_PLUGIN_NAME, MASTERS, index);
 
-            assert!(!form_id.valid_in_light_master());
+            assert!(!form_id.is_valid_in_light_plugin());
         }
     }
 
