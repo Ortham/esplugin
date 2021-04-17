@@ -335,7 +335,7 @@ pub unsafe extern "C" fn esp_plugin_records_overlap_size(
 }
 
 #[no_mangle]
-#[deprecated = "This has been renamed to Plugin::is_valid_as_light_plugin() for clarity."]
+#[deprecated = "This has been renamed to esp_plugin_is_valid_as_light_plugin() for clarity."]
 pub unsafe extern "C" fn esp_plugin_is_valid_as_light_master(
     plugin_ptr: *const Plugin,
     is_valid: *mut bool,
