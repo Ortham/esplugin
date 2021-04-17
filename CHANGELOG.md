@@ -2,6 +2,27 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [3.4.0] - 2021-04-17
+
+### Added
+
+- `Plugin::is_light_plugin()` is the preferred alias of
+  `Plugin::is_light_master_file()` as it reflects that not all plugins with the
+  light flag set are masters.
+- `Plugin::is_valid_as_light_plugin()` is the preferred alias of
+  `Plugin::is_valid_as_light_master()`.
+
+### Changed
+
+- Updated to nom v6.0.0.
+
+### Deprecated
+
+- `Plugin::is_light_master_file()`: use the alias `Plugin::is_light_plugin()`
+  instead.
+- `Plugin::is_valid_as_light_master()`: use the alias
+  `Plugin::is_valid_as_light_plugin()` instead.
+
 ## [3.3.1] - 2020-04-03
 
 ### Changed
