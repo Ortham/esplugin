@@ -2,6 +2,19 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [3.5.0] - 2021-05-04
+
+### Added
+
+- `esp_plugin_is_light_plugin()` is the preferred alias of
+  `esp_plugin_is_light_master()` as it reflects that not all plugins with the
+  light flag set are masters.
+
+### Deprecated
+
+- `esp_plugin_is_light_master()`: use the alias `esp_plugin_is_light_plugin()`
+  instead.
+
 ## [3.4.0] - 2021-04-17
 
 ### Added
