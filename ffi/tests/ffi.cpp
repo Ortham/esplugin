@@ -102,6 +102,20 @@ void test_esp_plugin_is_light_master() {
   esp_plugin_free(plugin);
 }
 
+void test_esp_plugin_is_light_plugin() {
+  printf("testing esp_plugin_is_light_plugin()...\n");
+  Plugin * plugin;
+  auto return_code = esp_plugin_new(&plugin, ESP_GAME_FALLOUT4, "../../testing-plugins/Skyrim/Data/Blank.esl");
+  assert(return_code == ESP_OK);
+
+  bool is_light_plugin;
+  return_code = esp_plugin_is_light_plugin(plugin, &is_light_plugin);
+  assert(return_code == ESP_OK);
+  assert(is_light_plugin);
+
+  esp_plugin_free(plugin);
+}
+
 void test_esp_plugin_is_valid() {
   bool is_valid;
   auto return_code = esp_plugin_is_valid(ESP_GAME_SKYRIM, "../../testing-plugins/Skyrim/Data/Blank.esm", true, &is_valid);
@@ -273,6 +287,7 @@ int main() {
   test_esp_plugin_masters();
   test_esp_plugin_is_master();
   test_esp_plugin_is_light_master();
+  test_esp_plugin_is_light_plugin();
   test_esp_plugin_is_valid();
   test_esp_plugin_description();
   test_esp_plugin_header_version();

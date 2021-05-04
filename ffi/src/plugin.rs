@@ -129,17 +129,26 @@ pub unsafe extern "C" fn esp_plugin_is_master(
 }
 
 #[no_mangle]
+#[deprecated = "This has been renamed to esp_plugin_is_light_plugin() for clarity."]
 pub unsafe extern "C" fn esp_plugin_is_light_master(
     plugin_ptr: *const Plugin,
     is_light_master: *mut bool,
 ) -> u32 {
+    esp_plugin_is_light_plugin(plugin_ptr, is_light_master)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn esp_plugin_is_light_plugin(
+    plugin_ptr: *const Plugin,
+    is_light_plugin: *mut bool,
+) -> u32 {
     panic::catch_unwind(|| {
-        if plugin_ptr.is_null() || is_light_master.is_null() {
+        if plugin_ptr.is_null() || is_light_plugin.is_null() {
             ESP_ERROR_NULL_POINTER
         } else {
             let plugin = &*plugin_ptr;
 
-            *is_light_master = plugin.is_light_plugin();
+            *is_light_plugin = plugin.is_light_plugin();
 
             ESP_OK
         }
