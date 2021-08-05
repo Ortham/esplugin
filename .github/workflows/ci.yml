@@ -67,7 +67,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install Tarpaulin
-        run: curl -sL https://github.com/xd009642/tarpaulin/releases/download/0.14.2/cargo-tarpaulin-0.14.2-travis.tar.gz | tar xvz -C $HOME/.cargo/bin
+        run: curl -sL https://github.com/xd009642/tarpaulin/releases/download/0.18.0/cargo-tarpaulin-0.18.0-travis.tar.gz | tar xvz -C $HOME/.cargo/bin
 
       - name: Prepare test resources
         run: |
@@ -75,7 +75,7 @@ jobs:
           tar -xf 1.4.1.tar.gz
           mv testing-plugins-1.4.1 testing-plugins
       - name: Build and run tests with code coverage
-        run: cargo tarpaulin --workspace --features compressed-fields --out Lcov
+        run: cargo tarpaulin --workspace --features compressed-fields --out Lcov --avoid-cfg-tarpaulin
 
       - name: Upload code coverage to Coveralls
         uses: coverallsapp/github-action@v1.1.1
