@@ -191,10 +191,7 @@ impl Plugin {
                     .and_then(|p| p.extension())
                     .map(|e| e.to_string_lossy());
 
-                match path_extension {
-                    Some(ref e) if extension == e => true,
-                    _ => false,
-                }
+                matches!(path_extension, Some(ref e) if extension == e)
             }
             _ => false,
         }
@@ -265,7 +262,7 @@ impl Plugin {
             .subrecords()
             .iter()
             .find(|s| s.subrecord_type() == b"HEDR" && s.data().len() > 3)
-            .map(|s| crate::le_slice_to_f32(&s.data()))
+            .map(|s| crate::le_slice_to_f32(s.data()))
     }
 
     pub fn record_and_group_count(&self) -> Option<u32> {
@@ -293,8 +290,8 @@ impl Plugin {
     pub fn overlaps_with(&self, other: &Self) -> bool {
         use self::RecordIds::*;
         match (&self.data.record_ids, &other.data.record_ids) {
-            (FormIds(left), FormIds(right)) => sorted_slices_intersect(&left, &right),
-            (NamespacedIds(left), NamespacedIds(right)) => sorted_slices_intersect(&left, &right),
+            (FormIds(left), FormIds(right)) => sorted_slices_intersect(left, right),
+            (NamespacedIds(left), NamespacedIds(right)) => sorted_slices_intersect(left, right),
             _ => false,
         }
     }
@@ -391,7 +388,7 @@ fn hashed_form_ids(
     masters: &[String],
 ) -> Vec<HashedFormId> {
     let hashed_filename = hash(filename);
-    let hashed_masters: Vec<_> = masters.iter().map(|m| hash(&m)).collect();
+    let hashed_masters: Vec<_> = masters.iter().map(|m| hash(m)).collect();
 
     let mut form_ids: Vec<_> = form_ids
         .iter()
@@ -426,7 +423,7 @@ fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
         .collect::<Result<Vec<String>, Error>>()
 }
 
-fn parse_form_ids<'a>(input: &'a [u8], game_id: GameId) -> IResult<&'a [u8], Vec<u32>> {
+fn parse_form_ids(input: &[u8], game_id: GameId) -> IResult<&[u8], Vec<u32>> {
     let mut form_ids = Vec::new();
     let mut remaining_input = input;
 
@@ -449,7 +446,7 @@ fn read_form_ids<R: BufRead + Seek>(reader: &mut R, game_id: GameId) -> Result<V
     Ok(form_ids)
 }
 
-fn parse_morrowind_record_ids<'a>(input: &'a [u8]) -> IResult<&'a [u8], RecordIds> {
+fn parse_morrowind_record_ids(input: &[u8]) -> IResult<&[u8], RecordIds> {
     let mut record_ids = Vec::new();
     let mut remaining_input = input;
 
@@ -496,7 +493,7 @@ fn parse_record_ids<'a>(
     } else {
         // Map to the Alpha error kind even though it's misleading, because it
         // doesn't actually matter what is chosen, the detail is discarded.
-        let masters = masters(&header_record).map_err(|_| {
+        let masters = masters(header_record).map_err(|_| {
             nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Alpha))
         })?;
 
@@ -516,7 +513,7 @@ fn read_record_ids<R: BufRead + Seek>(
     if game_id == GameId::Morrowind {
         read_morrowind_record_ids(reader)
     } else {
-        let masters = masters(&header_record)?;
+        let masters = masters(header_record)?;
 
         let form_ids = read_form_ids(reader, game_id)?;
         let form_ids = hashed_form_ids(&form_ids, game_id, filename, &masters).into();

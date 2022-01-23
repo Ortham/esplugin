@@ -60,11 +60,11 @@ impl Group {
         let group_header_length = group_or_record_header_length(game_id);
         let skip_length = get_header_length_to_skip(game_id);
 
-        let mut header_bytes = &mut header_buffer[..usize::from(group_header_length)];
-        reader.read_exact(&mut header_bytes)?;
+        let header_bytes = &mut header_buffer[..usize::from(group_header_length)];
+        reader.read_exact(header_bytes)?;
 
         let (_, size_of_records) =
-            all_consuming(parse_header(group_header_length, skip_length))(&header_bytes)?;
+            all_consuming(parse_header(group_header_length, skip_length))(header_bytes)?;
 
         read_records(reader, game_id, form_ids, header_buffer, size_of_records)
     }
@@ -110,8 +110,8 @@ fn read_records<R: BufRead + Seek>(
 
     while bytes_read < size_of_records {
         // Read the next group/record header.
-        let mut header_bytes = &mut header_buffer[..header_length];
-        reader.read_exact(&mut header_bytes)?;
+        let header_bytes = &mut header_buffer[..header_length];
+        reader.read_exact(header_bytes)?;
         bytes_read += header_bytes.len() as u32;
 
         if &header_bytes[..GROUP_TYPE.len()] == GROUP_TYPE {
@@ -155,7 +155,7 @@ fn parse_records<'a>(
         }
     }
 
-    Ok((&input1, ()))
+    Ok((input1, ()))
 }
 
 #[cfg(test)]

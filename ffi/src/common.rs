@@ -5,7 +5,7 @@ use libc::{c_char, size_t};
 #[no_mangle]
 pub unsafe extern "C" fn esp_string_free(string: *mut c_char) {
     if !string.is_null() {
-        CString::from_raw(string);
+        drop(CString::from_raw(string));
     }
 }
 

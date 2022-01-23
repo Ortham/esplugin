@@ -12,7 +12,7 @@ pub unsafe fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32> {
 
     let rust_c_string = CStr::from_ptr(c_string);
 
-    Ok(rust_c_string.to_str().map_err(|_| ESP_ERROR_NOT_UTF8)?)
+    rust_c_string.to_str().map_err(|_| ESP_ERROR_NOT_UTF8)
 }
 
 pub fn to_c_string(string: &str) -> *mut c_char {

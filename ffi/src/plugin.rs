@@ -306,7 +306,7 @@ pub unsafe extern "C" fn esp_plugin_do_records_overlap(
             let plugin = &*plugin_ptr;
             let other_plugin = &*other_plugin_ptr;
 
-            *overlap = plugin.overlaps_with(&other_plugin);
+            *overlap = plugin.overlaps_with(other_plugin);
 
             ESP_OK
         }

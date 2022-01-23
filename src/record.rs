@@ -126,13 +126,13 @@ impl Record {
             let header_length = header_length(game_id);
 
             header_buffer = &mut header_buffer[..header_length];
-            reader.read_exact(&mut header_buffer)?;
+            reader.read_exact(header_buffer)?;
             header_length
         } else {
             0
         };
 
-        let header = all_consuming(record_header(&header_buffer, game_id))?;
+        let header = all_consuming(record_header(header_buffer, game_id))?;
 
         if game_id == GameId::Morrowind {
             let mut subrecords_data = vec![0; header.size_of_subrecords as usize];
@@ -317,7 +317,7 @@ fn record_id_subrecord_types(record_type: RecordType) -> Vec<&'static SubrecordT
         b"LAND" => vec![b"INTV"],
         b"SCPT" => vec![b"SCHD"],
         b"CELL" | b"PGRD" => vec![b"DATA", b"NAME"],
-        b"TES3" | _ => Vec::new(),
+        _ => Vec::new(),
     }
 }
 
