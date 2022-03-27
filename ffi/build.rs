@@ -1,11 +1,9 @@
 #[cfg(feature = "ffi-headers")]
 mod ffi_headers {
-    extern crate cbindgen;
-
     use std::env;
     use std::fs;
 
-    use self::cbindgen::generate;
+    use cbindgen::generate;
 
     pub fn generate_headers() {
         let crate_dir = env::var("CARGO_MANIFEST_DIR")

@@ -3,9 +3,10 @@ use std::{f32, mem, panic, ptr};
 
 use libc::{c_char, c_float, size_t};
 
-use constants::*;
 use esplugin::Plugin;
-use helpers::*;
+
+use crate::constants::*;
+use crate::helpers::*;
 
 #[no_mangle]
 pub unsafe extern "C" fn esp_plugin_new(
