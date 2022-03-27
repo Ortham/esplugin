@@ -224,7 +224,7 @@ impl Plugin {
     }
 
     pub fn is_valid(game_id: GameId, filepath: &Path, load_header_only: bool) -> bool {
-        let mut plugin = Plugin::new(game_id, &filepath.to_path_buf());
+        let mut plugin = Plugin::new(game_id, filepath);
 
         plugin.parse_file(load_header_only).is_ok()
     }
