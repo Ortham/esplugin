@@ -2,6 +2,13 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [3.5.1] - 2022-03-27
+
+### Changed
+
+- Avoid unnecessary path copy when checking if a plugin is valid.
+- Updated to nom v7.0.0.
+
 ## [3.4.0] - 2021-04-17
 
 ### Added

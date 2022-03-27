@@ -2,6 +2,14 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [3.5.1] - 2022-03-27
+
+### Changed
+
+- esplugin-ffi now uses Rust's 2018 edition for consistency with esplugin.
+- Updated to esplugin v3.5.1.
+- Updated to cbindgen v0.20.
+
 ## [3.5.0] - 2021-05-04
 
 ### Added
