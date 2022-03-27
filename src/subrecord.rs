@@ -17,8 +17,6 @@
  * along with esplugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-extern crate nom;
-
 use std::convert::TryInto;
 #[cfg(feature = "compressed-fields")]
 use std::io;

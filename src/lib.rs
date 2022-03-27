@@ -16,13 +16,6 @@
  * You should have received a copy of the GNU General Public License
  * along with esplugin. If not, see <http://www.gnu.org/licenses/>.
  */
-
-extern crate encoding_rs;
-extern crate nom;
-
-#[cfg(feature = "compressed-fields")]
-extern crate flate2;
-
 use std::convert::TryInto;
 
 pub use crate::error::Error;

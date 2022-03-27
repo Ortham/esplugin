@@ -1,7 +1,3 @@
-#[macro_use]
-extern crate criterion;
-extern crate esplugin;
-
 use std::path::Path;
 
 use criterion::Criterion;
@@ -52,5 +48,5 @@ fn criterion_benchmark(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);
+criterion::criterion_group!(benches, criterion_benchmark);
+criterion::criterion_main!(benches);
