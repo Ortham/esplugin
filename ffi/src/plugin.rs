@@ -84,7 +84,7 @@ pub unsafe extern "C" fn esp_plugin_filename(
 pub unsafe extern "C" fn esp_plugin_masters(
     plugin_ptr: *const Plugin,
     plugin_masters: *mut *mut *mut c_char,
-    plugin_masters_size: *mut u8,
+    plugin_masters_size: *mut size_t,
 ) -> u32 {
     panic::catch_unwind(|| {
         if plugin_masters.is_null() || plugin_ptr.is_null() {
@@ -100,7 +100,7 @@ pub unsafe extern "C" fn esp_plugin_masters(
             c_string_vec.shrink_to_fit();
 
             *plugin_masters = c_string_vec.as_mut_ptr();
-            *plugin_masters_size = c_string_vec.len() as u8;
+            *plugin_masters_size = c_string_vec.len();
 
             mem::forget(c_string_vec);
 

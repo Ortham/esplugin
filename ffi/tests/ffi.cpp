@@ -61,7 +61,7 @@ void test_esp_plugin_masters() {
   assert(return_code == ESP_OK);
 
   char ** masters;
-  uint8_t num_masters;
+  size_t num_masters;
   return_code = esp_plugin_masters(plugin, &masters, &num_masters);
   assert(return_code == ESP_OK);
   assert(num_masters == 1);

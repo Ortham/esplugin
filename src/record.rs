@@ -30,6 +30,7 @@ use crate::error::{Error, ParsingErrorKind};
 use crate::game_id::GameId;
 use crate::record_id::{NamespacedId, RecordId};
 use crate::subrecord::{parse_subrecord_data_as_u32, Subrecord, SubrecordRef, SubrecordType};
+use crate::u32_to_usize;
 
 const RECORD_TYPE_LENGTH: usize = 4;
 pub type RecordType = [u8; 4];
@@ -64,7 +65,7 @@ impl Record {
         game_id: GameId,
         expected_type: &[u8],
     ) -> Result<Vec<u8>, Error> {
-        let mut content: Vec<u8> = vec![0; header_length(game_id)];
+        let mut content: Vec<u8> = vec![0; usize::from(header_length(game_id))];
         reader.read_exact(&mut content)?;
 
         if &content[0..4] != expected_type {
@@ -75,9 +76,9 @@ impl Record {
             ));
         }
 
-        let size_of_subrecords = crate::le_slice_to_u32(&content[4..]) as usize;
+        let size_of_subrecords = crate::le_slice_to_u32(&content[4..]);
         if size_of_subrecords > 0 {
-            let mut subrecords = vec![0; size_of_subrecords];
+            let mut subrecords = vec![0; u32_to_usize(size_of_subrecords)];
             reader.read_exact(&mut subrecords)?;
 
             content.append(&mut subrecords);
@@ -95,12 +96,12 @@ impl Record {
         game_id: GameId,
         skip_subrecords: bool,
     ) -> Result<Record, Error> {
-        let mut header_bytes: Vec<u8> = vec![0; header_length(game_id)];
+        let mut header_bytes: Vec<u8> = vec![0; usize::from(header_length(game_id))];
         reader.read_exact(&mut header_bytes)?;
 
         let header = all_consuming(record_header(&header_bytes, game_id))?;
 
-        let mut subrecord_bytes: Vec<u8> = vec![0; header.size_of_subrecords as usize];
+        let mut subrecord_bytes: Vec<u8> = vec![0; u32_to_usize(header.size_of_subrecords)];
         reader.read_exact(&mut subrecord_bytes)?;
 
         let subrecords: Vec<Subrecord> = if !skip_subrecords {
@@ -125,7 +126,7 @@ impl Record {
         let header_length_read = if !header_already_read {
             let header_length = header_length(game_id);
 
-            header_buffer = &mut header_buffer[..header_length];
+            header_buffer = &mut header_buffer[..usize::from(header_length)];
             reader.read_exact(header_buffer)?;
             header_length
         } else {
@@ -135,10 +136,10 @@ impl Record {
         let header = all_consuming(record_header(header_buffer, game_id))?;
 
         if game_id == GameId::Morrowind {
-            let mut subrecords_data = vec![0; header.size_of_subrecords as usize];
+            let mut subrecords_data = vec![0; u32_to_usize(header.size_of_subrecords)];
             reader.read_exact(&mut subrecords_data)?;
 
-            let bytes_read = header_length_read as u32 + header.size_of_subrecords;
+            let bytes_read = u32::from(header_length_read) + header.size_of_subrecords;
 
             let (_, record_id) = parse_morrowind_record_id(&subrecords_data, &header)?;
             Ok((bytes_read, record_id))
@@ -146,14 +147,15 @@ impl Record {
             // Seeking discards the current buffer, so only do so if the data
             // to be skipped doesn't fit in the buffer anyway.
             let buffer = reader.fill_buf()?;
-            if header.size_of_subrecords as usize > buffer.len() {
+            let usize_of_subrecords = u32_to_usize(header.size_of_subrecords);
+            if usize_of_subrecords > buffer.len() {
                 reader.seek(io::SeekFrom::Current(i64::from(header.size_of_subrecords)))?;
             } else {
-                reader.consume(header.size_of_subrecords as usize);
+                reader.consume(usize_of_subrecords);
             }
 
             Ok((
-                header_length_read as u32 + header.size_of_subrecords,
+                u32::from(header_length_read) + header.size_of_subrecords,
                 header.form_id.map(RecordId::FormId),
             ))
         }
@@ -321,7 +323,7 @@ fn record_id_subrecord_types(record_type: RecordType) -> Vec<&'static SubrecordT
     }
 }
 
-fn header_length(game_id: GameId) -> usize {
+fn header_length(game_id: GameId) -> u8 {
     match game_id {
         GameId::Morrowind => 16,
         GameId::Oblivion => 20,

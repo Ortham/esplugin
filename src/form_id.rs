@@ -20,6 +20,7 @@ use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
 use crate::game_id::GameId;
+use crate::u32_to_usize;
 
 #[derive(Clone, Debug)]
 pub struct HashedFormId {
@@ -38,14 +39,13 @@ impl HashedFormId {
         hashed_masters: &[u64],
         raw_form_id: u32,
     ) -> Self {
-        let mod_index = raw_form_id >> 24;
-
+        let mod_index = u32_to_usize(raw_form_id >> 24);
         Self {
-            overridden_record: (mod_index as usize) < hashed_masters.len(),
+            overridden_record: mod_index < hashed_masters.len(),
             game_id,
             object_index: raw_form_id & 0xFF_FFFF,
             hashed_plugin_name: hashed_masters
-                .get(mod_index as usize)
+                .get(mod_index)
                 .cloned()
                 .unwrap_or(hashed_parent_plugin_name),
         }

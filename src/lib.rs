@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with esplugin. If not, see <http://www.gnu.org/licenses/>.
  */
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 
 pub use crate::error::Error;
 pub use crate::game_id::GameId;
@@ -42,4 +42,8 @@ fn le_slice_to_u32(input: &[u8]) -> u32 {
 
 fn le_slice_to_f32(input: &[u8]) -> f32 {
     f32::from_bits(le_slice_to_u32(input))
+}
+
+fn u32_to_usize(input: u32) -> usize {
+    usize::try_from(input).expect("u32 to fit in usize")
 }
