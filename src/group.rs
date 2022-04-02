@@ -105,14 +105,13 @@ fn read_records<R: BufRead + Seek>(
     let skip_length = get_header_length_to_skip(game_id);
     let parse_header = parse_header(group_header_length, skip_length);
 
-    let header_length = usize::from(group_header_length);
     let mut bytes_read = 0;
 
     while bytes_read < size_of_records {
         // Read the next group/record header.
-        let header_bytes = &mut header_buffer[..header_length];
+        let header_bytes = &mut header_buffer[..usize::from(group_header_length)];
         reader.read_exact(header_bytes)?;
-        bytes_read += header_bytes.len() as u32;
+        bytes_read += u32::from(group_header_length);
 
         if &header_bytes[..GROUP_TYPE.len()] == GROUP_TYPE {
             let (_, size_of_records) = all_consuming(&parse_header)(header_bytes)?;
