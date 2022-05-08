@@ -8,6 +8,27 @@ use esplugin::Plugin;
 use crate::constants::*;
 use crate::helpers::*;
 
+/// Create a new Plugin handle for the plugin at the given path.
+///
+/// The details of the plugin format varies between the different games that
+/// esplugin supports, so the given `game_id` must the appropriate `ESP_GAME_*`
+/// constant.
+///
+/// The path must be encoded as UTF-8. This function does not read the file at
+/// the given `path`: use [esp_plugin_parse] to do so.
+///
+/// Returns [ESP_OK] if successful, otherwise an `ESP_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// `plugin_ptr_ptr` must be a valid pointer.
+///
+/// The lifetime of the output plugin handle is independent of the lifetimes of
+/// the inputs, and ownership is passed of it is passed to the caller. It must
+/// only be deallocated using [esp_plugin_free].
+///
+/// It is only safe to call this function more than once in parallel with the
+/// if each call is passed a different value for `plugin_ptr_ptr`.
 #[no_mangle]
 pub unsafe extern "C" fn esp_plugin_new(
     plugin_ptr_ptr: *mut *mut Plugin,
@@ -33,6 +54,19 @@ pub unsafe extern "C" fn esp_plugin_new(
     .unwrap_or(ESP_ERROR_PANICKED)
 }
 
+/// Free the memory allocated for the given Plugin handle.
+///
+/// # Safety
+///
+/// The given `plugin_ptr` must be null or the output of a call to
+/// [esp_plugin_new], though a null pointer will cause nothing to happen.
+///
+/// This function must not be called twice for the same `plugin_ptr` value. This
+/// function invalidates `plugin_ptr`, which must not be dereferenced after this
+/// function is called.
+///
+/// It is not safe to call this function in parallel with any function that is
+/// passed the same plugin handle.
 #[no_mangle]
 pub unsafe extern "C" fn esp_plugin_free(plugin_ptr: *mut Plugin) {
     if !plugin_ptr.is_null() {
@@ -40,6 +74,25 @@ pub unsafe extern "C" fn esp_plugin_free(plugin_ptr: *mut Plugin) {
     }
 }
 
+/// Reads a plugin file's data into memory.
+///
+/// If `load_header_only` is true then only the plugin's header will be read.
+/// Loading only the header will affect the output of the following functions:
+///
+/// * [esp_plugin_count_override_records]
+/// * [esp_plugin_do_records_overlap]
+/// * [esp_plugin_records_overlap_size]
+/// * [esp_plugin_is_valid_as_light_master] / [esp_plugin_is_valid_as_light_plugin]
+///
+/// Returns [ESP_OK] if successful, otherwise an `ESP_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// `plugin_ptr` must be null or the output of a call to [esp_plugin_new],
+/// though a null pointer will cause an error to be returned.
+///
+/// It is not safe to call this function in parallel with any function that is
+/// passed the same plugin handle.
 #[no_mangle]
 pub unsafe extern "C" fn esp_plugin_parse(plugin_ptr: *mut Plugin, load_header_only: bool) -> u32 {
     panic::catch_unwind(|| {
@@ -56,6 +109,28 @@ pub unsafe extern "C" fn esp_plugin_parse(plugin_ptr: *mut Plugin, load_header_o
     .unwrap_or(ESP_ERROR_PANICKED)
 }
 
+/// Outputs the filename associated with the given plugin handle.
+///
+/// The filename string will be encoded in UTF-8.
+///
+/// Returns [ESP_OK] if successful, otherwise an `ESP_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// `plugin_ptr` must be null or the output of a call to [esp_plugin_new],
+/// though a null pointer will cause an error to be returned.
+///
+/// `filename` must be a valid pointer.
+///
+/// The lifetime of the output `filename` is independent of the lifetime of
+/// the plugin handle, and ownership is passed of it is passed to the caller. It
+/// must only be deallocated using [super::esp_string_free].
+///
+/// It is safe to call this function in parallel with any function so long as
+/// that function does not mutate the same data. I.e. it is not safe to call
+/// this function in parallel with [esp_plugin_free] or [esp_plugin_parse], or
+/// to call this function multiple times in parallel while sharing the same
+/// `filename` value between calls.
 #[no_mangle]
 pub unsafe extern "C" fn esp_plugin_filename(
     plugin_ptr: *const Plugin,
