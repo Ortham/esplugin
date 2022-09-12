@@ -19,7 +19,7 @@ nom = "7.0.0"
 flate2 = { version = "1.0.1", optional = true }
 
 [dev-dependencies]
-criterion = "0.3.0"
+criterion = "0.4.0"
 
 [features]
 default = []
