@@ -2,6 +2,18 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [4.0.0] - 2022-09-15
+
+### Added
+
+- Some public functions now have documentation comments.
+
+### Changed
+
+- `esp_plugin_masters()` now takes a pointer to a `size_t` instead of a pointer
+  to a `u8` as its array size output parameter. This means that the function
+  will correctly handle invalid plugins with more than 255 masters.
+
 ## [3.5.1] - 2022-03-27
 
 ### Changed

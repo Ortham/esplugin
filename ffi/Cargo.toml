@@ -1,6 +1,6 @@
 [package]
 name = "esplugin-ffi"
-version = "3.5.1"
+version = "4.0.0"
 authors = ["Oliver Hamlet <oliver@ortham.io>"]
 build = "build.rs"
 description = "A wrapper library providing a C FFI for esplugin."
@@ -17,7 +17,7 @@ exclude = [
 ]
 
 [dependencies]
-esplugin = { version = "3.4.0", path = ".." }
+esplugin = { version = "4.0.0", path = ".." }
 libc = "0.2"
 
 [lib]
