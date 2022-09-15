@@ -35,8 +35,8 @@ use crate::record_id::{NamespacedId, RecordId};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum FileExtension {
-    ESM,
-    ESL,
+    Esm,
+    Esl,
 }
 
 impl PartialEq<&std::borrow::Cow<'_, str>> for FileExtension {
@@ -48,13 +48,13 @@ impl PartialEq<&std::borrow::Cow<'_, str>> for FileExtension {
         // here the strings are of the correct length and they're being compared
         // against ASCII literals.
         match self {
-            FileExtension::ESM => other.len() == ESM.len() && other.to_lowercase() == ESM,
-            FileExtension::ESL => other.len() == ESL.len() && other.to_lowercase() == ESL,
+            FileExtension::Esm => other.len() == ESM.len() && other.to_lowercase() == ESM,
+            FileExtension::Esl => other.len() == ESL.len() && other.to_lowercase() == ESL,
         }
     }
 }
 
-fn is_ghost_file_extension(extension: &std::borrow::Cow<'_, str>) -> bool {
+fn is_ghost_file_extension(extension: &str) -> bool {
     const GHOST: &str = "ghost";
 
     // Generally not a good idea to lowercase strings for case-insensitive
@@ -199,11 +199,11 @@ impl Plugin {
 
     pub fn is_master_file(&self) -> bool {
         match self.game_id {
-            GameId::Morrowind => self.has_extension(FileExtension::ESM),
+            GameId::Morrowind => self.has_extension(FileExtension::Esm),
             GameId::Fallout4 | GameId::SkyrimSE => {
                 self.is_master_flag_set()
-                    || self.has_extension(FileExtension::ESM)
-                    || self.has_extension(FileExtension::ESL)
+                    || self.has_extension(FileExtension::Esm)
+                    || self.has_extension(FileExtension::Esl)
             }
             _ => self.is_master_flag_set(),
         }
@@ -217,7 +217,7 @@ impl Plugin {
     pub fn is_light_plugin(&self) -> bool {
         match self.game_id {
             GameId::Fallout4 | GameId::SkyrimSE => {
-                self.is_light_flag_set() || self.has_extension(FileExtension::ESL)
+                self.is_light_flag_set() || self.has_extension(FileExtension::Esl)
             }
             _ => false,
         }
