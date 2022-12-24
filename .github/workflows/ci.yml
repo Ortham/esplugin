@@ -70,16 +70,17 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install Tarpaulin
-        run: curl -sL https://github.com/xd009642/tarpaulin/releases/download/0.18.0/cargo-tarpaulin-0.18.0-travis.tar.gz | tar xvz -C $HOME/.cargo/bin
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: Prepare test resources
         run: |
           wget https://github.com/WrinklyNinja/testing-plugins/archive/1.4.1.tar.gz
           tar -xf 1.4.1.tar.gz
           mv testing-plugins-1.4.1 testing-plugins
+
       - name: Build and run tests with code coverage
-        run: cargo tarpaulin --workspace --features compressed-fields --out Lcov --avoid-cfg-tarpaulin
+        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
 
       - name: Upload code coverage to Coveralls
         uses: coverallsapp/github-action@v1.1.1
