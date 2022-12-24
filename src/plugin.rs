@@ -562,7 +562,7 @@ fn read_plugin<R: BufRead + Seek>(
 
     if header_record.header_type() != expected_header_type {
         return Err(Error::ParsingError(
-            (&header_record.header_type()).to_vec(),
+            header_record.header_type().to_vec(),
             ParsingErrorKind::UnexpectedRecordType(expected_header_type.to_vec()),
         ));
     }

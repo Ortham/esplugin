@@ -70,7 +70,7 @@ pub unsafe extern "C" fn esp_plugin_new(
 #[no_mangle]
 pub unsafe extern "C" fn esp_plugin_free(plugin_ptr: *mut Plugin) {
     if !plugin_ptr.is_null() {
-        Box::from_raw(plugin_ptr);
+        drop(Box::from_raw(plugin_ptr));
     }
 }
 
