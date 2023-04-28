@@ -83,10 +83,7 @@ jobs:
         run: cargo llvm-cov --workspace --lcov --output-path lcov.info
 
       - name: Upload code coverage to Coveralls
-        uses: coverallsapp/github-action@v1.1.1
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ./lcov.info
+        uses: coverallsapp/github-action@v2
 
       # Need to rebuild the FFI wrapper so that its binary is given a filename
       # without a hash.
