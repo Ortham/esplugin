@@ -63,8 +63,9 @@ fn is_ghost_file_extension(extension: &str) -> bool {
     extension.len() == GHOST.len() && extension.to_lowercase() == GHOST
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Default, PartialEq, Eq, Debug, Hash)]
 enum RecordIds {
+    #[default]
     None,
     FormIds(Vec<HashedFormId>),
     NamespacedIds(Vec<NamespacedId>),
@@ -79,12 +80,6 @@ impl From<Vec<NamespacedId>> for RecordIds {
 impl From<Vec<HashedFormId>> for RecordIds {
     fn from(form_ids: Vec<HashedFormId>) -> RecordIds {
         RecordIds::FormIds(form_ids)
-    }
-}
-
-impl Default for RecordIds {
-    fn default() -> RecordIds {
-        RecordIds::None
     }
 }
 
