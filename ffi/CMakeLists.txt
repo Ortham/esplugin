@@ -9,7 +9,7 @@ if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif ()
 
 if (MSVC)
-    set (SYSTEM_LIBS ws2_32 Userenv bcrypt)
+    set (SYSTEM_LIBS ws2_32 Userenv bcrypt ntdll)
 endif ()
 
 add_executable(ffi_cpp_tests "${CMAKE_SOURCE_DIR}/tests/ffi.cpp")
