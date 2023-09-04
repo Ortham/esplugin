@@ -55,6 +55,7 @@ impl HashedFormId {
         match self.game_id {
             GameId::SkyrimSE => self.object_index >= 0x800 && self.object_index <= 0xFFF,
             GameId::Fallout4 => self.object_index >= 0x001 && self.object_index <= 0xFFF,
+            GameId::Starfield => self.object_index <= 0xFFF,
             _ => false,
         }
     }
@@ -213,6 +214,17 @@ mod tests {
 
     #[allow(non_snake_case)]
     #[test]
+    fn is_valid_in_light_plugin_should_be_false_if_game_is_starfield_and_object_index_is_less_than_0xFFF(
+    ) {
+        for index in 0..=0xFFF {
+            let form_id = HashedFormId::new(GameId::Starfield, PARENT_PLUGIN_NAME, MASTERS, index);
+
+            assert!(form_id.is_valid_in_light_plugin());
+        }
+    }
+
+    #[allow(non_snake_case)]
+    #[test]
     fn is_valid_in_light_plugin_should_be_false_if_game_is_skyrim_se_and_object_index_is_outwith_0x800_and_0xFFF_inclusive(
     ) {
         for index in 0..0x800 {
@@ -238,6 +250,17 @@ mod tests {
 
         for index in 0x1000..=0xFF_FFFF {
             let form_id = HashedFormId::new(GameId::Fallout4, PARENT_PLUGIN_NAME, MASTERS, index);
+
+            assert!(!form_id.is_valid_in_light_plugin());
+        }
+    }
+
+    #[allow(non_snake_case)]
+    #[test]
+    fn is_valid_in_light_plugin_should_be_false_if_game_is_starfield_and_object_index_is_greater_than_0xFFF(
+    ) {
+        for index in 0x1000..=0xFF_FFFF {
+            let form_id = HashedFormId::new(GameId::Starfield, PARENT_PLUGIN_NAME, MASTERS, index);
 
             assert!(!form_id.is_valid_in_light_plugin());
         }

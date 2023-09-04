@@ -26,4 +26,59 @@ pub enum GameId {
     Morrowind,
     Fallout4,
     SkyrimSE,
+    Starfield,
+}
+
+impl GameId {
+    pub fn supports_light_plugins(self) -> bool {
+        matches!(
+            self,
+            GameId::SkyrimSE | GameId::Fallout4 | GameId::Starfield
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn supports_light_plugins_should_be_false_for_morrowind() {
+        assert!(!GameId::Morrowind.supports_light_plugins());
+    }
+
+    #[test]
+    fn supports_light_plugins_should_be_false_for_oblivion() {
+        assert!(!GameId::Oblivion.supports_light_plugins());
+    }
+
+    #[test]
+    fn supports_light_plugins_should_be_false_for_skyrim() {
+        assert!(!GameId::Skyrim.supports_light_plugins());
+    }
+
+    #[test]
+    fn supports_light_plugins_should_be_false_for_fallout3() {
+        assert!(!GameId::Fallout3.supports_light_plugins());
+    }
+
+    #[test]
+    fn supports_light_plugins_should_be_false_for_falloutnv() {
+        assert!(!GameId::FalloutNV.supports_light_plugins());
+    }
+
+    #[test]
+    fn supports_light_plugins_should_be_true_for_skyrimse() {
+        assert!(GameId::SkyrimSE.supports_light_plugins());
+    }
+
+    #[test]
+    fn supports_light_plugins_should_be_true_for_fallout4() {
+        assert!(GameId::Fallout4.supports_light_plugins());
+    }
+
+    #[test]
+    fn supports_light_plugins_should_be_true_for_starfield() {
+        assert!(GameId::Starfield.supports_light_plugins());
+    }
 }

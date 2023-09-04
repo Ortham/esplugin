@@ -13,6 +13,7 @@ void test_game_id_values() {
   assert(ESP_GAME_MORROWIND == 4);
   assert(ESP_GAME_FALLOUT4 == 5);
   assert(ESP_GAME_SKYRIMSE == 6);
+  assert(ESP_GAME_STARFIELD == 7);
 }
 
 void test_esp_plugin_new() {
@@ -112,6 +113,20 @@ void test_esp_plugin_is_light_plugin() {
   return_code = esp_plugin_is_light_plugin(plugin, &is_light_plugin);
   assert(return_code == ESP_OK);
   assert(is_light_plugin);
+
+  esp_plugin_free(plugin);
+}
+
+void test_esp_plugin_is_override_plugin() {
+  printf("testing esp_plugin_is_override_plugin()...\n");
+  Plugin * plugin;
+  auto return_code = esp_plugin_new(&plugin, ESP_GAME_FALLOUT4, "../../testing-plugins/Skyrim/Data/Blank.esl");
+  assert(return_code == ESP_OK);
+
+  bool is_override_plugin;
+  return_code = esp_plugin_is_override_plugin(plugin, &is_override_plugin);
+  assert(return_code == ESP_OK);
+  assert(!is_override_plugin);
 
   esp_plugin_free(plugin);
 }
@@ -278,6 +293,23 @@ void test_esp_plugin_is_valid_as_light_plugin() {
   esp_plugin_free(plugin);
 }
 
+void test_esp_plugin_is_valid_as_override_plugin() {
+  printf("testing esp_plugin_is_valid_as_override_plugin()...\n");
+  Plugin * plugin;
+  auto return_code = esp_plugin_new(&plugin, ESP_GAME_SKYRIMSE, "../../testing-plugins/SkyrimSE/Data/Blank.esm");
+  assert(return_code == ESP_OK);
+
+  return_code = esp_plugin_parse(plugin, true);
+  assert(return_code == ESP_OK);
+
+  bool is_valid;
+  return_code = esp_plugin_is_valid_as_override_plugin(plugin, &is_valid);
+  assert(return_code == ESP_OK);
+  assert(!is_valid);
+
+  esp_plugin_free(plugin);
+}
+
 int main() {
   test_game_id_values();
 
@@ -298,6 +330,7 @@ int main() {
   test_esp_plugin_records_overlap_size();
   test_esp_plugin_is_valid_as_light_master();
   test_esp_plugin_is_valid_as_light_plugin();
+  test_esp_plugin_is_valid_as_override_plugin();
 
   printf("SUCCESS\n");
   return 0;

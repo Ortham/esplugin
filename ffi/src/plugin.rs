@@ -83,6 +83,7 @@ pub unsafe extern "C" fn esp_plugin_free(plugin_ptr: *mut Plugin) {
 /// * [esp_plugin_do_records_overlap]
 /// * [esp_plugin_records_overlap_size]
 /// * [esp_plugin_is_valid_as_light_master] / [esp_plugin_is_valid_as_light_plugin]
+/// * [esp_plugin_is_valid_as_override_plugin]
 ///
 /// Returns [ESP_OK] if successful, otherwise an `ESP_ERROR_*` code is returned.
 ///
@@ -225,6 +226,25 @@ pub unsafe extern "C" fn esp_plugin_is_light_plugin(
             let plugin = &*plugin_ptr;
 
             *is_light_plugin = plugin.is_light_plugin();
+
+            ESP_OK
+        }
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn esp_plugin_is_override_plugin(
+    plugin_ptr: *const Plugin,
+    is_override_plugin: *mut bool,
+) -> u32 {
+    panic::catch_unwind(|| {
+        if plugin_ptr.is_null() || is_override_plugin.is_null() {
+            ESP_ERROR_NULL_POINTER
+        } else {
+            let plugin = &*plugin_ptr;
+
+            *is_override_plugin = plugin.is_override_plugin();
 
             ESP_OK
         }
@@ -440,6 +460,25 @@ pub unsafe extern "C" fn esp_plugin_is_valid_as_light_plugin(
             let plugin = &*plugin_ptr;
 
             *is_valid = plugin.is_valid_as_light_plugin();
+
+            ESP_OK
+        }
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn esp_plugin_is_valid_as_override_plugin(
+    plugin_ptr: *const Plugin,
+    is_valid: *mut bool,
+) -> u32 {
+    panic::catch_unwind(|| {
+        if plugin_ptr.is_null() || is_valid.is_null() {
+            ESP_ERROR_NULL_POINTER
+        } else {
+            let plugin = &*plugin_ptr;
+
+            *is_valid = plugin.is_valid_as_override_plugin();
 
             ESP_OK
         }

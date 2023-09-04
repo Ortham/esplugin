@@ -39,3 +39,6 @@ pub static ESP_GAME_FALLOUT4: u32 = 5;
 
 #[no_mangle]
 pub static ESP_GAME_SKYRIMSE: u32 = 6;
+
+#[no_mangle]
+pub static ESP_GAME_STARFIELD: u32 = 7;
