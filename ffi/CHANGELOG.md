@@ -2,6 +2,20 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [4.1.0] - 2023-09-05
+
+### Added
+
+- `ESP_GAME_STARFIELD` as the game code to use with Starfield plugins.
+- `esp_plugin_is_override_plugin()`, which checks if a Starfield plugin is
+  loaded as an override plugin.
+- `esp_plugin_is_valid_as_override_plugin()`, which checks if a Starfield plugin
+  contains no new records.
+
+### Changed
+
+- Updated to esplugin v4.1.0.
+
 ## [4.0.0] - 2022-09-15
 
 ### Added

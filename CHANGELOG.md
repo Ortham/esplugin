@@ -2,6 +2,18 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [4.1.0] - 2023-09-05
+
+### Added
+
+- Support for parsing Starfield plugins.
+- `GameId::supports_light_plugins()`, which returns true for Skyrim SE,
+  Fallout 4 and Starfield.
+- `Plugin::is_override_plugin()`, which checks if a Starfield plugin is
+  loaded as an override plugin.
+- `Plugin::is_valid_as_override_plugin()`, which checks if a Starfield plugin
+  contains no new records.
+
 ## [4.0.0] - 2022-09-15
 
 ### Changed
