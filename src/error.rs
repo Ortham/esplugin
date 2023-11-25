@@ -29,7 +29,7 @@ pub enum Error {
     NoFilename,
     ParsingIncomplete,
     ParsingError(Vec<u8>, ParsingErrorKind),
-    DecodeError,
+    DecodeError(Vec<u8>),
 }
 
 impl From<Err<nom::error::Error<&[u8]>>> for Error {
@@ -61,9 +61,9 @@ impl fmt::Display for Error {
                 "An error was encountered while parsing the plugin content {:02X?}: {}",
                 input, kind
             ),
-            Error::DecodeError => write!(
+            Error::DecodeError(bytes) => write!(
                 f,
-                "Plugin string content could not be decoded from Windows-1252"
+                "Plugin string content could not be decoded from Windows-1252, bytes are {bytes:02X?}"
             ),
         }
     }
