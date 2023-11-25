@@ -20,13 +20,14 @@
 use std::error;
 use std::fmt;
 use std::io;
+use std::path::PathBuf;
 
 use nom::Err;
 
 #[derive(Debug)]
 pub enum Error {
     IoError(io::Error),
-    NoFilename,
+    NoFilename(PathBuf),
     ParsingIncomplete,
     ParsingError(Vec<u8>, ParsingErrorKind),
     DecodeError(Vec<u8>),
@@ -53,8 +54,8 @@ impl From<io::Error> for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::IoError(ref x) => x.fmt(f),
-            Error::NoFilename => write!(f, "The plugin path has no filename part"),
+            Error::IoError(x) => x.fmt(f),
+            Error::NoFilename(path) => write!(f, "The plugin path {path:?} has no filename part"),
             Error::ParsingIncomplete => write!(f, "More input was expected by the plugin parser"),
             Error::ParsingError(input, kind) => write!(
                 f,
