@@ -108,7 +108,7 @@ impl Plugin {
 
     pub fn parse(&mut self, input: &[u8], load_header_only: bool) -> Result<(), Error> {
         match self.filename() {
-            None => Err(Error::NoFilename),
+            None => Err(Error::NoFilename(self.path.clone())),
             Some(filename) => {
                 self.data = parse_plugin(input, self.game_id, &filename, load_header_only)?.1;
 
@@ -124,7 +124,7 @@ impl Plugin {
         expected_header_type: &'static [u8],
     ) -> Result<(), Error> {
         match self.filename() {
-            None => Err(Error::NoFilename),
+            None => Err(Error::NoFilename(self.path.clone())),
             Some(filename) => {
                 self.data = read_plugin(
                     &mut reader,
