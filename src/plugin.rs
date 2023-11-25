@@ -259,7 +259,7 @@ impl Plugin {
                 return WINDOWS_1252
                     .decode_without_bom_handling_and_without_replacement(data)
                     .map(|s| Some(s.to_string()))
-                    .ok_or(Error::DecodeError);
+                    .ok_or(Error::DecodeError(data.to_vec()));
             }
         }
 
@@ -475,7 +475,7 @@ fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
             WINDOWS_1252
                 .decode_without_bom_handling_and_without_replacement(d)
                 .map(|s| s.to_string())
-                .ok_or(Error::DecodeError)
+                .ok_or(Error::DecodeError(d.to_vec()))
         })
         .collect::<Result<Vec<String>, Error>>()
 }
