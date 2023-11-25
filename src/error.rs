@@ -20,6 +20,7 @@
 use std::error;
 use std::fmt;
 use std::io;
+use std::num::NonZeroUsize;
 use std::path::PathBuf;
 
 use nom::Err;
@@ -28,7 +29,7 @@ use nom::Err;
 pub enum Error {
     IoError(io::Error),
     NoFilename(PathBuf),
-    ParsingIncomplete,
+    ParsingIncomplete(MoreDataNeeded),
     ParsingError(Vec<u8>, ParsingErrorKind),
     DecodeError(Vec<u8>),
 }
@@ -36,7 +37,12 @@ pub enum Error {
 impl From<Err<nom::error::Error<&[u8]>>> for Error {
     fn from(error: Err<nom::error::Error<&[u8]>>) -> Self {
         match error {
-            Err::Incomplete(_) => Error::ParsingIncomplete,
+            Err::Incomplete(nom::Needed::Unknown) => {
+                Error::ParsingIncomplete(MoreDataNeeded::UnknownSize)
+            }
+            Err::Incomplete(nom::Needed::Size(size)) => {
+                Error::ParsingIncomplete(MoreDataNeeded::Size(size))
+            }
             Err::Error(err) | Err::Failure(err) => Error::ParsingError(
                 err.input.to_vec(),
                 ParsingErrorKind::GenericParserError(err.code.description().to_string()),
@@ -56,7 +62,8 @@ impl fmt::Display for Error {
         match self {
             Error::IoError(x) => x.fmt(f),
             Error::NoFilename(path) => write!(f, "The plugin path {path:?} has no filename part"),
-            Error::ParsingIncomplete => write!(f, "More input was expected by the plugin parser"),
+            Error::ParsingIncomplete(MoreDataNeeded::UnknownSize) => write!(f, "An unknown number of bytes of additional input was expected by the plugin parser"),
+            Error::ParsingIncomplete(MoreDataNeeded::Size(size)) => write!(f, "{size} bytes of additional input was expected by the plugin parser"),
             Error::ParsingError(input, kind) => write!(
                 f,
                 "An error was encountered while parsing the plugin content {:02X?}: {}",
@@ -103,4 +110,12 @@ impl fmt::Display for ParsingErrorKind {
             ParsingErrorKind::GenericParserError(e) => write!(f, "Error in parser: {}", e),
         }
     }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum MoreDataNeeded {
+    /// It's not known how much more data are needed
+    UnknownSize,
+    /// Contains the number of bytes of data that are needed
+    Size(NonZeroUsize),
 }
