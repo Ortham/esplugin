@@ -19,6 +19,7 @@
 
 use std::fs::File;
 use std::io::{BufRead, BufReader, Seek};
+use std::ops::RangeInclusive;
 use std::path::{Path, PathBuf};
 use std::str;
 
@@ -343,10 +344,14 @@ impl Plugin {
         if self.game_id.supports_light_plugins() {
             match &self.data.record_ids {
                 RecordIds::None => true,
-                RecordIds::FormIds(form_ids) => form_ids
-                    .iter()
-                    .filter(|f| !f.is_overridden_record())
-                    .all(HashedFormId::is_valid_in_light_plugin),
+                RecordIds::FormIds(form_ids) => {
+                    let valid_range = self.valid_light_form_id_range();
+
+                    form_ids
+                        .iter()
+                        .filter(|f| !f.is_overridden_record())
+                        .all(|f| valid_range.contains(&f.object_index()))
+                }
                 RecordIds::NamespacedIds(_) => false, // this should never happen.
             }
         } else {
@@ -399,6 +404,23 @@ impl Plugin {
             _ => false,
         }
     }
+
+    fn valid_light_form_id_range(&self) -> RangeInclusive<u32> {
+        match self.game_id {
+            GameId::SkyrimSE => match self.header_version() {
+                Some(v) if v < 1.71 => 0x800..=0xFFF,
+                Some(_) => 0..=0xFFF,
+                None => 0..=0,
+            },
+            GameId::Fallout4 => match self.header_version() {
+                Some(v) if v < 1.0 => 0x800..=0xFFF,
+                Some(_) => 0x001..=0xFFF,
+                None => 0..=0,
+            },
+            GameId::Starfield => 0..=0xFFF,
+            _ => 0..=0,
+        }
+    }
 }
 
 fn sorted_slices_intersect<T: PartialOrd>(left: &[T], right: &[T]) -> bool {
@@ -418,18 +440,13 @@ fn sorted_slices_intersect<T: PartialOrd>(left: &[T], right: &[T]) -> bool {
     false
 }
 
-fn hashed_form_ids(
-    form_ids: &[u32],
-    game_id: GameId,
-    filename: &str,
-    masters: &[String],
-) -> Vec<HashedFormId> {
+fn hashed_form_ids(form_ids: &[u32], filename: &str, masters: &[String]) -> Vec<HashedFormId> {
     let hashed_filename = hash(filename);
     let hashed_masters: Vec<_> = masters.iter().map(|m| hash(m)).collect();
 
     let mut form_ids: Vec<_> = form_ids
         .iter()
-        .map(|form_id| HashedFormId::new(game_id, hashed_filename, &hashed_masters, *form_id))
+        .map(|form_id| HashedFormId::new(hashed_filename, &hashed_masters, *form_id))
         .collect();
 
     form_ids.sort();
@@ -535,7 +552,7 @@ fn parse_record_ids<'a>(
         })?;
 
         let (remaining_input, form_ids) = parse_form_ids(input, game_id)?;
-        let form_ids = hashed_form_ids(&form_ids, game_id, filename, &masters).into();
+        let form_ids = hashed_form_ids(&form_ids, filename, &masters).into();
 
         Ok((remaining_input, form_ids))
     }
@@ -553,7 +570,7 @@ fn read_record_ids<R: BufRead + Seek>(
         let masters = masters(header_record)?;
 
         let form_ids = read_form_ids(reader, game_id)?;
-        let form_ids = hashed_form_ids(&form_ids, game_id, filename, &masters).into();
+        let form_ids = hashed_form_ids(&form_ids, filename, &masters).into();
 
         Ok(form_ids)
     }
@@ -898,6 +915,19 @@ mod tests {
         }
 
         #[test]
+        fn valid_light_form_id_range_should_be_empty() {
+            let mut plugin = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank - Master Dependent.esm"),
+            );
+            assert!(plugin.parse_file(false).is_ok());
+
+            let range = plugin.valid_light_form_id_range();
+            assert_eq!(&0, range.start());
+            assert_eq!(&0, range.end());
+        }
+
+        #[test]
         fn is_valid_as_light_plugin_should_always_be_false() {
             let mut plugin = Plugin::new(
                 GameId::Morrowind,
@@ -931,6 +961,19 @@ mod tests {
             assert!(plugin.parse_file(true).is_ok());
 
             assert_eq!(0.8, plugin.header_version().unwrap());
+        }
+
+        #[test]
+        fn valid_light_form_id_range_should_be_empty() {
+            let mut plugin = Plugin::new(
+                GameId::Oblivion,
+                Path::new("testing-plugins/Oblivion/Data/Blank - Master Dependent.esm"),
+            );
+            assert!(plugin.parse_file(false).is_ok());
+
+            let range = plugin.valid_light_form_id_range();
+            assert_eq!(&0, range.start());
+            assert_eq!(&0, range.end());
         }
 
         #[test]
@@ -1176,6 +1219,19 @@ mod tests {
         }
 
         #[test]
+        fn valid_light_form_id_range_should_be_empty() {
+            let mut plugin = Plugin::new(
+                GameId::Skyrim,
+                Path::new("testing-plugins/Skyrim/Data/Blank - Master Dependent.esm"),
+            );
+            assert!(plugin.parse_file(false).is_ok());
+
+            let range = plugin.valid_light_form_id_range();
+            assert_eq!(&0, range.start());
+            assert_eq!(&0, range.end());
+        }
+
+        #[test]
         fn is_valid_as_light_plugin_should_always_be_false() {
             let mut plugin = Plugin::new(
                 GameId::Skyrim,
@@ -1289,6 +1345,43 @@ mod tests {
         }
 
         #[test]
+        fn valid_light_form_id_range_should_be_0x800_to_0xfff_if_hedr_version_is_less_than_1_71() {
+            let mut plugin = Plugin::new(
+                GameId::SkyrimSE,
+                Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
+            );
+            assert!(plugin.parse_file(false).is_ok());
+
+            let range = plugin.valid_light_form_id_range();
+            assert_eq!(&0x800, range.start());
+            assert_eq!(&0xFFF, range.end());
+        }
+
+        #[test]
+        fn valid_light_form_id_range_should_be_0_to_0xfff_if_hedr_version_is_1_71_or_greater() {
+            let mut plugin = Plugin::new(
+                GameId::SkyrimSE,
+                Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
+            );
+            let mut bytes = read(plugin.path()).unwrap();
+
+            assert_eq!(0xD7, bytes[0x1E]);
+            assert_eq!(0xA3, bytes[0x1F]);
+            assert_eq!(0x70, bytes[0x20]);
+            assert_eq!(0x3F, bytes[0x21]);
+            bytes[0x1E] = 0x48;
+            bytes[0x1F] = 0xE1;
+            bytes[0x20] = 0xDA;
+            bytes[0x21] = 0x3F;
+
+            assert!(plugin.parse(&bytes, false).is_ok());
+
+            let range = plugin.valid_light_form_id_range();
+            assert_eq!(&0, range.start());
+            assert_eq!(&0xFFF, range.end());
+        }
+
+        #[test]
         fn is_valid_as_light_plugin_should_be_true_if_the_plugin_has_no_form_ids_outside_the_valid_range(
         ) {
             let mut plugin = Plugin::new(
@@ -1317,25 +1410,6 @@ mod tests {
             assert!(plugin.parse(&bytes, false).is_ok());
 
             assert!(plugin.is_valid_as_light_plugin());
-        }
-
-        #[test]
-        fn is_valid_as_light_plugin_should_be_false_if_the_plugin_has_a_new_form_id_less_than_0x800(
-        ) {
-            let mut plugin = Plugin::new(
-                GameId::SkyrimSE,
-                Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
-            );
-            let mut bytes = read(plugin.path()).unwrap();
-
-            assert_eq!(0xEB, bytes[0x386]);
-            assert_eq!(0x0C, bytes[0x387]);
-            bytes[0x386] = 0xFF;
-            bytes[0x387] = 0x07;
-
-            assert!(plugin.parse(&bytes, false).is_ok());
-
-            assert!(!plugin.is_valid_as_light_plugin());
         }
 
         #[test]
@@ -1372,6 +1446,19 @@ mod tests {
         }
 
         #[test]
+        fn valid_light_form_id_range_should_be_empty() {
+            let mut plugin = Plugin::new(
+                GameId::Fallout3,
+                Path::new("testing-plugins/Skyrim/Data/Blank - Master Dependent.esm"),
+            );
+            assert!(plugin.parse_file(false).is_ok());
+
+            let range = plugin.valid_light_form_id_range();
+            assert_eq!(&0, range.start());
+            assert_eq!(&0, range.end());
+        }
+
+        #[test]
         fn is_valid_as_light_plugin_should_always_be_false() {
             let mut plugin = Plugin::new(
                 GameId::Fallout3,
@@ -1396,6 +1483,19 @@ mod tests {
         }
 
         #[test]
+        fn valid_light_form_id_range_should_be_empty() {
+            let mut plugin = Plugin::new(
+                GameId::Fallout3,
+                Path::new("testing-plugins/Skyrim/Data/Blank - Master Dependent.esm"),
+            );
+            assert!(plugin.parse_file(false).is_ok());
+
+            let range = plugin.valid_light_form_id_range();
+            assert_eq!(&0, range.start());
+            assert_eq!(&0, range.end());
+        }
+
+        #[test]
         fn is_valid_as_light_plugin_should_always_be_false() {
             let mut plugin = Plugin::new(
                 GameId::FalloutNV,
@@ -1408,6 +1508,8 @@ mod tests {
 
     mod fallout4 {
         use super::super::*;
+
+        use std::fs::read;
 
         #[test]
         fn is_master_file_should_use_file_extension_and_flag() {
@@ -1456,6 +1558,43 @@ mod tests {
         fn is_light_plugin_should_be_true_for_a_ghosted_esl_file() {
             let plugin = Plugin::new(GameId::Fallout4, Path::new("Blank.esl.ghost"));
             assert!(plugin.is_light_plugin());
+        }
+
+        #[test]
+        fn valid_light_form_id_range_should_be_1_to_0xfff_if_hedr_version_is_less_than_1() {
+            let mut plugin = Plugin::new(
+                GameId::Fallout4,
+                Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
+            );
+            assert!(plugin.parse_file(false).is_ok());
+
+            let range = plugin.valid_light_form_id_range();
+            assert_eq!(&0x800, range.start());
+            assert_eq!(&0xFFF, range.end());
+        }
+
+        #[test]
+        fn valid_light_form_id_range_should_be_1_to_0xfff_if_hedr_version_is_1_or_greater() {
+            let mut plugin = Plugin::new(
+                GameId::Fallout4,
+                Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
+            );
+            let mut bytes = read(plugin.path()).unwrap();
+
+            assert_eq!(0xD7, bytes[0x1E]);
+            assert_eq!(0xA3, bytes[0x1F]);
+            assert_eq!(0x70, bytes[0x20]);
+            assert_eq!(0x3F, bytes[0x21]);
+            bytes[0x1E] = 0;
+            bytes[0x1F] = 0;
+            bytes[0x20] = 0x80;
+            bytes[0x21] = 0x3F;
+
+            assert!(plugin.parse(&bytes, false).is_ok());
+
+            let range = plugin.valid_light_form_id_range();
+            assert_eq!(&1, range.start());
+            assert_eq!(&0xFFF, range.end());
         }
 
         #[test]
@@ -1597,6 +1736,19 @@ mod tests {
                 .1;
 
             assert!(!plugin.is_override_plugin());
+        }
+
+        #[test]
+        fn valid_light_form_id_range_should_be_0_to_0xfff() {
+            let mut plugin = Plugin::new(
+                GameId::Starfield,
+                Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
+            );
+            assert!(plugin.parse_file(false).is_ok());
+
+            let range = plugin.valid_light_form_id_range();
+            assert_eq!(&0, range.start());
+            assert_eq!(&0xFFF, range.end());
         }
 
         #[test]
@@ -1820,11 +1972,10 @@ mod tests {
         let raw_form_ids = vec![0x0000_0001, 0x0100_0002];
 
         let masters = vec!["tést.esm".to_string()];
-        let form_ids = hashed_form_ids(&raw_form_ids, GameId::Oblivion, "Blàñk.esp", &masters);
+        let form_ids = hashed_form_ids(&raw_form_ids, "Blàñk.esp", &masters);
 
         let other_masters = vec!["TÉST.ESM".to_string()];
-        let other_form_ids =
-            hashed_form_ids(&raw_form_ids, GameId::Oblivion, "BLÀÑK.ESP", &other_masters);
+        let other_form_ids = hashed_form_ids(&raw_form_ids, "BLÀÑK.ESP", &other_masters);
 
         assert_eq!(form_ids, other_form_ids);
     }
