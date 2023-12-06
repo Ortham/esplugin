@@ -2,6 +2,20 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [4.1.1] - 2022-09-15
+
+### Added
+
+- Support for the expanded FormID range introduced in Skyrim Special Edition
+  v1.6.1130.0 for light plugins with a `HEDR` version of 1.71.
+
+### Fixed
+
+- `Plugin::is_valid_as_light_plugin()` now takes into account the plugin's
+  `HEDR` version when determining the valid FormID range. This means that
+  Fallout 4 light plugins with a `HEDR` version below `1.0` now use the
+  correct range of object indexes, starting at `0x800`.
+
 ## [4.1.0] - 2023-09-05
 
 ### Added
