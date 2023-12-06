@@ -424,14 +424,17 @@ impl Plugin {
 }
 
 fn sorted_slices_intersect<T: PartialOrd>(left: &[T], right: &[T]) -> bool {
-    let mut left_index = 0;
-    let mut right_index = 0;
+    let mut left_iter = left.iter();
+    let mut right_iter = right.iter();
 
-    while left_index != left.len() && right_index != right.len() {
-        if left[left_index] < right[right_index] {
-            left_index += 1;
-        } else if left[left_index] > right[right_index] {
-            right_index += 1;
+    let mut left_element = left_iter.next();
+    let mut right_element = right_iter.next();
+
+    while let (Some(left_value), Some(right_value)) = (left_element, right_element) {
+        if left_value < right_value {
+            left_element = left_iter.next();
+        } else if left_value > right_value {
+            right_element = right_iter.next();
         } else {
             return true;
         }
