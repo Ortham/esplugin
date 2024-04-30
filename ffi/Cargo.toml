@@ -2,7 +2,6 @@
 name = "esplugin-ffi"
 version = "4.1.1"
 authors = ["Oliver Hamlet <oliver@ortham.io>"]
-build = "build.rs"
 description = "A wrapper library providing a C FFI for esplugin."
 documentation = "https://docs.rs/esplugin-ffi"
 repository = "https://github.com/Ortham/esplugin.git"
@@ -22,10 +21,3 @@ libc = "0.2"
 
 [lib]
 crate-type = ["staticlib"]
-
-[features]
-default = []
-ffi-headers = ["cbindgen"]
-
-[build-dependencies]
-cbindgen = { version = "0.26", optional = true }

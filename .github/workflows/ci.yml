@@ -42,7 +42,9 @@ jobs:
       # Need to rebuild the FFI wrapper so that its binary is given a filename
       # without a hash.
       - name: Build FFI wrapper
-        run: cargo build --manifest-path ffi/Cargo.toml --features ffi-headers
+        run: |
+          cargo build --manifest-path ffi/Cargo.toml
+          cbindgen ffi/ -o ffi/include/esplugin.h
 
       # Use bash because PowerShell doesn't fail if one command fails.
       - name: Build and run C++ tests
@@ -86,7 +88,9 @@ jobs:
       # Need to rebuild the FFI wrapper so that its binary is given a filename
       # without a hash.
       - name: Build FFI wrapper
-        run: cargo build --manifest-path ffi/Cargo.toml --features ffi-headers
+        run: |
+          cargo build --manifest-path ffi/Cargo.toml
+          cbindgen ffi/ -o ffi/include/esplugin.h
 
       # Use bash because PowerShell doesn't fail if one command fails.
       - name: Build and run C++ tests
