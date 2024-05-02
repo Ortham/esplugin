@@ -2,6 +2,16 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [5.0.0] - 2024-05-02
+
+### Changed
+
+- Updated to esplugin v5.0.0.
+
+### Removed
+
+- The `ffi-headers` build feature: if you want to generate C or C++ headers, install and run cbindgen separately.
+
 ## [4.1.1] - 2023-12-06
 
 ### Changed

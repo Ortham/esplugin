@@ -2,6 +2,16 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [5.0.0] - 2024-05-02
+
+### Added
+
+- `Cargo.lock` is no longer ignored by Git.
+
+### Changed
+
+- `Error::NoFilename`, `Error::ParsingIncomplete` and `Error::DecodeError` now hold contextual data.
+
 ## [4.1.1] - 2022-09-15
 
 ### Added
