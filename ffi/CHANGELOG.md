@@ -2,6 +2,13 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [5.0.1] - 2024-05-02
+
+### Changed
+
+- Updated to esplugin v5.0.1.
+- Updated to Rust's 2021 edition.
+
 ## [5.0.0] - 2024-05-02
 
 ### Changed
