@@ -36,6 +36,10 @@ impl GameId {
             GameId::SkyrimSE | GameId::Fallout4 | GameId::Starfield
         )
     }
+
+    pub fn supports_medium_plugins(self) -> bool {
+        self == GameId::Starfield
+    }
 }
 
 #[cfg(test)]
@@ -80,5 +84,17 @@ mod tests {
     #[test]
     fn supports_light_plugins_should_be_true_for_starfield() {
         assert!(GameId::Starfield.supports_light_plugins());
+    }
+
+    #[test]
+    fn supports_medium_plugins_should_be_true_for_only_starfield() {
+        assert!(!GameId::Morrowind.supports_medium_plugins());
+        assert!(!GameId::Oblivion.supports_medium_plugins());
+        assert!(!GameId::Skyrim.supports_medium_plugins());
+        assert!(!GameId::SkyrimSE.supports_medium_plugins());
+        assert!(!GameId::Fallout3.supports_medium_plugins());
+        assert!(!GameId::FalloutNV.supports_medium_plugins());
+        assert!(!GameId::Fallout4.supports_medium_plugins());
+        assert!(GameId::Starfield.supports_medium_plugins());
     }
 }

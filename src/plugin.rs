@@ -365,6 +365,25 @@ impl Plugin {
         }
     }
 
+    pub fn is_valid_as_medium_plugin(&self) -> bool {
+        if self.game_id.supports_medium_plugins() {
+            match &self.data.record_ids {
+                RecordIds::None => true,
+                RecordIds::FormIds(form_ids) => {
+                    let valid_range = self.valid_medium_form_id_range();
+
+                    form_ids
+                        .iter()
+                        .filter(|f| !f.is_overridden_record())
+                        .all(|f| valid_range.contains(&f.object_index()))
+                }
+                RecordIds::NamespacedIds(_) => false, // this should never happen.
+            }
+        } else {
+            false
+        }
+    }
+
     pub fn is_valid_as_override_plugin(&self) -> bool {
         if self.game_id == GameId::Starfield {
             // If an override plugin has a record that does not override an existing record, that
@@ -444,6 +463,13 @@ impl Plugin {
                 None => 0..=0,
             },
             GameId::Starfield => 0..=0xFFF,
+            _ => 0..=0,
+        }
+    }
+
+    fn valid_medium_form_id_range(&self) -> RangeInclusive<u32> {
+        match self.game_id {
+            GameId::Starfield => 0..=0xFFFF,
             _ => 0..=0,
         }
     }
@@ -1890,11 +1916,36 @@ mod tests {
         }
 
         #[test]
+        fn valid_medium_form_id_range_should_be_0_to_0xffff() {
+            let mut plugin = Plugin::new(
+                GameId::Starfield,
+                Path::new("testing-plugins/Starfield/Data/Blank.small.esm"),
+            );
+            assert!(plugin.parse_file(false).is_ok());
+
+            let range = plugin.valid_medium_form_id_range();
+            assert_eq!(&0, range.start());
+            assert_eq!(&0xFFFF, range.end());
+        }
+
+        #[test]
         fn is_valid_as_light_plugin_should_be_true_if_the_plugin_has_no_form_ids_outside_the_valid_range(
         ) {
             let mut plugin = Plugin::new(
                 GameId::Starfield,
                 Path::new("testing-plugins/Starfield/Data/Blank.full.esm"),
+            );
+            assert!(plugin.parse_file(false).is_ok());
+
+            assert!(plugin.is_valid_as_light_plugin());
+        }
+
+        #[test]
+        fn is_valid_as_medium_plugin_should_be_true_if_the_plugin_has_no_form_ids_outside_the_valid_range(
+        ) {
+            let mut plugin = Plugin::new(
+                GameId::Starfield,
+                Path::new("testing-plugins/Starfield/Data/Blank.medium.esm"),
             );
             assert!(plugin.parse_file(false).is_ok());
 
