@@ -641,6 +641,9 @@ fn read_plugin<R: BufRead + Seek>(
 
 #[cfg(test)]
 mod tests {
+    use std::fs::copy;
+    use tempfile::tempdir;
+
     use super::*;
 
     mod morrowind {
@@ -1246,16 +1249,18 @@ mod tests {
     }
 
     mod skyrimse {
-        use super::super::*;
+        use super::*;
 
         use std::fs::read;
 
         #[test]
         fn is_master_file_should_use_file_extension_and_flag() {
-            use std::fs::copy;
+            let tmp_dir = tempdir().unwrap();
+
+            let master_flagged_esp = tmp_dir.path().join("Blank.esp");
             copy(
                 Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
-                Path::new("testing-plugins/Skyrim/Data/Blank.esm.esp"),
+                &master_flagged_esp,
             )
             .unwrap();
 
@@ -1275,10 +1280,7 @@ mod tests {
             assert!(plugin.parse_file(true).is_ok());
             assert!(!plugin.is_master_file());
 
-            let mut plugin = Plugin::new(
-                GameId::SkyrimSE,
-                Path::new("testing-plugins/Skyrim/Data/Blank.esm.esp"),
-            );
+            let mut plugin = Plugin::new(GameId::SkyrimSE, &master_flagged_esp);
             assert!(plugin.parse_file(true).is_ok());
             assert!(plugin.is_master_file());
         }
@@ -1301,17 +1303,16 @@ mod tests {
 
         #[test]
         fn is_light_plugin_should_be_true_for_an_esp_file_with_the_light_flag_set() {
-            use std::fs::copy;
+            let tmp_dir = tempdir().unwrap();
+
+            let light_flagged_esp = tmp_dir.path().join("Blank.esp");
             copy(
                 Path::new("testing-plugins/SkyrimSE/Data/Blank.esl"),
-                Path::new("testing-plugins/SkyrimSE/Data/Blank.esl.esp"),
+                &light_flagged_esp,
             )
             .unwrap();
 
-            let mut plugin = Plugin::new(
-                GameId::SkyrimSE,
-                Path::new("testing-plugins/SkyrimSE/Data/Blank.esl.esp"),
-            );
+            let mut plugin = Plugin::new(GameId::SkyrimSE, &light_flagged_esp);
             assert!(plugin.parse_file(true).is_ok());
             assert!(plugin.is_light_plugin());
             assert!(!plugin.is_master_file());
@@ -1319,17 +1320,16 @@ mod tests {
 
         #[test]
         fn is_light_plugin_should_be_true_for_an_esm_file_with_the_light_flag_set() {
-            use std::fs::copy;
+            let tmp_dir = tempdir().unwrap();
+
+            let light_flagged_esm = tmp_dir.path().join("Blank.esm");
             copy(
                 Path::new("testing-plugins/SkyrimSE/Data/Blank.esl"),
-                Path::new("testing-plugins/SkyrimSE/Data/Blank.esl.esm"),
+                &light_flagged_esm,
             )
             .unwrap();
 
-            let mut plugin = Plugin::new(
-                GameId::SkyrimSE,
-                Path::new("testing-plugins/SkyrimSE/Data/Blank.esl.esm"),
-            );
+            let mut plugin = Plugin::new(GameId::SkyrimSE, &light_flagged_esm);
             assert!(plugin.parse_file(true).is_ok());
             assert!(plugin.is_light_plugin());
             assert!(plugin.is_master_file());
@@ -1510,16 +1510,18 @@ mod tests {
     }
 
     mod fallout4 {
-        use super::super::*;
+        use super::*;
 
         use std::fs::read;
 
         #[test]
         fn is_master_file_should_use_file_extension_and_flag() {
-            use std::fs::copy;
+            let tmp_dir = tempdir().unwrap();
+
+            let master_flagged_esp = tmp_dir.path().join("Blank.esp");
             copy(
                 Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
-                Path::new("testing-plugins/Skyrim/Data/Blank.esm.esp"),
+                &master_flagged_esp,
             )
             .unwrap();
 
@@ -1539,10 +1541,7 @@ mod tests {
             assert!(plugin.parse_file(true).is_ok());
             assert!(!plugin.is_master_file());
 
-            let mut plugin = Plugin::new(
-                GameId::Fallout4,
-                Path::new("testing-plugins/Skyrim/Data/Blank.esm.esp"),
-            );
+            let mut plugin = Plugin::new(GameId::Fallout4, &master_flagged_esp);
             assert!(plugin.parse_file(true).is_ok());
             assert!(plugin.is_master_file());
         }
@@ -1614,14 +1613,16 @@ mod tests {
     }
 
     mod starfield {
-        use super::super::*;
+        use super::*;
 
         #[test]
         fn is_master_file_should_use_file_extension_and_flag() {
-            use std::fs::copy;
+            let tmp_dir = tempdir().unwrap();
+
+            let master_flagged_esp = tmp_dir.path().join("Blank.esp");
             copy(
                 Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
-                Path::new("testing-plugins/Skyrim/Data/Blank.esm.esp"),
+                &master_flagged_esp,
             )
             .unwrap();
 
@@ -1641,10 +1642,7 @@ mod tests {
             assert!(plugin.parse_file(true).is_ok());
             assert!(!plugin.is_master_file());
 
-            let mut plugin = Plugin::new(
-                GameId::Starfield,
-                Path::new("testing-plugins/Skyrim/Data/Blank.esm.esp"),
-            );
+            let mut plugin = Plugin::new(GameId::Starfield, &master_flagged_esp);
             assert!(plugin.parse_file(true).is_ok());
             assert!(plugin.is_master_file());
         }
@@ -1789,9 +1787,9 @@ mod tests {
         }
     }
 
-    fn write_invalid_plugin() {
+    fn write_invalid_plugin(path: &Path) {
         use std::io::Write;
-        let mut file = File::create("testing-plugins/Skyrim/Data/Invalid.esm").unwrap();
+        let mut file = File::create(path).unwrap();
         let bytes = [0; 24];
         file.write_all(&bytes).unwrap();
     }
@@ -1817,12 +1815,12 @@ mod tests {
 
     #[test]
     fn parse_file_header_only_should_fail_for_a_non_plugin_file() {
-        write_invalid_plugin();
+        let tmp_dir = tempdir().unwrap();
 
-        let mut plugin = Plugin::new(
-            GameId::Skyrim,
-            Path::new("testing-plugins/Skyrim/Data/Invalid.esm"),
-        );
+        let path = tmp_dir.path().join("Invalid.esm");
+        write_invalid_plugin(&path);
+
+        let mut plugin = Plugin::new(GameId::Skyrim, &path);
 
         let result = plugin.parse_file(true);
         assert!(result.is_err());
@@ -1831,12 +1829,12 @@ mod tests {
 
     #[test]
     fn parse_file_should_fail_for_a_non_plugin_file() {
-        write_invalid_plugin();
+        let tmp_dir = tempdir().unwrap();
 
-        let mut plugin = Plugin::new(
-            GameId::Skyrim,
-            Path::new("testing-plugins/Skyrim/Data/Invalid.esm"),
-        );
+        let path = tmp_dir.path().join("Invalid.esm");
+        write_invalid_plugin(&path);
+
+        let mut plugin = Plugin::new(GameId::Skyrim, &path);
 
         let result = plugin.parse_file(false);
         assert!(result.is_err());
