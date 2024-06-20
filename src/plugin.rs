@@ -232,9 +232,10 @@ impl Plugin {
 
     pub fn is_override_plugin(&self) -> bool {
         // The override flag is unset by the game if the plugin has no masters or
-        // if the plugin's light flag is set.
+        // if the plugin's light or medium flags are set.
         self.is_override_flag_set()
             && !self.is_light_flag_set()
+            && !self.is_medium_flag_set()
             && self.masters().map(|m| !m.is_empty()).unwrap_or(false)
     }
 
@@ -1861,6 +1862,18 @@ mod tests {
             let mut plugin = Plugin::new(
                 GameId::Starfield,
                 Path::new("testing-plugins/Starfield/Data/Blank - Override.small.esm"),
+            );
+            plugin.parse_file(true).unwrap();
+
+            assert!(!plugin.is_override_plugin());
+        }
+
+        #[test]
+        fn is_override_plugin_should_be_false_for_a_plugin_with_the_override_and_medium_flags_set()
+        {
+            let mut plugin = Plugin::new(
+                GameId::Starfield,
+                Path::new("testing-plugins/Starfield/Data/Blank - Override.medium.esm"),
             );
             plugin.parse_file(true).unwrap();
 
