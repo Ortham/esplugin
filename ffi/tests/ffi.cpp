@@ -16,6 +16,24 @@ void test_game_id_values() {
   assert(ESP_GAME_STARFIELD == 7);
 }
 
+void test_esp_get_error_message() {
+  printf("testing esp_get_error_message()...\n");
+  const char * message = nullptr;
+  unsigned int return_code = esp_get_error_message(&message);
+
+  assert(return_code == 0);
+  assert(message == nullptr);
+
+  message = nullptr;
+  return_code = esp_plugin_new(nullptr, ESP_GAME_SKYRIM, nullptr);
+  assert(return_code == ESP_ERROR_NULL_POINTER);
+
+  return_code = esp_get_error_message(&message);
+  assert(return_code == ESP_OK);
+  assert(message != nullptr);
+  assert(strcmp(message, "Null pointer passed") == 0);
+}
+
 void test_esp_plugin_new() {
   printf("testing esp_plugin_new()...\n");
   Plugin * plugin;
@@ -326,6 +344,7 @@ void test_esp_plugin_is_valid_as_override_plugin() {
 
 int main() {
   test_game_id_values();
+  test_esp_get_error_message();
 
   test_esp_plugin_new();
   test_esp_plugin_parse();

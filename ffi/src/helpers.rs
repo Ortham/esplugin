@@ -4,22 +4,27 @@ use libc::{c_char, size_t};
 
 use esplugin::GameId;
 
-use crate::constants::*;
+use crate::{constants::*, error::error};
 
 pub unsafe fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32> {
     if c_string.is_null() {
-        return Err(ESP_ERROR_NULL_POINTER);
+        return Err(error(ESP_ERROR_NULL_POINTER, "Null pointer passed"));
     }
 
     let rust_c_string = CStr::from_ptr(c_string);
 
-    rust_c_string.to_str().map_err(|_| ESP_ERROR_NOT_UTF8)
+    rust_c_string
+        .to_str()
+        .map_err(|_| error(ESP_ERROR_NOT_UTF8, "Non-UTF-8 string passed"))
 }
 
 pub fn to_c_string(string: &str) -> Result<*mut c_char, u32> {
-    CString::new(string)
-        .map(CString::into_raw)
-        .map_err(|_| ESP_ERROR_NOT_UTF8)
+    CString::new(string).map(CString::into_raw).map_err(|_| {
+        error(
+            ESP_ERROR_TEXT_ENCODE_ERROR,
+            "String could not be converted to a C string as it contained a null byte",
+        )
+    })
 }
 
 pub fn to_truncated_c_string(string: &str) -> *mut c_char {
@@ -59,7 +64,10 @@ pub fn map_game_id(game_id: u32) -> Result<GameId, u32> {
         x if x == ESP_GAME_FALLOUT4 => Ok(GameId::Fallout4),
         x if x == ESP_GAME_SKYRIMSE => Ok(GameId::SkyrimSE),
         x if x == ESP_GAME_STARFIELD => Ok(GameId::Starfield),
-        _ => Err(ESP_ERROR_INVALID_GAME_ID),
+        _ => Err(error(
+            ESP_ERROR_INVALID_GAME_ID,
+            &format!("Invalid game ID: {}", game_id),
+        )),
     }
 }
 
@@ -82,7 +90,7 @@ mod tests {
     fn to_c_string_should_error_if_a_string_contains_nul_chars() {
         let err = to_c_string("test\0with null").unwrap_err();
 
-        assert_eq!(ESP_ERROR_NOT_UTF8, err);
+        assert_eq!(ESP_ERROR_TEXT_ENCODE_ERROR, err);
     }
 
     #[test]

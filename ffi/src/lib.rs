@@ -18,5 +18,6 @@ pub use self::plugin::*;
 
 mod common;
 mod constants;
+mod error;
 mod helpers;
 mod plugin;

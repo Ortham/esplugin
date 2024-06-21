@@ -20,6 +20,24 @@ pub static ESP_ERROR_PARSE_ERROR: u32 = 5;
 pub static ESP_ERROR_PANICKED: u32 = 6;
 
 #[no_mangle]
+pub static ESP_ERROR_NO_FILENAME: u32 = 7;
+
+#[no_mangle]
+pub static ESP_ERROR_TEXT_DECODE_ERROR: u32 = 8;
+
+#[no_mangle]
+pub static ESP_ERROR_TEXT_ENCODE_ERROR: u32 = 9;
+
+#[no_mangle]
+pub static ESP_ERROR_IO_ERROR: u32 = 10;
+
+#[no_mangle]
+pub static ESP_ERROR_FILE_NOT_FOUND: u32 = 11;
+
+#[no_mangle]
+pub static ESP_ERROR_IO_PERMISSION_DENIED: u32 = 12;
+
+#[no_mangle]
 pub static ESP_GAME_OBLIVION: u32 = 0;
 
 #[no_mangle]

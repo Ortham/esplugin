@@ -6,6 +6,7 @@ use libc::{c_char, c_float, size_t};
 use esplugin::{GameId, Plugin};
 
 use crate::constants::*;
+use crate::error::{error, handle_error};
 use crate::helpers::*;
 
 /// Create a new Plugin handle for the plugin at the given path.
@@ -98,12 +99,12 @@ pub unsafe extern "C" fn esp_plugin_free(plugin_ptr: *mut Plugin) {
 pub unsafe extern "C" fn esp_plugin_parse(plugin_ptr: *mut Plugin, load_header_only: bool) -> u32 {
     panic::catch_unwind(|| {
         if plugin_ptr.is_null() {
-            ESP_ERROR_NULL_POINTER
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &mut *plugin_ptr;
             match plugin.parse_file(load_header_only) {
                 Ok(_) => ESP_OK,
-                Err(_) => ESP_ERROR_PARSE_ERROR,
+                Err(e) => handle_error(e),
             }
         }
     })
@@ -139,14 +140,14 @@ pub unsafe extern "C" fn esp_plugin_filename(
 ) -> u32 {
     panic::catch_unwind(|| {
         if filename.is_null() || plugin_ptr.is_null() {
-            ESP_ERROR_NULL_POINTER
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &*plugin_ptr;
 
             let c_string = match plugin.filename().map(|s| to_c_string(&s)) {
                 None => ptr::null_mut(),
                 Some(Ok(x)) => x,
-                Some(Err(e)) => return e,
+                Some(Err(e)) => return error(e, "The filename contained a null byte"),
             };
 
             *filename = c_string;
@@ -165,13 +166,13 @@ pub unsafe extern "C" fn esp_plugin_masters(
 ) -> u32 {
     panic::catch_unwind(|| {
         if plugin_masters.is_null() || plugin_ptr.is_null() {
-            ESP_ERROR_NULL_POINTER
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &*plugin_ptr;
 
             let masters = match plugin.masters() {
                 Ok(x) => x,
-                Err(_) => return ESP_ERROR_NOT_UTF8,
+                Err(e) => return handle_error(e),
             };
 
             match to_c_string_array(&masters) {
@@ -180,7 +181,7 @@ pub unsafe extern "C" fn esp_plugin_masters(
                     *num_plugin_masters = size;
                     ESP_OK
                 }
-                Err(x) => x,
+                Err(x) => error(x, "A filename contained a null byte"),
             }
         }
     })
@@ -194,7 +195,7 @@ pub unsafe extern "C" fn esp_plugin_is_master(
 ) -> u32 {
     panic::catch_unwind(|| {
         if plugin_ptr.is_null() || is_master.is_null() {
-            ESP_ERROR_NULL_POINTER
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &*plugin_ptr;
 
@@ -222,7 +223,7 @@ pub unsafe extern "C" fn esp_plugin_is_light_plugin(
 ) -> u32 {
     panic::catch_unwind(|| {
         if plugin_ptr.is_null() || is_light_plugin.is_null() {
-            ESP_ERROR_NULL_POINTER
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &*plugin_ptr;
 
@@ -241,7 +242,7 @@ pub unsafe extern "C" fn esp_plugin_is_override_plugin(
 ) -> u32 {
     panic::catch_unwind(|| {
         if plugin_ptr.is_null() || is_override_plugin.is_null() {
-            ESP_ERROR_NULL_POINTER
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &*plugin_ptr;
 
@@ -262,7 +263,7 @@ pub unsafe extern "C" fn esp_plugin_is_valid(
 ) -> u32 {
     panic::catch_unwind(|| {
         if path.is_null() || is_valid.is_null() {
-            ESP_ERROR_NULL_POINTER
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let rust_path = match to_str(path) {
                 Ok(x) => Path::new(x),
@@ -289,13 +290,13 @@ pub unsafe extern "C" fn esp_plugin_description(
 ) -> u32 {
     panic::catch_unwind(|| {
         if description.is_null() || plugin_ptr.is_null() {
-            ESP_ERROR_NULL_POINTER
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &*plugin_ptr;
 
             let description_option = match plugin.description() {
                 Ok(x) => x,
-                Err(_) => return ESP_ERROR_NOT_UTF8,
+                Err(e) => return handle_error(e),
             };
 
             let c_string = match description_option {
@@ -306,7 +307,7 @@ pub unsafe extern "C" fn esp_plugin_description(
                     } else {
                         match to_c_string(&d) {
                             Ok(s) => s,
-                            Err(e) => return e,
+                            Err(e) => return error(e, "The description contained a null byte"),
                         }
                     }
                 }
@@ -327,7 +328,7 @@ pub unsafe extern "C" fn esp_plugin_header_version(
 ) -> u32 {
     panic::catch_unwind(|| {
         if plugin_ptr.is_null() || header_version.is_null() {
-            ESP_ERROR_NULL_POINTER
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &*plugin_ptr;
 
@@ -349,7 +350,7 @@ pub unsafe extern "C" fn esp_plugin_is_empty(
 ) -> u32 {
     panic::catch_unwind(|| {
         if plugin_ptr.is_null() || is_empty.is_null() {
-            ESP_ERROR_NULL_POINTER
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &*plugin_ptr;
 
@@ -368,7 +369,7 @@ pub unsafe extern "C" fn esp_plugin_record_and_group_count(
 ) -> u32 {
     panic::catch_unwind(|| {
         if plugin_ptr.is_null() || count.is_null() {
-            ESP_ERROR_NULL_POINTER
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &*plugin_ptr;
 
@@ -387,7 +388,7 @@ pub unsafe extern "C" fn esp_plugin_count_override_records(
 ) -> u32 {
     panic::catch_unwind(|| {
         if plugin_ptr.is_null() || count.is_null() {
-            ESP_ERROR_NULL_POINTER
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &*plugin_ptr;
 
@@ -407,7 +408,7 @@ pub unsafe extern "C" fn esp_plugin_do_records_overlap(
 ) -> u32 {
     panic::catch_unwind(|| {
         if plugin_ptr.is_null() || other_plugin_ptr.is_null() || overlap.is_null() {
-            ESP_ERROR_NULL_POINTER
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &*plugin_ptr;
             let other_plugin = &*other_plugin_ptr;
@@ -429,7 +430,7 @@ pub unsafe extern "C" fn esp_plugin_records_overlap_size(
 ) -> u32 {
     panic::catch_unwind(|| {
         if plugin_ptr.is_null() || other_plugins_ptr.is_null() || overlap_size.is_null() {
-            ESP_ERROR_NULL_POINTER
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &*plugin_ptr;
             let other_plugins: Option<Vec<&Plugin>> =
@@ -438,12 +439,19 @@ pub unsafe extern "C" fn esp_plugin_records_overlap_size(
                     .map(|pointer| pointer.as_ref())
                     .collect();
 
-            if let Some(other_plugins) = other_plugins {
-                *overlap_size = plugin.overlap_size(&other_plugins);
-                ESP_OK
-            } else {
-                ESP_ERROR_NULL_POINTER
-            }
+            let other_plugins = match other_plugins {
+                Some(p) => p,
+                None => {
+                    return error(
+                        ESP_ERROR_NULL_POINTER,
+                        "Null pointer passed in plugins array",
+                    )
+                }
+            };
+
+            *overlap_size = plugin.overlap_size(&other_plugins);
+
+            ESP_OK
         }
     })
     .unwrap_or(ESP_ERROR_PANICKED)
@@ -465,7 +473,7 @@ pub unsafe extern "C" fn esp_plugin_is_valid_as_light_plugin(
 ) -> u32 {
     panic::catch_unwind(|| {
         if plugin_ptr.is_null() || is_valid.is_null() {
-            ESP_ERROR_NULL_POINTER
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &*plugin_ptr;
 
@@ -484,7 +492,7 @@ pub unsafe extern "C" fn esp_plugin_is_valid_as_override_plugin(
 ) -> u32 {
     panic::catch_unwind(|| {
         if plugin_ptr.is_null() || is_valid.is_null() {
-            ESP_ERROR_NULL_POINTER
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &*plugin_ptr;
 
