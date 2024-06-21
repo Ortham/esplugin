@@ -32,6 +32,8 @@ pub enum Error {
     ParsingIncomplete(MoreDataNeeded),
     ParsingError(Vec<u8>, ParsingErrorKind),
     DecodeError(Vec<u8>),
+    UnresolvedFormIds(PathBuf),
+    PluginMetadataNotFound(String),
 }
 
 impl From<Err<nom::error::Error<&[u8]>>> for Error {
@@ -73,6 +75,8 @@ impl fmt::Display for Error {
                 f,
                 "Plugin string content could not be decoded from Windows-1252, bytes are {bytes:02X?}"
             ),
+            Error::UnresolvedFormIds(path) => write!(f, "FormIDs are unresolved for plugin at {path:?}"),
+            Error::PluginMetadataNotFound(plugin) => write!(f, "Plugin metadata for \"{plugin}\" not found")
         }
     }
 }

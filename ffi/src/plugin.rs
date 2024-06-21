@@ -3,7 +3,7 @@ use std::{f32, panic, ptr};
 
 use libc::{c_char, c_float, size_t};
 
-use esplugin::{GameId, Plugin};
+use esplugin::{GameId, Plugin, PluginMetadata};
 
 use crate::constants::*;
 use crate::error::{error, handle_error};
@@ -103,6 +103,31 @@ pub unsafe extern "C" fn esp_plugin_parse(plugin_ptr: *mut Plugin, load_header_o
         } else {
             let plugin = &mut *plugin_ptr;
             match plugin.parse_file(load_header_only) {
+                Ok(_) => ESP_OK,
+                Err(e) => handle_error(e),
+            }
+        }
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn esp_plugin_resolve_record_ids(
+    plugin_ptr: *mut Plugin,
+    plugins_metadata: *const Vec<PluginMetadata>,
+) -> u32 {
+    panic::catch_unwind(|| {
+        if plugin_ptr.is_null() {
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
+        } else {
+            let plugin = &mut *plugin_ptr;
+            let plugins_metadata = if plugins_metadata.is_null() {
+                &[]
+            } else {
+                (*plugins_metadata).as_slice()
+            };
+
+            match plugin.resolve_record_ids(plugins_metadata) {
                 Ok(_) => ESP_OK,
                 Err(e) => handle_error(e),
             }
@@ -411,9 +436,13 @@ pub unsafe extern "C" fn esp_plugin_count_override_records(
         } else {
             let plugin = &*plugin_ptr;
 
-            *count = plugin.count_override_records();
-
-            ESP_OK
+            match plugin.count_override_records() {
+                Ok(c) => {
+                    *count = c;
+                    ESP_OK
+                }
+                Err(e) => handle_error(e),
+            }
         }
     })
     .unwrap_or(ESP_ERROR_PANICKED)
@@ -432,9 +461,13 @@ pub unsafe extern "C" fn esp_plugin_do_records_overlap(
             let plugin = &*plugin_ptr;
             let other_plugin = &*other_plugin_ptr;
 
-            *overlap = plugin.overlaps_with(other_plugin);
-
-            ESP_OK
+            match plugin.overlaps_with(other_plugin) {
+                Ok(x) => {
+                    *overlap = x;
+                    ESP_OK
+                }
+                Err(e) => handle_error(e),
+            }
         }
     })
     .unwrap_or(ESP_ERROR_PANICKED)
@@ -468,9 +501,13 @@ pub unsafe extern "C" fn esp_plugin_records_overlap_size(
                 }
             };
 
-            *overlap_size = plugin.overlap_size(&other_plugins);
-
-            ESP_OK
+            match plugin.overlap_size(&other_plugins) {
+                Ok(x) => {
+                    *overlap_size = x;
+                    ESP_OK
+                }
+                Err(e) => handle_error(e),
+            }
         }
     })
     .unwrap_or(ESP_ERROR_PANICKED)
@@ -496,9 +533,13 @@ pub unsafe extern "C" fn esp_plugin_is_valid_as_light_plugin(
         } else {
             let plugin = &*plugin_ptr;
 
-            *is_valid = plugin.is_valid_as_light_plugin();
-
-            ESP_OK
+            match plugin.is_valid_as_light_plugin() {
+                Ok(x) => {
+                    *is_valid = x;
+                    ESP_OK
+                }
+                Err(e) => handle_error(e),
+            }
         }
     })
     .unwrap_or(ESP_ERROR_PANICKED)
@@ -515,9 +556,13 @@ pub unsafe extern "C" fn esp_plugin_is_valid_as_medium_plugin(
         } else {
             let plugin = &*plugin_ptr;
 
-            *is_valid = plugin.is_valid_as_medium_plugin();
-
-            ESP_OK
+            match plugin.is_valid_as_medium_plugin() {
+                Ok(x) => {
+                    *is_valid = x;
+                    ESP_OK
+                }
+                Err(e) => handle_error(e),
+            }
         }
     })
     .unwrap_or(ESP_ERROR_PANICKED)
@@ -534,9 +579,13 @@ pub unsafe extern "C" fn esp_plugin_is_valid_as_override_plugin(
         } else {
             let plugin = &*plugin_ptr;
 
-            *is_valid = plugin.is_valid_as_override_plugin();
-
-            ESP_OK
+            match plugin.is_valid_as_override_plugin() {
+                Ok(x) => {
+                    *is_valid = x;
+                    ESP_OK
+                }
+                Err(e) => handle_error(e),
+            }
         }
     })
     .unwrap_or(ESP_ERROR_PANICKED)

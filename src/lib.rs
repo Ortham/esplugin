@@ -20,7 +20,7 @@ use std::convert::{TryFrom, TryInto};
 
 pub use crate::error::{Error, MoreDataNeeded, ParsingErrorKind};
 pub use crate::game_id::GameId;
-pub use crate::plugin::Plugin;
+pub use crate::plugin::{plugins_metadata, Plugin, PluginMetadata};
 
 mod error;
 mod form_id;

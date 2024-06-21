@@ -33,7 +33,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         assert!(plugin.parse_file(false).is_ok());
 
         b.iter(|| {
-            assert!(plugin.overlaps_with(&plugin));
+            assert!(plugin.overlaps_with(&plugin).unwrap());
         });
     });
 
@@ -43,7 +43,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         assert!(plugin.parse_file(false).is_ok());
 
         b.iter(|| {
-            assert_eq!(plugin.count_override_records(), 1272);
+            assert_eq!(plugin.count_override_records().unwrap(), 1272);
         });
     });
 }

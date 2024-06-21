@@ -55,6 +55,29 @@ void test_esp_plugin_parse() {
   esp_plugin_free(plugin);
 }
 
+void test_esp_plugin_resolve_record_ids() {
+  printf("testing esp_plugin_resolve_record_ids()...\n");
+  Plugin * plugin;
+  auto return_code = esp_plugin_new(&plugin, ESP_GAME_SKYRIM, "../../testing-plugins/Skyrim/Data/Blank.esm");
+  assert(return_code == ESP_OK);
+
+  return_code = esp_plugin_parse(plugin, true);
+  assert(return_code == ESP_OK);
+
+  esp_plugin_resolve_record_ids(plugin, nullptr);
+  assert(return_code == ESP_OK);
+
+  Vec_PluginMetadata * plugins_metadata;
+  return_code = esp_get_plugins_metadata(&plugin, 1, &plugins_metadata);
+  assert(return_code == ESP_OK);
+
+  esp_plugin_resolve_record_ids(plugin, plugins_metadata);
+  assert(return_code == ESP_OK);
+
+  esp_plugins_metadata_free(plugins_metadata);
+  esp_plugin_free(plugin);
+}
+
 void test_esp_plugin_filename() {
   printf("testing esp_plugin_new()...\n");
   Plugin * plugin;
@@ -355,6 +378,9 @@ void test_esp_plugin_is_valid_as_medium_plugin() {
   return_code = esp_plugin_parse(plugin, false);
   assert(return_code == ESP_OK);
 
+  esp_plugin_resolve_record_ids(plugin, nullptr);
+  assert(return_code == ESP_OK);
+
   bool is_valid;
   return_code = esp_plugin_is_valid_as_medium_plugin(plugin, &is_valid);
   assert(return_code == ESP_OK);
@@ -372,6 +398,9 @@ void test_esp_plugin_is_valid_as_override_plugin() {
   return_code = esp_plugin_parse(plugin, false);
   assert(return_code == ESP_OK);
 
+  esp_plugin_resolve_record_ids(plugin, nullptr);
+  assert(return_code == ESP_OK);
+
   bool is_valid;
   return_code = esp_plugin_is_valid_as_override_plugin(plugin, &is_valid);
   assert(return_code == ESP_OK);
@@ -386,6 +415,7 @@ int main() {
 
   test_esp_plugin_new();
   test_esp_plugin_parse();
+  test_esp_plugin_resolve_record_ids();
   test_esp_plugin_filename();
   test_esp_plugin_masters();
   test_esp_plugin_is_master();
