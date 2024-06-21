@@ -505,6 +505,25 @@ pub unsafe extern "C" fn esp_plugin_is_valid_as_light_plugin(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn esp_plugin_is_valid_as_medium_plugin(
+    plugin_ptr: *const Plugin,
+    is_valid: *mut bool,
+) -> u32 {
+    panic::catch_unwind(|| {
+        if plugin_ptr.is_null() || is_valid.is_null() {
+            error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
+        } else {
+            let plugin = &*plugin_ptr;
+
+            *is_valid = plugin.is_valid_as_medium_plugin();
+
+            ESP_OK
+        }
+    })
+    .unwrap_or(ESP_ERROR_PANICKED)
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn esp_plugin_is_valid_as_override_plugin(
     plugin_ptr: *const Plugin,
     is_valid: *mut bool,

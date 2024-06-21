@@ -346,6 +346,23 @@ void test_esp_plugin_is_valid_as_light_plugin() {
   esp_plugin_free(plugin);
 }
 
+void test_esp_plugin_is_valid_as_medium_plugin() {
+  printf("testing esp_plugin_is_valid_as_medium_plugin()...\n");
+  Plugin * plugin;
+  auto return_code = esp_plugin_new(&plugin, ESP_GAME_STARFIELD, "../../testing-plugins/Starfield/Data/Blank.medium.esm");
+  assert(return_code == ESP_OK);
+
+  return_code = esp_plugin_parse(plugin, false);
+  assert(return_code == ESP_OK);
+
+  bool is_valid;
+  return_code = esp_plugin_is_valid_as_medium_plugin(plugin, &is_valid);
+  assert(return_code == ESP_OK);
+  assert(is_valid);
+
+  esp_plugin_free(plugin);
+}
+
 void test_esp_plugin_is_valid_as_override_plugin() {
   printf("testing esp_plugin_is_valid_as_override_plugin()...\n");
   Plugin * plugin;
@@ -386,6 +403,7 @@ int main() {
   test_esp_plugin_records_overlap_size();
   test_esp_plugin_is_valid_as_light_master();
   test_esp_plugin_is_valid_as_light_plugin();
+  test_esp_plugin_is_valid_as_medium_plugin();
   test_esp_plugin_is_valid_as_override_plugin();
 
   printf("SUCCESS\n");
