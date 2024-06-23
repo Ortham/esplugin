@@ -187,8 +187,8 @@ impl Plugin {
         Ok(())
     }
 
-    pub fn game_id(&self) -> &GameId {
-        &self.game_id
+    pub fn game_id(&self) -> GameId {
+        self.game_id
     }
 
     pub fn path(&self) -> &Path {
@@ -906,7 +906,7 @@ mod tests {
         fn game_id_should_return_the_plugins_associated_game_id() {
             let plugin = Plugin::new(GameId::Morrowind, &Path::new("Data/Blank.esm"));
 
-            assert_eq!(&GameId::Morrowind, plugin.game_id());
+            assert_eq!(GameId::Morrowind, plugin.game_id());
         }
 
         #[test]
@@ -1246,7 +1246,7 @@ mod tests {
         fn game_id_should_return_the_plugins_associated_game_id() {
             let plugin = Plugin::new(GameId::Skyrim, &Path::new("Data/Blank.esm"));
 
-            assert_eq!(&GameId::Skyrim, plugin.game_id());
+            assert_eq!(GameId::Skyrim, plugin.game_id());
         }
 
         #[test]

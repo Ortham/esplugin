@@ -346,7 +346,7 @@ pub unsafe extern "C" fn esp_plugin_description(
             let c_string = match description_option {
                 None => ptr::null_mut(),
                 Some(d) => {
-                    if plugin.game_id() == &GameId::Morrowind {
+                    if plugin.game_id() == GameId::Morrowind {
                         to_truncated_c_string(&d)
                     } else {
                         match to_c_string(&d) {
