@@ -1,9 +1,9 @@
 use std::path::Path;
-use std::{f32, mem, panic, ptr};
+use std::{f32, panic, ptr};
 
 use libc::{c_char, c_float, size_t};
 
-use esplugin::Plugin;
+use esplugin::{GameId, Plugin};
 
 use crate::constants::*;
 use crate::helpers::*;
@@ -143,9 +143,10 @@ pub unsafe extern "C" fn esp_plugin_filename(
         } else {
             let plugin = &*plugin_ptr;
 
-            let c_string: *mut c_char = match plugin.filename().map(|s| to_c_string(&s)) {
+            let c_string = match plugin.filename().map(|s| to_c_string(&s)) {
                 None => ptr::null_mut(),
-                Some(x) => x,
+                Some(Ok(x)) => x,
+                Some(Err(e)) => return e,
             };
 
             *filename = c_string;
@@ -160,7 +161,7 @@ pub unsafe extern "C" fn esp_plugin_filename(
 pub unsafe extern "C" fn esp_plugin_masters(
     plugin_ptr: *const Plugin,
     plugin_masters: *mut *mut *mut c_char,
-    plugin_masters_size: *mut size_t,
+    num_plugin_masters: *mut size_t,
 ) -> u32 {
     panic::catch_unwind(|| {
         if plugin_masters.is_null() || plugin_ptr.is_null() {
@@ -168,19 +169,19 @@ pub unsafe extern "C" fn esp_plugin_masters(
         } else {
             let plugin = &*plugin_ptr;
 
-            let mut c_string_vec: Vec<*mut c_char> = match plugin.masters() {
-                Ok(x) => x.iter().map(|m| to_c_string(m)).collect(),
+            let masters = match plugin.masters() {
+                Ok(x) => x,
                 Err(_) => return ESP_ERROR_NOT_UTF8,
             };
 
-            c_string_vec.shrink_to_fit();
-
-            *plugin_masters = c_string_vec.as_mut_ptr();
-            *plugin_masters_size = c_string_vec.len();
-
-            mem::forget(c_string_vec);
-
-            ESP_OK
+            match to_c_string_array(&masters) {
+                Ok((pointer, size)) => {
+                    *plugin_masters = pointer;
+                    *num_plugin_masters = size;
+                    ESP_OK
+                }
+                Err(x) => x,
+            }
         }
     })
     .unwrap_or(ESP_ERROR_PANICKED)
@@ -293,13 +294,22 @@ pub unsafe extern "C" fn esp_plugin_description(
             let plugin = &*plugin_ptr;
 
             let description_option = match plugin.description() {
-                Ok(x) => x.map(|d| to_c_string(&d)),
+                Ok(x) => x,
                 Err(_) => return ESP_ERROR_NOT_UTF8,
             };
 
             let c_string = match description_option {
                 None => ptr::null_mut(),
-                Some(x) => x,
+                Some(d) => {
+                    if plugin.game_id() == &GameId::Morrowind {
+                        to_truncated_c_string(&d)
+                    } else {
+                        match to_c_string(&d) {
+                            Ok(s) => s,
+                            Err(e) => return e,
+                        }
+                    }
+                }
             };
 
             *description = c_string;

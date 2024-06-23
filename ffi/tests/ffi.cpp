@@ -154,6 +154,20 @@ void test_esp_plugin_description() {
 
   esp_string_free(description);
   esp_plugin_free(plugin);
+
+  // Also try for Morrowind as it needs its description block truncated.
+  return_code = esp_plugin_new(&plugin, ESP_GAME_MORROWIND, "../../testing-plugins/Morrowind/Data Files/Blank.esm");
+  assert(return_code == ESP_OK);
+
+  return_code = esp_plugin_parse(plugin, true);
+  assert(return_code == ESP_OK);
+
+  return_code = esp_plugin_description(plugin, &description);
+  assert(return_code == ESP_OK);
+  assert(strcmp(description, "v5.0") == 0);
+
+  esp_string_free(description);
+  esp_plugin_free(plugin);
 }
 
 void test_esp_plugin_header_version() {
