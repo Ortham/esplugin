@@ -83,7 +83,7 @@ pub unsafe extern "C" fn esp_plugin_free(plugin_ptr: *mut Plugin) {
 /// * [esp_plugin_count_override_records]
 /// * [esp_plugin_do_records_overlap]
 /// * [esp_plugin_records_overlap_size]
-/// * [esp_plugin_is_valid_as_light_master] / [esp_plugin_is_valid_as_light_plugin]
+/// * [esp_plugin_is_valid_as_light_plugin]
 /// * [esp_plugin_is_valid_as_override_plugin]
 ///
 /// Returns [ESP_OK] if successful, otherwise an `ESP_ERROR_*` code is returned.
@@ -230,15 +230,6 @@ pub unsafe extern "C" fn esp_plugin_is_master(
         }
     })
     .unwrap_or(ESP_ERROR_PANICKED)
-}
-
-#[no_mangle]
-#[deprecated = "This has been renamed to esp_plugin_is_light_plugin() for clarity."]
-pub unsafe extern "C" fn esp_plugin_is_light_master(
-    plugin_ptr: *const Plugin,
-    is_light_master: *mut bool,
-) -> u32 {
-    esp_plugin_is_light_plugin(plugin_ptr, is_light_master)
 }
 
 #[no_mangle]
@@ -511,15 +502,6 @@ pub unsafe extern "C" fn esp_plugin_records_overlap_size(
         }
     })
     .unwrap_or(ESP_ERROR_PANICKED)
-}
-
-#[no_mangle]
-#[deprecated = "This has been renamed to esp_plugin_is_valid_as_light_plugin() for clarity."]
-pub unsafe extern "C" fn esp_plugin_is_valid_as_light_master(
-    plugin_ptr: *const Plugin,
-    is_valid: *mut bool,
-) -> u32 {
-    esp_plugin_is_valid_as_light_plugin(plugin_ptr, is_valid)
 }
 
 #[no_mangle]

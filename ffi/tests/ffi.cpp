@@ -130,20 +130,6 @@ void test_esp_plugin_is_master() {
   esp_plugin_free(plugin);
 }
 
-void test_esp_plugin_is_light_master() {
-  printf("testing esp_plugin_is_light_master()...\n");
-  Plugin * plugin;
-  auto return_code = esp_plugin_new(&plugin, ESP_GAME_FALLOUT4, "../../testing-plugins/Skyrim/Data/Blank.esl");
-  assert(return_code == ESP_OK);
-
-  bool is_light_master;
-  return_code = esp_plugin_is_light_master(plugin, &is_light_master);
-  assert(return_code == ESP_OK);
-  assert(is_light_master);
-
-  esp_plugin_free(plugin);
-}
-
 void test_esp_plugin_is_light_plugin() {
   printf("testing esp_plugin_is_light_plugin()...\n");
   Plugin * plugin;
@@ -335,23 +321,6 @@ void test_esp_plugin_records_overlap_size() {
   esp_plugin_free(plugin);
 }
 
-void test_esp_plugin_is_valid_as_light_master() {
-  printf("testing esp_plugin_is_valid_as_light_master()...\n");
-  Plugin * plugin;
-  auto return_code = esp_plugin_new(&plugin, ESP_GAME_SKYRIMSE, "../../testing-plugins/SkyrimSE/Data/Blank.esm");
-  assert(return_code == ESP_OK);
-
-  return_code = esp_plugin_parse(plugin, false);
-  assert(return_code == ESP_OK);
-
-  bool is_valid;
-  return_code = esp_plugin_is_valid_as_light_master(plugin, &is_valid);
-  assert(return_code == ESP_OK);
-  assert(is_valid);
-
-  esp_plugin_free(plugin);
-}
-
 void test_esp_plugin_is_valid_as_light_plugin() {
   printf("testing esp_plugin_is_valid_as_light_plugin()...\n");
   Plugin * plugin;
@@ -419,7 +388,6 @@ int main() {
   test_esp_plugin_filename();
   test_esp_plugin_masters();
   test_esp_plugin_is_master();
-  test_esp_plugin_is_light_master();
   test_esp_plugin_is_light_plugin();
   test_esp_plugin_is_medium_plugin();
   test_esp_plugin_is_override_plugin();
@@ -431,7 +399,6 @@ int main() {
   test_esp_plugin_count_override_records();
   test_esp_plugin_do_records_overlap();
   test_esp_plugin_records_overlap_size();
-  test_esp_plugin_is_valid_as_light_master();
   test_esp_plugin_is_valid_as_light_plugin();
   test_esp_plugin_is_valid_as_medium_plugin();
   test_esp_plugin_is_valid_as_override_plugin();

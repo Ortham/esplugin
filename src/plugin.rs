@@ -246,11 +246,6 @@ impl Plugin {
         }
     }
 
-    #[deprecated = "This has been renamed to Plugin::is_light_plugin() for clarity."]
-    pub fn is_light_master_file(&self) -> bool {
-        self.is_light_plugin()
-    }
-
     pub fn is_light_plugin(&self) -> bool {
         if self.game_id.supports_light_plugins() {
             if self.game_id == GameId::Starfield {
@@ -402,11 +397,6 @@ impl Plugin {
             }
             None => Ok(0),
         }
-    }
-
-    #[deprecated = "This has been renamed to Plugin::is_valid_as_light_plugin() for clarity."]
-    pub fn is_valid_as_light_master(&self) -> Result<bool, Error> {
-        self.is_valid_as_light_plugin()
     }
 
     pub fn is_valid_as_light_plugin(&self) -> Result<bool, Error> {
