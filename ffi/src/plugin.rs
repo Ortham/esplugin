@@ -84,7 +84,7 @@ pub unsafe extern "C" fn esp_plugin_free(plugin_ptr: *mut Plugin) {
 /// * [esp_plugin_do_records_overlap]
 /// * [esp_plugin_records_overlap_size]
 /// * [esp_plugin_is_valid_as_light_plugin]
-/// * [esp_plugin_is_valid_as_override_plugin]
+/// * [esp_plugin_is_valid_as_update_plugin]
 ///
 /// Returns [ESP_OK] if successful, otherwise an `ESP_ERROR_*` code is returned.
 ///
@@ -271,17 +271,17 @@ pub unsafe extern "C" fn esp_plugin_is_medium_plugin(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn esp_plugin_is_override_plugin(
+pub unsafe extern "C" fn esp_plugin_is_update_plugin(
     plugin_ptr: *const Plugin,
-    is_override_plugin: *mut bool,
+    is_update_plugin: *mut bool,
 ) -> u32 {
     panic::catch_unwind(|| {
-        if plugin_ptr.is_null() || is_override_plugin.is_null() {
+        if plugin_ptr.is_null() || is_update_plugin.is_null() {
             error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &*plugin_ptr;
 
-            *is_override_plugin = plugin.is_override_plugin();
+            *is_update_plugin = plugin.is_update_plugin();
 
             ESP_OK
         }
@@ -551,7 +551,7 @@ pub unsafe extern "C" fn esp_plugin_is_valid_as_medium_plugin(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn esp_plugin_is_valid_as_override_plugin(
+pub unsafe extern "C" fn esp_plugin_is_valid_as_update_plugin(
     plugin_ptr: *const Plugin,
     is_valid: *mut bool,
 ) -> u32 {
@@ -561,7 +561,7 @@ pub unsafe extern "C" fn esp_plugin_is_valid_as_override_plugin(
         } else {
             let plugin = &*plugin_ptr;
 
-            match plugin.is_valid_as_override_plugin() {
+            match plugin.is_valid_as_update_plugin() {
                 Ok(x) => {
                     *is_valid = x;
                     ESP_OK

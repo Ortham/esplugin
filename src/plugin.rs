@@ -252,7 +252,7 @@ impl Plugin {
                 // If the inject flag is set, it prevents the .esl extension from
                 // causing the light flag to be forcibly set on load.
                 self.is_light_flag_set()
-                    || (!self.is_override_flag_set() && self.has_extension(FileExtension::Esl))
+                    || (!self.is_update_flag_set() && self.has_extension(FileExtension::Esl))
             } else {
                 self.is_light_flag_set() || self.has_extension(FileExtension::Esl)
             }
@@ -266,10 +266,10 @@ impl Plugin {
         self.is_medium_flag_set() && !self.is_light_plugin()
     }
 
-    pub fn is_override_plugin(&self) -> bool {
-        // The override flag is unset by the game if the plugin has no masters or
+    pub fn is_update_plugin(&self) -> bool {
+        // The update flag is unset by the game if the plugin has no masters or
         // if the plugin's light or medium flags are set.
-        self.is_override_flag_set()
+        self.is_update_flag_set()
             && !self.is_light_flag_set()
             && !self.is_medium_flag_set()
             && self.masters().map(|m| !m.is_empty()).unwrap_or(false)
@@ -443,9 +443,9 @@ impl Plugin {
         }
     }
 
-    pub fn is_valid_as_override_plugin(&self) -> Result<bool, Error> {
+    pub fn is_valid_as_update_plugin(&self) -> Result<bool, Error> {
         if self.game_id == GameId::Starfield {
-            // If an override plugin has a record that does not override an existing record, that
+            // If an update plugin has a record that does not override an existing record, that
             // record is placed into the mod index of the plugin's first master, which risks
             // overwriting an unrelated record with the same object index, so treat that case as
             // invalid.
@@ -503,7 +503,7 @@ impl Plugin {
         self.data.header_record.header().flags() & flag != 0
     }
 
-    fn is_override_flag_set(&self) -> bool {
+    fn is_update_flag_set(&self) -> bool {
         match self.game_id {
             GameId::Starfield => self.data.header_record.header().flags() & 0x200 != 0,
             _ => false,
@@ -1998,7 +1998,7 @@ mod tests {
         }
 
         #[test]
-        fn is_light_plugin_should_be_true_for_plugins_with_an_esl_file_extension_if_the_override_flag_is_not_set(
+        fn is_light_plugin_should_be_true_for_plugins_with_an_esl_file_extension_if_the_update_flag_is_not_set(
         ) {
             // The flag won't be set because no data is loaded.
             let plugin = Plugin::new(GameId::Starfield, Path::new("Blank.esp"));
@@ -2010,7 +2010,7 @@ mod tests {
         }
 
         #[test]
-        fn is_light_plugin_should_be_false_for_a_plugin_with_the_override_flag_set_and_an_esl_extension(
+        fn is_light_plugin_should_be_false_for_a_plugin_with_the_update_flag_set_and_an_esl_extension(
         ) {
             let tmp_dir = tempdir().unwrap();
             let esl_path = tmp_dir.path().join("Blank.esl");
@@ -2089,7 +2089,7 @@ mod tests {
         }
 
         #[test]
-        fn is_override_plugin_should_be_true_for_a_plugin_with_the_override_flag_set_and_at_least_one_master_and_no_light_flag(
+        fn is_update_plugin_should_be_true_for_a_plugin_with_the_update_flag_set_and_at_least_one_master_and_no_light_flag(
         ) {
             let mut plugin = Plugin::new(
                 GameId::Starfield,
@@ -2097,12 +2097,11 @@ mod tests {
             );
             plugin.parse_file(true).unwrap();
 
-            assert!(plugin.is_override_plugin());
+            assert!(plugin.is_update_plugin());
         }
 
         #[test]
-        fn is_override_plugin_should_be_false_for_a_plugin_with_the_override_flag_set_and_no_masters(
-        ) {
+        fn is_update_plugin_should_be_false_for_a_plugin_with_the_update_flag_set_and_no_masters() {
             let mut plugin = Plugin::new(GameId::Starfield, Path::new("Blank.esm"));
             let file_data = &[
                 0x54, 0x45, 0x53, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00,
@@ -2112,30 +2111,29 @@ mod tests {
                 .unwrap()
                 .1;
 
-            assert!(!plugin.is_override_plugin());
+            assert!(!plugin.is_update_plugin());
         }
 
         #[test]
-        fn is_override_plugin_should_be_false_for_a_plugin_with_the_override_and_light_flags_set() {
+        fn is_update_plugin_should_be_false_for_a_plugin_with_the_update_and_light_flags_set() {
             let mut plugin = Plugin::new(
                 GameId::Starfield,
                 Path::new("testing-plugins/Starfield/Data/Blank - Override.small.esm"),
             );
             plugin.parse_file(true).unwrap();
 
-            assert!(!plugin.is_override_plugin());
+            assert!(!plugin.is_update_plugin());
         }
 
         #[test]
-        fn is_override_plugin_should_be_false_for_a_plugin_with_the_override_and_medium_flags_set()
-        {
+        fn is_update_plugin_should_be_false_for_a_plugin_with_the_update_and_medium_flags_set() {
             let mut plugin = Plugin::new(
                 GameId::Starfield,
                 Path::new("testing-plugins/Starfield/Data/Blank - Override.medium.esm"),
             );
             plugin.parse_file(true).unwrap();
 
-            assert!(!plugin.is_override_plugin());
+            assert!(!plugin.is_update_plugin());
         }
 
         #[test]
@@ -2382,21 +2380,21 @@ mod tests {
         }
 
         #[test]
-        fn is_valid_as_override_plugin_should_be_false_if_form_ids_are_unresolved() {
+        fn is_valid_as_update_plugin_should_be_false_if_form_ids_are_unresolved() {
             let mut plugin = Plugin::new(
                 GameId::Starfield,
                 Path::new("testing-plugins/Starfield/Data/Blank - Override.esp"),
             );
             assert!(plugin.parse_file(false).is_ok());
 
-            match plugin.is_valid_as_override_plugin().unwrap_err() {
+            match plugin.is_valid_as_update_plugin().unwrap_err() {
                 Error::UnresolvedFormIds(path) => assert_eq!(plugin.path, path),
                 _ => panic!("Expected unresolved FormIDs error"),
             }
         }
 
         #[test]
-        fn is_valid_as_override_plugin_should_be_true_if_the_plugin_has_no_new_records() {
+        fn is_valid_as_update_plugin_should_be_true_if_the_plugin_has_no_new_records() {
             let master_metadata = PluginMetadata {
                 filename: "Blank.full.esm".to_string(),
                 scale: PluginScale::Full,
@@ -2408,11 +2406,11 @@ mod tests {
             assert!(plugin.parse_file(false).is_ok());
             assert!(plugin.resolve_record_ids(&[master_metadata]).is_ok());
 
-            assert!(plugin.is_valid_as_override_plugin().unwrap());
+            assert!(plugin.is_valid_as_update_plugin().unwrap());
         }
 
         #[test]
-        fn is_valid_as_override_plugin_should_be_false_if_the_plugin_has_new_records() {
+        fn is_valid_as_update_plugin_should_be_false_if_the_plugin_has_new_records() {
             let master_metadata = PluginMetadata {
                 filename: "Blank.full.esm".to_string(),
                 scale: PluginScale::Full,
@@ -2424,7 +2422,7 @@ mod tests {
             assert!(plugin.parse_file(false).is_ok());
             assert!(plugin.resolve_record_ids(&[master_metadata]).is_ok());
 
-            assert!(!plugin.is_valid_as_override_plugin().unwrap());
+            assert!(!plugin.is_valid_as_update_plugin().unwrap());
         }
 
         #[test]
