@@ -1627,7 +1627,7 @@ mod tests {
 
             let master_flagged_esp = tmp_dir.path().join("Blank.esp");
             copy(
-                Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
+                Path::new("testing-plugins/Starfield/Data/Blank.full.esm"),
                 &master_flagged_esp,
             )
             .unwrap();
