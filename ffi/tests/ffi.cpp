@@ -249,7 +249,7 @@ void test_esp_plugin_count_override_records() {
   auto return_code = esp_plugin_new(&plugin, ESP_GAME_SKYRIM, "../../testing-plugins/Skyrim/Data/Blank.esm");
   assert(return_code == ESP_OK);
 
-  return_code = esp_plugin_parse(plugin, true);
+  return_code = esp_plugin_parse(plugin, false);
   assert(return_code == ESP_OK);
 
   size_t count;
@@ -301,7 +301,7 @@ void test_esp_plugin_is_valid_as_light_master() {
   auto return_code = esp_plugin_new(&plugin, ESP_GAME_SKYRIMSE, "../../testing-plugins/SkyrimSE/Data/Blank.esm");
   assert(return_code == ESP_OK);
 
-  return_code = esp_plugin_parse(plugin, true);
+  return_code = esp_plugin_parse(plugin, false);
   assert(return_code == ESP_OK);
 
   bool is_valid;
