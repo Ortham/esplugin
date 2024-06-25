@@ -318,7 +318,7 @@ void test_esp_plugin_is_valid_as_light_plugin() {
   auto return_code = esp_plugin_new(&plugin, ESP_GAME_SKYRIMSE, "../../testing-plugins/SkyrimSE/Data/Blank.esm");
   assert(return_code == ESP_OK);
 
-  return_code = esp_plugin_parse(plugin, true);
+  return_code = esp_plugin_parse(plugin, false);
   assert(return_code == ESP_OK);
 
   bool is_valid;
