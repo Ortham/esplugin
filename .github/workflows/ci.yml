@@ -4,6 +4,7 @@ on: [push, pull_request]
 
 env:
   CARGO_TERM_COLOR: always
+  TESTING_PLUGINS_VERSION: "1.4.1"
 
 jobs:
   rustfmt:
@@ -16,47 +17,15 @@ jobs:
           cargo fmt -- --version
           cargo fmt --all -- --check
 
-  windows:
-    runs-on: windows-2019
-    steps:
-      - uses: actions/checkout@v4
+  build:
+    strategy:
+      matrix:
+        os:
+          - windows-2019
+          - ubuntu-20.04
 
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    runs-on: ${{ matrix.os }}
 
-      - name: Prepare test resources
-        run: |
-          (New-Object Net.WebClient).DownloadFile('https://github.com/WrinklyNinja/testing-plugins/archive/1.4.1.zip', "$PWD/1.4.1.zip")
-          7z x 1.4.1.zip
-          mv testing-plugins-1.4.1 testing-plugins
-      - name: Build and run tests
-        run: cargo test --all --all-features
-
-      # Need to rebuild the FFI wrapper so that its binary is given a filename
-      # without a hash.
-      - name: Build FFI wrapper
-        run: |
-          cargo build --manifest-path ffi/Cargo.toml
-          cbindgen ffi/ -o ffi/include/esplugin.h
-
-      # Use bash because PowerShell doesn't fail if one command fails.
-      - name: Build and run C++ tests
-        shell: bash
-        run: |
-          mkdir ffi/build
-          cd ffi/build
-          cmake ..
-          cmake --build .
-          ctest
-  linux:
-    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v4
 
@@ -72,27 +41,35 @@ jobs:
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
+        if: startsWith(runner.os, 'Linux')
 
       - name: Prepare test resources
+        shell: bash
         run: |
-          wget https://github.com/WrinklyNinja/testing-plugins/archive/1.4.1.tar.gz
-          tar -xf 1.4.1.tar.gz
-          mv testing-plugins-1.4.1 testing-plugins
+          curl -sSfLO "https://github.com/Ortham/testing-plugins/archive/${{ env.TESTING_PLUGINS_VERSION }}.zip"
+          7z x "${{ env.TESTING_PLUGINS_VERSION }}.zip"
+          mv "testing-plugins-${{ env.TESTING_PLUGINS_VERSION }}" testing-plugins
+
+      - name: Build and run tests
+        run: cargo test --all --all-features
+        if: "!startsWith(runner.os, 'Linux')"
 
       - name: Build and run tests with code coverage
         run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+        if: startsWith(runner.os, 'Linux')
 
       - name: Upload code coverage to Coveralls
         uses: coverallsapp/github-action@v2
+        if: startsWith(runner.os, 'Linux')
 
       # Need to rebuild the FFI wrapper so that its binary is given a filename
       # without a hash.
       - name: Build FFI wrapper
+        shell: bash
         run: |
           cargo build --manifest-path ffi/Cargo.toml
           cbindgen ffi/ -o ffi/include/esplugin.h
 
-      # Use bash because PowerShell doesn't fail if one command fails.
       - name: Build and run C++ tests
         shell: bash
         run: |
