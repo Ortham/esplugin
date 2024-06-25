@@ -1643,7 +1643,7 @@ mod tests {
 
             let mut plugin = Plugin::new(
                 GameId::Starfield,
-                Path::new("testing-plugins/Skyrim/Data/Blank.esp"),
+                Path::new("testing-plugins/Starfield/Data/Blank.esp"),
             );
             assert!(plugin.parse_file(true).is_ok());
             assert!(!plugin.is_master_file());
@@ -1668,13 +1668,16 @@ mod tests {
         #[test]
         fn is_light_plugin_should_be_false_for_a_plugin_with_the_override_flag_set_and_an_esl_extension(
         ) {
-            let mut plugin = Plugin::new(GameId::Starfield, Path::new("Blank.esl"));
-            let file_data = &[
-                0x54, 0x45, 0x53, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0xB2, 0x2E, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00,
-            ];
-            plugin.data.header_record =
-                Record::parse(file_data, GameId::Starfield, true).unwrap().1;
+            let tmp_dir = tempdir().unwrap();
+            let esl_path = tmp_dir.path().join("Blank.esl");
+            copy(
+                Path::new("testing-plugins/Starfield/Data/Blank - Override.esp"),
+                &esl_path,
+            )
+            .unwrap();
+
+            let mut plugin = Plugin::new(GameId::Starfield, &esl_path);
+            plugin.parse_file(true).unwrap();
 
             assert!(!plugin.is_light_plugin());
         }
@@ -1687,14 +1690,11 @@ mod tests {
 
         #[test]
         fn is_light_plugin_should_be_true_for_a_plugin_with_the_light_flag_set() {
-            let mut plugin = Plugin::new(GameId::Starfield, Path::new("Blank.esm"));
-            let file_data = &[
-                0x54, 0x45, 0x53, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0xB2, 0x2E, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00,
-            ];
-            plugin.data.header_record = Record::parse(file_data, GameId::Starfield, false)
-                .unwrap()
-                .1;
+            let mut plugin = Plugin::new(
+                GameId::Starfield,
+                Path::new("testing-plugins/Starfield/Data/Blank.small.esm"),
+            );
+            plugin.parse_file(true).unwrap();
 
             assert!(plugin.is_light_plugin());
         }
@@ -1702,15 +1702,11 @@ mod tests {
         #[test]
         fn is_override_plugin_should_be_true_for_a_plugin_with_the_override_flag_set_and_at_least_one_master_and_no_light_flag(
         ) {
-            let mut plugin = Plugin::new(GameId::Starfield, Path::new("Blank.esm"));
-            let file_data = &[
-                0x54, 0x45, 0x53, 0x34, 0x07, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0xB2, 0x2E, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4D, 0x41, 0x53, 0x54,
-                0x01, 0x00, 0x00,
-            ];
-            plugin.data.header_record = Record::parse(file_data, GameId::Starfield, false)
-                .unwrap()
-                .1;
+            let mut plugin = Plugin::new(
+                GameId::Starfield,
+                Path::new("testing-plugins/Starfield/Data/Blank - Override.full.esm"),
+            );
+            plugin.parse_file(true).unwrap();
 
             assert!(plugin.is_override_plugin());
         }
@@ -1732,26 +1728,18 @@ mod tests {
 
         #[test]
         fn is_override_plugin_should_be_false_for_a_plugin_with_the_override_and_light_flags_set() {
-            let mut plugin = Plugin::new(GameId::Starfield, Path::new("Blank.esm"));
-            let file_data = &[
-                0x54, 0x45, 0x53, 0x34, 0x07, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0xB2, 0x2E, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4D, 0x41, 0x53, 0x54,
-                0x01, 0x00, 0x00,
-            ];
-            plugin.data.header_record = Record::parse(file_data, GameId::Starfield, false)
-                .unwrap()
-                .1;
+            let mut plugin = Plugin::new(
+                GameId::Starfield,
+                Path::new("testing-plugins/Starfield/Data/Blank - Override.small.esm"),
+            );
+            plugin.parse_file(true).unwrap();
 
             assert!(!plugin.is_override_plugin());
         }
 
         #[test]
         fn valid_light_form_id_range_should_be_0_to_0xfff() {
-            let mut plugin = Plugin::new(
-                GameId::Starfield,
-                Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
-            );
-            assert!(plugin.parse_file(false).is_ok());
+            let plugin = Plugin::new(GameId::Starfield, Path::new("Blank.esp"));
 
             let range = plugin.valid_light_form_id_range();
             assert_eq!(&0, range.start());
@@ -1763,7 +1751,7 @@ mod tests {
         ) {
             let mut plugin = Plugin::new(
                 GameId::Starfield,
-                Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
+                Path::new("testing-plugins/Starfield/Data/Blank.full.esm"),
             );
             assert!(plugin.parse_file(false).is_ok());
 
@@ -1774,7 +1762,7 @@ mod tests {
         fn is_valid_as_override_plugin_should_be_true_if_the_plugin_has_no_new_records() {
             let mut plugin = Plugin::new(
                 GameId::Starfield,
-                Path::new("testing-plugins/SkyrimSE/Data/Blank - Different Plugin Dependent.esp"),
+                Path::new("testing-plugins/Starfield/Data/Blank - Override.esp"),
             );
             assert!(plugin.parse_file(false).is_ok());
 
@@ -1785,7 +1773,7 @@ mod tests {
         fn is_valid_as_override_plugin_should_be_false_if_the_plugin_has_new_records() {
             let mut plugin = Plugin::new(
                 GameId::Starfield,
-                Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
+                Path::new("testing-plugins/Starfield/Data/Blank.full.esm"),
             );
             assert!(plugin.parse_file(false).is_ok());
 
