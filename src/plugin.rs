@@ -195,7 +195,6 @@ impl Plugin {
 
     pub fn is_master_file(&self) -> bool {
         match self.game_id {
-            GameId::Morrowind => self.has_extension(FileExtension::Esm),
             GameId::Fallout4 | GameId::SkyrimSE | GameId::Starfield => {
                 self.is_master_flag_set()
                     || self.has_extension(FileExtension::Esm)
@@ -385,7 +384,18 @@ impl Plugin {
     }
 
     fn is_master_flag_set(&self) -> bool {
-        self.data.header_record.header().flags() & 0x1 != 0
+        match self.game_id {
+            GameId::Morrowind => self
+                .data
+                .header_record
+                .subrecords()
+                .iter()
+                .find(|s| s.subrecord_type() == b"HEDR")
+                .and_then(|s| s.data().get(4))
+                .map(|b| b & 0x1 != 0)
+                .unwrap_or(false),
+            _ => self.data.header_record.header().flags() & 0x1 != 0,
+        }
     }
 
     fn is_light_flag_set(&self) -> bool {
@@ -647,7 +657,7 @@ mod tests {
     use super::*;
 
     mod morrowind {
-        use super::super::*;
+        use super::*;
 
         use std::collections::HashSet;
         use std::iter::FromIterator;
@@ -688,11 +698,13 @@ mod tests {
         #[test]
         fn parse_file_header_only_should_not_store_record_ids() {
             let mut plugin = Plugin::new(
-                GameId::Skyrim,
-                Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
             );
 
-            assert!(plugin.parse_file(true).is_ok());
+            let result = plugin.parse_file(true);
+
+            assert!(result.is_ok());
 
             assert_eq!(RecordIds::None, plugin.data.record_ids);
         }
@@ -705,13 +717,10 @@ mod tests {
         }
 
         #[test]
-        fn is_master_file_should_be_true_for_master_file() {
+        fn is_master_file_should_be_true_for_plugin_with_master_flag_set() {
             let mut plugin = Plugin::new(
                 GameId::Morrowind,
-                Path::new(
-                    "testing-plugins/Morrowind/Data \
-                     Files/Blank.esm",
-                ),
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
             );
 
             assert!(plugin.parse_file(true).is_ok());
@@ -719,31 +728,28 @@ mod tests {
         }
 
         #[test]
-        fn is_master_file_should_check_file_extension_case_insensitively() {
-            let plugin = Plugin::new(
+        fn is_master_file_should_be_false_for_plugin_without_master_flag_set() {
+            let mut plugin = Plugin::new(
                 GameId::Morrowind,
-                Path::new("testing-plugins/Skyrim/Data/Blank.EsM"),
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esp"),
             );
 
-            assert!(plugin.is_master_file());
-
-            let plugin = Plugin::new(
-                GameId::Morrowind,
-                Path::new("testing-plugins/Skyrim/Data/Blank.EsM.GHOST"),
-            );
-
-            assert!(plugin.is_master_file());
+            assert!(plugin.parse_file(true).is_ok());
+            assert!(!plugin.is_master_file());
         }
 
         #[test]
-        fn is_master_file_should_be_false_for_non_master_file() {
-            let mut plugin = Plugin::new(
-                GameId::Morrowind,
-                Path::new(
-                    "testing-plugins/Morrowind/Data \
-                     Files/Blank.esp",
-                ),
-            );
+        fn is_master_file_should_ignore_file_extension() {
+            let tmp_dir = tempdir().unwrap();
+
+            let esm = tmp_dir.path().join("Blank.esm");
+            copy(
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esp"),
+                &esm,
+            )
+            .unwrap();
+
+            let mut plugin = Plugin::new(GameId::Morrowind, &esm);
 
             assert!(plugin.parse_file(true).is_ok());
             assert!(!plugin.is_master_file());
