@@ -138,7 +138,11 @@ void test_esp_plugin_is_light_plugin() {
 void test_esp_plugin_is_override_plugin() {
   printf("testing esp_plugin_is_override_plugin()...\n");
   Plugin * plugin;
-  auto return_code = esp_plugin_new(&plugin, ESP_GAME_FALLOUT4, "../../testing-plugins/Skyrim/Data/Blank.esl");
+  // The Skyrim SE light flag is the same value as the Starfield update flag.
+  auto return_code = esp_plugin_new(&plugin, ESP_GAME_STARFIELD, "../../testing-plugins/SkyrimSE/Data/Blank.esl");
+  assert(return_code == ESP_OK);
+
+  return_code = esp_plugin_parse(plugin, true);
   assert(return_code == ESP_OK);
 
   bool is_override_plugin;
@@ -328,10 +332,10 @@ void test_esp_plugin_is_valid_as_light_plugin() {
 void test_esp_plugin_is_valid_as_override_plugin() {
   printf("testing esp_plugin_is_valid_as_override_plugin()...\n");
   Plugin * plugin;
-  auto return_code = esp_plugin_new(&plugin, ESP_GAME_SKYRIMSE, "../../testing-plugins/SkyrimSE/Data/Blank.esm");
+  auto return_code = esp_plugin_new(&plugin, ESP_GAME_STARFIELD, "../../testing-plugins/Starfield/Data/Blank.full.esm");
   assert(return_code == ESP_OK);
 
-  return_code = esp_plugin_parse(plugin, true);
+  return_code = esp_plugin_parse(plugin, false);
   assert(return_code == ESP_OK);
 
   bool is_valid;
@@ -353,6 +357,7 @@ int main() {
   test_esp_plugin_is_master();
   test_esp_plugin_is_light_master();
   test_esp_plugin_is_light_plugin();
+  test_esp_plugin_is_override_plugin();
   test_esp_plugin_is_valid();
   test_esp_plugin_description();
   test_esp_plugin_header_version();
