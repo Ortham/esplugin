@@ -92,7 +92,7 @@ impl error::Error for Error {
 
 #[derive(Debug)]
 pub enum ParsingErrorKind {
-    /// The Vec<u8> field is the expected record type.
+    /// The `Vec<u8>` field is the expected record type.
     UnexpectedRecordType(Vec<u8>),
     /// The usize field is the expected minimum data length.
     SubrecordDataTooShort(usize),
