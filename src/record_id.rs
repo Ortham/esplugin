@@ -24,23 +24,6 @@ pub enum RecordId {
     NamespacedId(NamespacedId),
 }
 
-#[cfg(test)]
-impl RecordId {
-    pub fn form_id(self) -> Option<std::num::NonZeroU32> {
-        match self {
-            RecordId::FormId(f) => Some(f),
-            _ => None,
-        }
-    }
-
-    pub fn namespaced_id(self) -> Option<NamespacedId> {
-        match self {
-            RecordId::NamespacedId(n) => Some(n),
-            _ => None,
-        }
-    }
-}
-
 /// This is a FormID equivalent for Morrowind plugin records.
 /// Record IDs with the same data in the same namespace refer to the same record
 /// but if the data or namespace is different, the IDs refer to different records.

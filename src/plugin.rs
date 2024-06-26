@@ -25,13 +25,11 @@ use std::str;
 
 use encoding_rs::WINDOWS_1252;
 
-use nom::{self, IResult};
-
 use crate::error::{Error, ParsingErrorKind};
 use crate::form_id::{HashedFormId, ObjectIndexMask, SourcePlugin};
 use crate::game_id::GameId;
 use crate::group::Group;
-use crate::record::Record;
+use crate::record::{Record, MAX_RECORD_HEADER_LENGTH};
 use crate::record_id::{NamespacedId, RecordId};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -114,27 +112,18 @@ impl Plugin {
         }
     }
 
-    pub fn parse(&mut self, input: &[u8], load_header_only: bool) -> Result<(), Error> {
-        self.data = parse_plugin(input, self.game_id, load_header_only)?.1;
-
-        if self.game_id != GameId::Starfield {
-            self.resolve_record_ids(&[])?;
-        }
-
-        Ok(())
-    }
-
-    fn read<R: BufRead + Seek>(
+    pub fn parse_reader<R: std::io::Read + std::io::Seek>(
         &mut self,
-        mut reader: R,
+        reader: R,
         load_header_only: bool,
-        expected_header_type: &'static [u8],
     ) -> Result<(), Error> {
+        let mut reader = BufReader::new(reader);
+
         self.data = read_plugin(
             &mut reader,
             self.game_id,
             load_header_only,
-            expected_header_type,
+            self.header_type(),
         )?;
 
         if self.game_id != GameId::Starfield {
@@ -144,21 +133,10 @@ impl Plugin {
         Ok(())
     }
 
-    pub fn parse_open_file(&mut self, file: File, load_header_only: bool) -> Result<(), Error> {
-        let mut reader = BufReader::new(&file);
-
-        if load_header_only {
-            let content = Record::read_and_validate(&mut reader, self.game_id, self.header_type())?;
-            self.parse(&content, load_header_only)
-        } else {
-            self.read(reader, load_header_only, self.header_type())
-        }
-    }
-
     pub fn parse_file(&mut self, load_header_only: bool) -> Result<(), Error> {
         let file = File::open(&self.path)?;
 
-        self.parse_open_file(file, load_header_only)
+        self.parse_reader(file, load_header_only)
     }
 
     /// plugins_metadata can be empty for all games other than Starfield, and for Starfield plugins with no masters.
@@ -697,45 +675,15 @@ fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
         .collect::<Result<Vec<String>, Error>>()
 }
 
-fn parse_form_ids(input: &[u8], game_id: GameId) -> IResult<&[u8], Vec<u32>> {
-    let mut form_ids = Vec::new();
-    let mut remaining_input = input;
-
-    while !remaining_input.is_empty() {
-        let (input, _) = Group::parse_for_form_ids(remaining_input, game_id, &mut form_ids)?;
-        remaining_input = input;
-    }
-
-    Ok((remaining_input, form_ids))
-}
-
 fn read_form_ids<R: BufRead + Seek>(reader: &mut R, game_id: GameId) -> Result<Vec<u32>, Error> {
     let mut form_ids = Vec::new();
-    let mut header_buf = [0; 24]; // 24 bytes is the largest group/record header size.
+    let mut header_buf = [0; MAX_RECORD_HEADER_LENGTH];
 
     while !reader.fill_buf()?.is_empty() {
         Group::read_form_ids(reader, game_id, &mut form_ids, &mut header_buf)?;
     }
 
     Ok(form_ids)
-}
-
-fn parse_morrowind_record_ids(input: &[u8]) -> IResult<&[u8], RecordIds> {
-    let mut record_ids = Vec::new();
-    let mut remaining_input = input;
-
-    while !remaining_input.is_empty() {
-        let (input, record_id) = Record::parse_record_id(remaining_input, GameId::Morrowind)?;
-        remaining_input = input;
-
-        if let Some(RecordId::NamespacedId(record_id)) = record_id {
-            record_ids.push(record_id);
-        }
-    }
-
-    record_ids.sort();
-
-    Ok((remaining_input, record_ids.into()))
 }
 
 fn read_morrowind_record_ids<R: BufRead + Seek>(reader: &mut R) -> Result<RecordIds, Error> {
@@ -756,16 +704,6 @@ fn read_morrowind_record_ids<R: BufRead + Seek>(reader: &mut R) -> Result<Record
     Ok(record_ids.into())
 }
 
-fn parse_record_ids(input: &[u8], game_id: GameId) -> IResult<&[u8], RecordIds> {
-    if game_id == GameId::Morrowind {
-        parse_morrowind_record_ids(input)
-    } else {
-        let (remaining_input, form_ids) = parse_form_ids(input, game_id)?;
-
-        Ok((remaining_input, form_ids.into()))
-    }
-}
-
 fn read_record_ids<R: BufRead + Seek>(reader: &mut R, game_id: GameId) -> Result<RecordIds, Error> {
     if game_id == GameId::Morrowind {
         read_morrowind_record_ids(reader)
@@ -774,48 +712,13 @@ fn read_record_ids<R: BufRead + Seek>(reader: &mut R, game_id: GameId) -> Result
     }
 }
 
-fn parse_plugin(
-    input: &[u8],
-    game_id: GameId,
-    load_header_only: bool,
-) -> IResult<&[u8], PluginData> {
-    let (input1, header_record) = Record::parse(input, game_id, false)?;
-
-    if load_header_only {
-        return Ok((
-            input1,
-            PluginData {
-                header_record,
-                record_ids: RecordIds::None,
-            },
-        ));
-    }
-
-    let (input2, record_ids) = parse_record_ids(input1, game_id)?;
-
-    Ok((
-        input2,
-        PluginData {
-            header_record,
-            record_ids,
-        },
-    ))
-}
-
 fn read_plugin<R: BufRead + Seek>(
     reader: &mut R,
     game_id: GameId,
     load_header_only: bool,
     expected_header_type: &'static [u8],
 ) -> Result<PluginData, Error> {
-    let header_record = Record::read(reader, game_id, false)?;
-
-    if header_record.header_type() != expected_header_type {
-        return Err(Error::ParsingError(
-            header_record.header_type().to_vec(),
-            ParsingErrorKind::UnexpectedRecordType(expected_header_type.to_vec()),
-        ));
-    }
+    let header_record = Record::read(reader, game_id, expected_header_type)?;
 
     if load_header_only {
         return Ok(PluginData {
@@ -835,6 +738,7 @@ fn read_plugin<R: BufRead + Seek>(
 #[cfg(test)]
 mod tests {
     use std::fs::copy;
+    use std::io::Cursor;
     use tempfile::tempdir;
 
     use super::*;
@@ -861,7 +765,7 @@ mod tests {
         }
 
         #[test]
-        fn plugin_parse_should_read_a_unique_id_for_each_record() {
+        fn plugin_parse_file_should_read_a_unique_id_for_each_record() {
             let mut plugin = Plugin::new(
                 GameId::Morrowind,
                 Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
@@ -1606,7 +1510,7 @@ mod tests {
             bytes[0x20] = 0xDA;
             bytes[0x21] = 0x3F;
 
-            assert!(plugin.parse(&bytes, false).is_ok());
+            assert!(plugin.parse_reader(Cursor::new(bytes), false).is_ok());
 
             let range = plugin.valid_light_form_id_range();
             assert_eq!(&0, range.start());
@@ -1639,7 +1543,7 @@ mod tests {
             bytes[0x7A] = 0xFF;
             bytes[0x7B] = 0x07;
 
-            assert!(plugin.parse(&bytes, false).is_ok());
+            assert!(plugin.parse_reader(Cursor::new(bytes), false).is_ok());
 
             assert!(plugin.is_valid_as_light_plugin().unwrap());
         }
@@ -1658,7 +1562,7 @@ mod tests {
             bytes[0x386] = 0x00;
             bytes[0x387] = 0x10;
 
-            assert!(plugin.parse(&bytes, false).is_ok());
+            assert!(plugin.parse_reader(Cursor::new(bytes), false).is_ok());
 
             assert!(!plugin.is_valid_as_light_plugin().unwrap());
         }
@@ -1851,7 +1755,7 @@ mod tests {
             bytes[0x20] = 0x80;
             bytes[0x21] = 0x3F;
 
-            assert!(plugin.parse(&bytes, false).is_ok());
+            assert!(plugin.parse_reader(Cursor::new(bytes), false).is_ok());
 
             let range = plugin.valid_light_form_id_range();
             assert_eq!(&1, range.start());
@@ -2107,9 +2011,8 @@ mod tests {
                 0x54, 0x45, 0x53, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00,
                 0x00, 0x00, 0xB2, 0x2E, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00,
             ];
-            plugin.data.header_record = Record::parse(file_data, GameId::Starfield, false)
-                .unwrap()
-                .1;
+            plugin.data.header_record =
+                Record::read(&mut Cursor::new(file_data), GameId::Starfield, b"TES4").unwrap();
 
             assert!(!plugin.is_update_plugin());
         }
@@ -2636,7 +2539,7 @@ mod tests {
     fn write_invalid_plugin(path: &Path) {
         use std::io::Write;
         let mut file = File::create(path).unwrap();
-        let bytes = [0; 24];
+        let bytes = [0; MAX_RECORD_HEADER_LENGTH];
         file.write_all(&bytes).unwrap();
     }
 
@@ -2649,12 +2552,15 @@ mod tests {
 
     #[test]
     fn parse_file_should_error_if_plugin_is_not_valid() {
-        let mut plugin = Plugin::new(GameId::Skyrim, Path::new("README.md"));
+        let mut plugin = Plugin::new(
+            GameId::Oblivion,
+            Path::new("testing-plugins/Oblivion/Data/Blank.bsa"),
+        );
 
         let result = plugin.parse_file(false);
         assert!(result.is_err());
         assert_eq!(
-            "failed to fill whole buffer",
+            "An error was encountered while parsing the plugin content [42, 53, 41, 00, 67, 00, 00, 00, 24, 00, 00, 00, 07, 07, 00, 00]: Expected record type [54, 45, 53, 34]",
             result.unwrap_err().to_string()
         );
     }
@@ -2684,7 +2590,7 @@ mod tests {
 
         let result = plugin.parse_file(false);
         assert!(result.is_err());
-        assert_eq!("An error was encountered while parsing the plugin content [00, 00, 00, 00]: Expected record type [54, 45, 53, 34]", result.unwrap_err().to_string());
+        assert_eq!("An error was encountered while parsing the plugin content [00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00]: Expected record type [54, 45, 53, 34]", result.unwrap_err().to_string());
     }
 
     #[test]
@@ -2700,7 +2606,11 @@ mod tests {
 
     #[test]
     fn is_valid_should_return_false_for_an_invalid_plugin() {
-        let is_valid = Plugin::is_valid(GameId::Skyrim, Path::new("README.md"), true);
+        let is_valid = Plugin::is_valid(
+            GameId::Skyrim,
+            Path::new("testing-plugins/Oblivion/Data/Blank.bsa"),
+            true,
+        );
 
         assert!(!is_valid);
     }
@@ -2773,7 +2683,7 @@ mod tests {
         data[0x14] = 8;
         data[0x15] = 0;
 
-        assert!(plugin.parse(&data, true).is_ok());
+        assert!(plugin.parse_reader(Cursor::new(data), true).is_ok());
 
         let result = plugin.description();
         assert!(result.is_err());
@@ -2794,7 +2704,7 @@ mod tests {
         data[0x14] = 3;
         data[0x15] = 0;
 
-        assert!(plugin.parse(&data, true).is_ok());
+        assert!(plugin.parse_reader(Cursor::new(data), true).is_ok());
         assert!(plugin.header_version().is_none());
     }
 
@@ -2810,7 +2720,7 @@ mod tests {
         data[0x04] = 0x30;
         data[0x14] = 0x28;
 
-        assert!(plugin.parse(&data, true).is_ok());
+        assert!(plugin.parse_reader(Cursor::new(data), true).is_ok());
         assert!(plugin.record_and_group_count().is_none());
     }
 

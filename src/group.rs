@@ -19,8 +19,7 @@
 use std::io::{BufRead, Seek};
 
 use nom::bytes::complete::{tag, take};
-use nom::combinator::{all_consuming, map, peek};
-use nom::multi::length_data;
+use nom::combinator::{all_consuming, map};
 use nom::number::complete::le_u32;
 use nom::sequence::delimited;
 use nom::IResult;
@@ -36,21 +35,6 @@ const GROUP_TYPE: &[u8] = b"GRUP";
 pub struct Group;
 
 impl Group {
-    pub fn parse_for_form_ids<'a>(
-        input: &'a [u8],
-        game_id: GameId,
-        form_ids: &mut Vec<u32>,
-    ) -> IResult<&'a [u8], ()> {
-        let group_header_length = group_or_record_header_length(game_id);
-        let skip_length = get_header_length_to_skip(game_id);
-
-        let (remaining_input, records_data) =
-            length_data(parse_header(group_header_length, skip_length))(input)?;
-        parse_records(records_data, game_id, form_ids)?;
-
-        Ok((remaining_input, ()))
-    }
-
     pub fn read_form_ids<R: BufRead + Seek>(
         reader: &mut R,
         game_id: GameId,
@@ -132,33 +116,12 @@ fn read_records<R: BufRead + Seek>(
     Ok(())
 }
 
-fn parse_records<'a>(
-    input: &'a [u8],
-    game_id: GameId,
-    form_ids: &mut Vec<u32>,
-) -> IResult<&'a [u8], ()> {
-    let mut input1 = input;
-
-    while !input1.is_empty() {
-        let (_, next_type) = peek(take(GROUP_TYPE.len()))(input1)?;
-
-        if next_type == GROUP_TYPE {
-            let (input2, _) = Group::parse_for_form_ids(input1, game_id, form_ids)?;
-            input1 = input2;
-        } else {
-            let (input2, record_id) = Record::parse_record_id(input1, game_id)?;
-            input1 = input2;
-            if let Some(RecordId::FormId(form_id)) = record_id {
-                form_ids.push(form_id.get());
-            }
-        }
-    }
-
-    Ok((input1, ()))
-}
-
 #[cfg(test)]
 mod tests {
+    use std::io::Cursor;
+
+    use crate::record::MAX_RECORD_HEADER_LENGTH;
+
     use super::*;
 
     #[test]
@@ -167,7 +130,14 @@ mod tests {
             &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")[0x56..];
 
         let mut form_ids: Vec<u32> = Vec::new();
-        Group::parse_for_form_ids(data, GameId::Skyrim, &mut form_ids).unwrap();
+        let mut header_buf = [0; MAX_RECORD_HEADER_LENGTH];
+        Group::read_form_ids(
+            &mut Cursor::new(&data),
+            GameId::Skyrim,
+            &mut form_ids,
+            &mut header_buf,
+        )
+        .unwrap();
 
         assert_eq!(8, form_ids.len());
         // Also check three FormIDs from near the beginning, middle and end of the group.
@@ -181,7 +151,14 @@ mod tests {
         let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esm")[0x1004C..0x10114];
 
         let mut form_ids: Vec<u32> = Vec::new();
-        Group::parse_for_form_ids(data, GameId::Skyrim, &mut form_ids).unwrap();
+        let mut header_buf = [0; MAX_RECORD_HEADER_LENGTH];
+        Group::read_form_ids(
+            &mut Cursor::new(&data),
+            GameId::Skyrim,
+            &mut form_ids,
+            &mut header_buf,
+        )
+        .unwrap();
 
         assert_eq!(1, form_ids.len());
         assert!(form_ids.contains(&0xCF9));

@@ -23,7 +23,7 @@ use std::num::NonZeroU32;
 use nom::bytes::complete::take;
 use nom::combinator::{cond, map};
 use nom::number::complete::le_u32;
-use nom::sequence::{delimited, pair, terminated, tuple};
+use nom::sequence::tuple;
 use nom::IResult;
 
 use crate::error::{Error, ParsingErrorKind};
@@ -32,6 +32,7 @@ use crate::record_id::{NamespacedId, RecordId};
 use crate::subrecord::{parse_subrecord_data_as_u32, Subrecord, SubrecordRef, SubrecordType};
 use crate::u32_to_usize;
 
+pub const MAX_RECORD_HEADER_LENGTH: usize = 24;
 const RECORD_TYPE_LENGTH: usize = 4;
 pub type RecordType = [u8; 4];
 
@@ -60,59 +61,32 @@ pub struct Record {
 }
 
 impl Record {
-    pub fn read_and_validate<T: io::Read>(
-        reader: &mut T,
-        game_id: GameId,
-        expected_type: &[u8],
-    ) -> Result<Vec<u8>, Error> {
-        let mut content: Vec<u8> = vec![0; usize::from(header_length(game_id))];
-        reader.read_exact(&mut content)?;
-
-        if &content[0..4] != expected_type {
-            // Take a copy of 16 bytes so the output includes the FormID.
-            return Err(Error::ParsingError(
-                content[..16].to_vec(),
-                ParsingErrorKind::UnexpectedRecordType(expected_type.to_vec()),
-            ));
-        }
-
-        let size_of_subrecords = crate::le_slice_to_u32(&content[4..]);
-        if size_of_subrecords > 0 {
-            let mut subrecords = vec![0; u32_to_usize(size_of_subrecords)];
-            reader.read_exact(&mut subrecords)?;
-
-            content.append(&mut subrecords);
-        }
-
-        Ok(content)
-    }
-
-    pub fn parse(input: &[u8], game_id: GameId, skip_subrecords: bool) -> IResult<&[u8], Record> {
-        record(input, game_id, skip_subrecords)
-    }
-
     pub fn read<R: std::io::Read>(
         reader: &mut R,
         game_id: GameId,
-        skip_subrecords: bool,
+        expected_type: &[u8],
     ) -> Result<Record, Error> {
         let mut header_bytes: Vec<u8> = vec![0; usize::from(header_length(game_id))];
         reader.read_exact(&mut header_bytes)?;
+
+        if &header_bytes[0..4] != expected_type {
+            // Take a copy of 16 bytes so the output includes the FormID.
+            return Err(Error::ParsingError(
+                header_bytes[..16].to_vec(),
+                ParsingErrorKind::UnexpectedRecordType(expected_type.to_vec()),
+            ));
+        }
 
         let header = all_consuming(record_header(&header_bytes, game_id))?;
 
         let mut subrecord_bytes: Vec<u8> = vec![0; u32_to_usize(header.size_of_subrecords)];
         reader.read_exact(&mut subrecord_bytes)?;
 
-        let subrecords: Vec<Subrecord> = if !skip_subrecords {
-            all_consuming(parse_subrecords(
-                &subrecord_bytes,
-                game_id,
-                header.are_subrecords_compressed(),
-            ))?
-        } else {
-            Vec::new()
-        };
+        let subrecords: Vec<Subrecord> = all_consuming(parse_subrecords(
+            &subrecord_bytes,
+            game_id,
+            header.are_subrecords_compressed(),
+        ))?;
 
         Ok(Record { header, subrecords })
     }
@@ -161,42 +135,8 @@ impl Record {
         }
     }
 
-    pub fn parse_record_id(input: &[u8], game_id: GameId) -> IResult<&[u8], Option<RecordId>> {
-        if game_id == GameId::Morrowind {
-            let (remaining_input, header) = record_header(input, game_id)?;
-            let (remaining_input, subrecords_data) =
-                take(header.size_of_subrecords)(remaining_input)?;
-
-            let (_, record_id) = parse_morrowind_record_id(subrecords_data, &header)?;
-            Ok((remaining_input, record_id))
-        } else {
-            let mut parser = tuple((
-                delimited(take(RECORD_TYPE_LENGTH), le_u32, take(4usize)),
-                terminated(le_u32, take(4usize)),
-            ));
-
-            let (remaining_input, (size_of_subrecords, form_id)) = parser(input)?;
-
-            let mut parser = pair(
-                cond(game_id != GameId::Oblivion, take(4usize)),
-                take(size_of_subrecords),
-            );
-
-            let (remaining_input, _) = parser(remaining_input)?;
-
-            Ok((
-                remaining_input,
-                NonZeroU32::new(form_id).map(RecordId::FormId),
-            ))
-        }
-    }
-
     pub fn header(&self) -> &RecordHeader {
         &self.header
-    }
-
-    pub fn header_type(&self) -> RecordType {
-        self.header.record_type
     }
 
     pub fn subrecords(&self) -> &[Subrecord] {
@@ -361,19 +301,6 @@ fn record_header(input: &[u8], game_id: GameId) -> IResult<&[u8], RecordHeader> 
     )(input)
 }
 
-fn record(input: &[u8], game_id: GameId, skip_subrecords: bool) -> IResult<&[u8], Record> {
-    let (remaining_input, header) = record_header(input, game_id)?;
-    let (remaining_input, subrecords_data) = take(header.size_of_subrecords)(remaining_input)?;
-
-    let subrecords: Vec<Subrecord> = if !skip_subrecords {
-        parse_subrecords(subrecords_data, game_id, header.are_subrecords_compressed())?.1
-    } else {
-        Vec::new()
-    };
-
-    Ok((remaining_input, Record { header, subrecords }))
-}
-
 fn parse_subrecords(
     input: &[u8],
     game_id: GameId,
@@ -428,10 +355,12 @@ fn parse_id_subrecords<'a>(
 
 #[cfg(test)]
 mod tests {
+    use std::io::Cursor;
+
     use super::*;
 
     mod morrowind {
-        use super::super::*;
+        use super::*;
 
         #[test]
         fn header_length_should_be_16() {
@@ -439,11 +368,11 @@ mod tests {
         }
 
         #[test]
-        fn parse_should_read_tes3_header_correctly() {
+        fn read_should_read_tes3_header_correctly() {
             let data =
                 &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
 
-            let record = Record::parse(data, GameId::Morrowind, false).unwrap().1;
+            let record = Record::read(&mut Cursor::new(data), GameId::Morrowind, b"TES3").unwrap();
 
             assert_eq!(0, record.header.flags);
             assert!(record.header.form_id.is_none());
@@ -453,33 +382,55 @@ mod tests {
         }
 
         #[test]
-        fn parse_should_set_form_id_to_none_for_all_records() {
+        fn read_should_set_form_id_to_none_for_all_records() {
             let data =
                 &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[0x144..0x16F];
 
-            let record = Record::parse(data, GameId::Morrowind, false).unwrap().1;
+            let record = Record::read(&mut Cursor::new(data), GameId::Morrowind, b"GMST").unwrap();
 
             assert!(record.header.form_id.is_none());
         }
 
         #[test]
-        fn parse_record_id_should_return_none_for_tes3_header() {
+        fn read_record_id_should_return_none_for_tes3_header() {
             let data =
                 &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
 
-            let form_id = Record::parse_record_id(data, GameId::Morrowind).unwrap().1;
+            let mut header_buf = [0; MAX_RECORD_HEADER_LENGTH];
+            let form_id = Record::read_record_id(
+                &mut Cursor::new(data),
+                GameId::Morrowind,
+                &mut header_buf,
+                false,
+            )
+            .unwrap()
+            .1;
 
             assert!(form_id.is_none());
         }
 
         #[test]
-        fn parse_record_id_should_return_some_namespaced_id_for_gmst() {
+        fn read_record_id_should_return_some_namespaced_id_for_gmst() {
             let data =
                 &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[0x144..0x16F];
 
-            let form_id = Record::parse_record_id(data, GameId::Morrowind).unwrap().1;
+            let mut header_buf = [0; MAX_RECORD_HEADER_LENGTH];
+            let form_id = Record::read_record_id(
+                &mut Cursor::new(data),
+                GameId::Morrowind,
+                &mut header_buf,
+                false,
+            )
+            .unwrap()
+            .1
+            .unwrap();
 
-            assert!(form_id.unwrap().namespaced_id().is_some());
+            match form_id {
+                RecordId::NamespacedId(_) => {
+                    // Do nothing
+                }
+                _ => panic!("Expected a namespaced ID"),
+            }
         }
 
         #[test]
@@ -679,7 +630,7 @@ mod tests {
     }
 
     mod oblivion {
-        use super::super::*;
+        use super::*;
 
         #[test]
         fn header_length_should_be_20() {
@@ -687,10 +638,10 @@ mod tests {
         }
 
         #[test]
-        fn parse_should_read_tes4_header_correctly() {
+        fn read_should_read_tes4_header_correctly() {
             let data = &include_bytes!("../testing-plugins/Oblivion/Data/Blank.esm")[..0x144];
 
-            let record = Record::parse(data, GameId::Oblivion, false).unwrap().1;
+            let record = Record::read(&mut Cursor::new(data), GameId::Oblivion, b"TES4").unwrap();
 
             assert_eq!(1, record.header.flags);
             assert!(record.header.form_id.is_none());
@@ -702,10 +653,10 @@ mod tests {
         }
 
         #[test]
-        fn parse_should_set_non_zero_form_id_for_non_header_records() {
+        fn read_should_set_non_zero_form_id_for_non_header_records() {
             let data = &include_bytes!("../testing-plugins/Oblivion/Data/Blank.esm")[0x4C..0x70];
 
-            let record = Record::parse(data, GameId::Oblivion, false).unwrap().1;
+            let record = Record::read(&mut Cursor::new(data), GameId::Oblivion, b"BOOK").unwrap();
 
             assert_eq!(0xCF0, record.header.form_id.unwrap().get());
         }
@@ -714,14 +665,28 @@ mod tests {
         fn parse_record_id_should_return_the_form_id() {
             let data = &include_bytes!("../testing-plugins/Oblivion/Data/Blank.esm")[0x4C..0x70];
 
-            let form_id = Record::parse_record_id(data, GameId::Oblivion).unwrap().1;
+            let mut header_buf = [0; MAX_RECORD_HEADER_LENGTH];
+            let form_id = Record::read_record_id(
+                &mut Cursor::new(data),
+                GameId::Oblivion,
+                &mut header_buf,
+                false,
+            )
+            .unwrap()
+            .1
+            .unwrap();
 
-            assert_eq!(0xCF0, form_id.unwrap().form_id().unwrap().get());
+            match form_id {
+                RecordId::FormId(f) => {
+                    assert_eq!(0xCF0, f.get())
+                }
+                _ => panic!("Expected a FormID"),
+            }
         }
     }
 
     mod skyrim {
-        use super::super::*;
+        use super::*;
 
         #[test]
         fn header_length_should_be_24() {
@@ -729,12 +694,12 @@ mod tests {
         }
 
         #[test]
-        fn parse_should_read_tes4_header_correctly() {
+        fn read_should_read_tes4_header_correctly() {
             let data =
                 &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")
                     [..0x56];
 
-            let record = Record::parse(data, GameId::Skyrim, false).unwrap().1;
+            let record = Record::read(&mut Cursor::new(data), GameId::Skyrim, b"TES4").unwrap();
 
             assert_eq!(0x1, record.header.flags);
             assert!(record.header.form_id.is_none());
@@ -748,102 +713,95 @@ mod tests {
         }
 
         #[test]
-        fn parse_should_set_non_zero_form_id_for_non_header_records() {
+        fn read_should_set_non_zero_form_id_for_non_header_records() {
             let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esp")[0x53..0xEF];
 
-            let record = Record::parse(data, GameId::Skyrim, false).unwrap().1;
+            let record = Record::read(&mut Cursor::new(data), GameId::Skyrim, b"BPTD").unwrap();
 
             assert_eq!(0xCEC, record.header.form_id.unwrap().get());
+        }
+
+        #[test]
+        fn read_should_fail_if_the_type_is_unexpected() {
+            let data =
+                &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")
+                    [..0x56];
+
+            let result = Record::read(&mut Cursor::new(data), GameId::Skyrim, b"TES3");
+            assert!(result.is_err());
+            assert_eq!("An error was encountered while parsing the plugin content [54, 45, 53, 34, 3E, 00, 00, 00, 01, 00, 00, 00, 00, 00, 00, 00]: Expected record type [54, 45, 53, 33]", result.unwrap_err().to_string());
+        }
+
+        #[test]
+        fn read_should_read_large_subrecords_correctly() {
+            let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esm")[..0x1004C];
+
+            let record = Record::read(&mut Cursor::new(data), GameId::Skyrim, b"TES4").unwrap();
+
+            assert_eq!(0x1, record.header.flags);
+            assert_eq!(4, record.subrecords.len());
+
+            assert_eq!(b"HEDR", record.subrecords[0].subrecord_type());
+            assert_eq!(b"CNAM", record.subrecords[1].subrecord_type());
+            assert_eq!(b"SNAM", record.subrecords[2].subrecord_type());
+            assert_eq!(b"ONAM", record.subrecords[3].subrecord_type());
+        }
+
+        #[test]
+        #[cfg(feature = "compressed-fields")]
+        fn read_should_read_compressed_subrecords_correctly() {
+            const DATA: &'static [u8] = &[
+                0x42, 0x50, 0x54, 0x44, //type
+                0x23, 0x00, 0x00, 0x00, //size
+                0x00, 0x00, 0x04, 0x00, //flags
+                0xEC, 0x0C, 0x00, 0x00, //id
+                0x00, 0x00, 0x00, 0x00, //revision
+                0x2B, 0x00, //version
+                0x00, 0x00, //unknown
+                0x42, 0x50, 0x54, 0x4E, //field type
+                0x1D, 0x00, //field size
+                0x19, 0x00, 0x00, 0x00, //decompressed field size
+                0x75, 0xc5, 0x21, 0x0d, 0x00, 0x00, 0x08, 0x05, 0xd1,
+                0x6c, //field data (compressed)
+                0x6c, 0xdc, 0x57, 0x48, 0x3c, 0xfd, 0x5b, 0x5c, 0x02,
+                0xd4, //field data (compressed)
+                0x6b, 0x32, 0xb5, 0xdc, 0xa3, //field data (compressed)
+            ];
+
+            let record = Record::read(&mut Cursor::new(DATA), GameId::Skyrim, b"BPTD").unwrap();
+
+            assert_eq!(0xCEC, record.header.form_id.unwrap().get());
+            assert_eq!(0x00040000, record.header.flags);
+            assert_eq!(1, record.subrecords.len());
+
+            let decompressed_data = record.subrecords[0].decompress_data().unwrap();
+            assert_eq!(
+                "DEFLATE_DEFLATE_DEFLATE_DEFLATE".as_bytes(),
+                decompressed_data.as_slice()
+            );
         }
 
         #[test]
         fn parse_record_id_should_return_the_form_id() {
             let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esp")[0x53..0xEF];
 
-            let form_id = Record::parse_record_id(data, GameId::Skyrim).unwrap().1;
+            let mut header_buf = [0; MAX_RECORD_HEADER_LENGTH];
+            let form_id = Record::read_record_id(
+                &mut Cursor::new(data),
+                GameId::Skyrim,
+                &mut header_buf,
+                false,
+            )
+            .unwrap()
+            .1
+            .unwrap();
 
-            assert_eq!(0xCEC, form_id.unwrap().form_id().unwrap().get());
+            match form_id {
+                RecordId::FormId(f) => {
+                    assert_eq!(0xCEC, f.get())
+                }
+                _ => panic!("Expected a FormID"),
+            }
         }
-    }
-
-    #[test]
-    fn read_and_validate_should_read_a_record_from_the_given_reader() {
-        let data =
-            &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")[..0x56];
-        let mut reader = io::Cursor::new(data);
-
-        let bytes = Record::read_and_validate(&mut reader, GameId::Skyrim, b"TES4").unwrap();
-
-        assert_eq!(data, bytes.as_slice());
-    }
-
-    #[test]
-    fn read_and_validate_should_fail_if_the_type_is_unexpected() {
-        let data =
-            &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")[..0x56];
-        let mut reader = io::Cursor::new(data);
-
-        let result = Record::read_and_validate(&mut reader, GameId::Skyrim, b"TES3");
-        assert!(result.is_err());
-        assert_eq!("An error was encountered while parsing the plugin content [54, 45, 53, 34, 3E, 00, 00, 00, 01, 00, 00, 00, 00, 00, 00, 00]: Expected record type [54, 45, 53, 33]", result.unwrap_err().to_string());
-    }
-
-    #[test]
-    fn parse_should_obey_skip_subrecords_parameter() {
-        let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esm")[..0x1004C];
-
-        let record = Record::parse(data, GameId::Skyrim, true).unwrap().1;
-
-        assert_eq!(1, record.header.flags);
-        assert_eq!(0, record.subrecords.len());
-    }
-
-    #[test]
-    fn parse_should_read_large_subrecords_correctly() {
-        let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esm")[..0x1004C];
-
-        let record = Record::parse(data, GameId::Skyrim, false).unwrap().1;
-
-        assert_eq!(0x1, record.header.flags);
-        assert_eq!(4, record.subrecords.len());
-
-        assert_eq!(b"HEDR", record.subrecords[0].subrecord_type());
-        assert_eq!(b"CNAM", record.subrecords[1].subrecord_type());
-        assert_eq!(b"SNAM", record.subrecords[2].subrecord_type());
-        assert_eq!(b"ONAM", record.subrecords[3].subrecord_type());
-    }
-
-    #[test]
-    #[cfg(feature = "compressed-fields")]
-    fn parse_should_read_compressed_subrecords_correctly() {
-        const DATA: &'static [u8] = &[
-            0x42, 0x50, 0x54, 0x44, //type
-            0x23, 0x00, 0x00, 0x00, //size
-            0x00, 0x00, 0x04, 0x00, //flags
-            0xEC, 0x0C, 0x00, 0x00, //id
-            0x00, 0x00, 0x00, 0x00, //revision
-            0x2B, 0x00, //version
-            0x00, 0x00, //unknown
-            0x42, 0x50, 0x54, 0x4E, //field type
-            0x1D, 0x00, //field size
-            0x19, 0x00, 0x00, 0x00, //decompressed field size
-            0x75, 0xc5, 0x21, 0x0d, 0x00, 0x00, 0x08, 0x05, 0xd1,
-            0x6c, //field data (compressed)
-            0x6c, 0xdc, 0x57, 0x48, 0x3c, 0xfd, 0x5b, 0x5c, 0x02,
-            0xd4, //field data (compressed)
-            0x6b, 0x32, 0xb5, 0xdc, 0xa3, //field data (compressed)
-        ];
-
-        let record = Record::parse(DATA, GameId::Skyrim, false).unwrap().1;
-
-        assert_eq!(0xCEC, record.header.form_id.unwrap().get());
-        assert_eq!(0x00040000, record.header.flags);
-        assert_eq!(1, record.subrecords.len());
-
-        let decompressed_data = record.subrecords[0].decompress_data().unwrap();
-        assert_eq!(
-            "DEFLATE_DEFLATE_DEFLATE_DEFLATE".as_bytes(),
-            decompressed_data.as_slice()
-        );
     }
 }
