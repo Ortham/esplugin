@@ -3,7 +3,7 @@ use std::{f32, panic, ptr};
 
 use libc::{c_char, c_float, size_t};
 
-use esplugin::{GameId, Plugin, PluginMetadata};
+use esplugin::{GameId, ParseOptions, Plugin, PluginMetadata};
 
 use crate::constants::*;
 use crate::error::{error, handle_error};
@@ -102,7 +102,14 @@ pub unsafe extern "C" fn esp_plugin_parse(plugin_ptr: *mut Plugin, load_header_o
             error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &mut *plugin_ptr;
-            match plugin.parse_file(load_header_only) {
+
+            let options = if load_header_only {
+                ParseOptions::header_only()
+            } else {
+                ParseOptions::whole_plugin()
+            };
+
+            match plugin.parse_file(options) {
                 Ok(_) => ESP_OK,
                 Err(e) => handle_error(e),
             }
@@ -310,7 +317,13 @@ pub unsafe extern "C" fn esp_plugin_is_valid(
                 Err(x) => return x,
             };
 
-            *is_valid = Plugin::is_valid(mapped_game_id, rust_path, load_header_only);
+            let options = if load_header_only {
+                ParseOptions::header_only()
+            } else {
+                ParseOptions::whole_plugin()
+            };
+
+            *is_valid = Plugin::is_valid(mapped_game_id, rust_path, options);
 
             ESP_OK
         }

@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use criterion::Criterion;
-use esplugin::{GameId, Plugin};
+use esplugin::{GameId, ParseOptions, Plugin};
 
 // HearthFires.esm is a 3.8 MB file, so it's got plenty of content without being
 // large enough to slow down benchmarking much.
@@ -15,7 +15,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         let mut plugin = Plugin::new(GAME_ID, Path::new(PLUGIN_TO_PARSE));
 
         b.iter(|| {
-            assert!(plugin.parse_file(true).is_ok());
+            assert!(plugin.parse_file(ParseOptions::header_only()).is_ok());
         });
     });
 
@@ -23,14 +23,14 @@ fn criterion_benchmark(c: &mut Criterion) {
         let mut plugin = Plugin::new(GAME_ID, Path::new(PLUGIN_TO_PARSE));
 
         b.iter(|| {
-            assert!(plugin.parse_file(false).is_ok());
+            assert!(plugin.parse_file(ParseOptions::whole_plugin()).is_ok());
         });
     });
 
     c.bench_function("Plugin.overlaps_with()", |b| {
         let mut plugin = Plugin::new(GAME_ID, Path::new(PLUGIN_TO_PARSE));
 
-        assert!(plugin.parse_file(false).is_ok());
+        assert!(plugin.parse_file(ParseOptions::whole_plugin()).is_ok());
 
         b.iter(|| {
             assert!(plugin.overlaps_with(&plugin).unwrap());
@@ -40,7 +40,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("Plugin.count_override_records()", |b| {
         let mut plugin = Plugin::new(GAME_ID, Path::new(PLUGIN_TO_PARSE));
 
-        assert!(plugin.parse_file(false).is_ok());
+        assert!(plugin.parse_file(ParseOptions::whole_plugin()).is_ok());
 
         b.iter(|| {
             assert_eq!(plugin.count_override_records().unwrap(), 1272);
