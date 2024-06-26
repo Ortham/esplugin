@@ -54,12 +54,7 @@ impl PartialEq<&std::borrow::Cow<'_, str>> for FileExtension {
 }
 
 fn is_ghost_file_extension(extension: &str) -> bool {
-    const GHOST: &str = "ghost";
-
-    // Generally not a good idea to lowercase strings for case-insensitive
-    // comparison, but this is ASCII, and we're checking that the string is of
-    // the correct length first, so lowercasing won't be expensive.
-    extension.len() == GHOST.len() && extension.to_lowercase() == GHOST
+    extension.eq_ignore_ascii_case("ghost")
 }
 
 #[derive(Clone, Default, PartialEq, Eq, Debug, Hash)]
