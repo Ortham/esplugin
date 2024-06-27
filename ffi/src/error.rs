@@ -62,7 +62,7 @@ fn map_error(err: &Error) -> c_uint {
         Error::ParsingIncomplete(_) => ESP_ERROR_PARSE_ERROR,
         Error::ParsingError(_, _) => ESP_ERROR_PARSE_ERROR,
         Error::DecodeError(_) => ESP_ERROR_TEXT_DECODE_ERROR,
-        Error::UnresolvedFormIds(_) => ESP_ERROR_UNRESOLVED_FORM_IDS,
+        Error::UnresolvedRecordIds(_) => ESP_ERROR_UNRESOLVED_RECORD_IDS,
         Error::PluginMetadataNotFound(_) => ESP_ERROR_PLUGIN_METADATA_NOT_FOUND,
     }
 }

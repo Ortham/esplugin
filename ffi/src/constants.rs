@@ -38,7 +38,7 @@ pub static ESP_ERROR_FILE_NOT_FOUND: u32 = 11;
 pub static ESP_ERROR_IO_PERMISSION_DENIED: u32 = 12;
 
 #[no_mangle]
-pub static ESP_ERROR_UNRESOLVED_FORM_IDS: u32 = 13;
+pub static ESP_ERROR_UNRESOLVED_RECORD_IDS: u32 = 13;
 
 #[no_mangle]
 pub static ESP_ERROR_PLUGIN_METADATA_NOT_FOUND: u32 = 14;

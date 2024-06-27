@@ -23,7 +23,6 @@ pub use crate::game_id::GameId;
 pub use crate::plugin::{plugins_metadata, ParseOptions, Plugin, PluginMetadata};
 
 mod error;
-mod form_id;
 mod game_id;
 mod group;
 mod plugin;

@@ -17,6 +17,7 @@
  * along with esplugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Seek};
 use std::ops::RangeInclusive;
@@ -26,11 +27,10 @@ use std::str;
 use encoding_rs::WINDOWS_1252;
 
 use crate::error::{Error, ParsingErrorKind};
-use crate::form_id::{HashedFormId, ObjectIndexMask, SourcePlugin};
 use crate::game_id::GameId;
 use crate::group::Group;
 use crate::record::{Record, MAX_RECORD_HEADER_LENGTH};
-use crate::record_id::{NamespacedId, RecordId};
+use crate::record_id::{NamespacedId, ObjectIndexMask, RecordId, ResolvedRecordId, SourcePlugin};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum FileExtension {
@@ -62,8 +62,8 @@ enum RecordIds {
     #[default]
     None,
     FormIds(Vec<u32>),
-    ResolvedFormIds(Vec<HashedFormId>),
     NamespacedIds(Vec<NamespacedId>),
+    Resolved(Vec<ResolvedRecordId>),
 }
 
 impl From<Vec<NamespacedId>> for RecordIds {
@@ -131,7 +131,7 @@ impl Plugin {
 
         self.data = read_plugin(&mut reader, self.game_id, options, self.header_type())?;
 
-        if self.game_id != GameId::Starfield {
+        if self.game_id != GameId::Morrowind && self.game_id != GameId::Starfield {
             self.resolve_record_ids(&[])?;
         }
 
@@ -146,25 +146,39 @@ impl Plugin {
 
     /// plugins_metadata can be empty for all games other than Starfield, and for Starfield plugins with no masters.
     pub fn resolve_record_ids(&mut self, plugins_metadata: &[PluginMetadata]) -> Result<(), Error> {
-        if let RecordIds::FormIds(ref form_ids) = self.data.record_ids {
-            let filename = self
-                .filename()
-                .ok_or_else(|| Error::NoFilename(self.path.clone()))?;
-            let parent_metadata = PluginMetadata {
-                filename,
-                scale: self.scale(),
-            };
-            let masters = self.masters()?;
+        match self.data.record_ids {
+            RecordIds::FormIds(ref form_ids) => {
+                let filename = self
+                    .filename()
+                    .ok_or_else(|| Error::NoFilename(self.path.clone()))?;
+                let parent_metadata = PluginMetadata {
+                    filename,
+                    scale: self.scale(),
+                    record_ids: Box::new([]),
+                };
+                let masters = self.masters()?;
 
-            let form_ids = hashed_form_ids(
-                self.game_id,
-                form_ids,
-                parent_metadata,
-                &masters,
-                plugins_metadata,
-            )?;
+                let form_ids = resolve_form_ids(
+                    self.game_id,
+                    form_ids,
+                    parent_metadata,
+                    &masters,
+                    plugins_metadata,
+                )?;
 
-            self.data.record_ids = RecordIds::ResolvedFormIds(form_ids);
+                self.data.record_ids = RecordIds::Resolved(form_ids);
+            }
+            RecordIds::NamespacedIds(ref namespaced_ids) => {
+                let masters = self.masters()?;
+
+                let record_ids =
+                    resolve_namespaced_ids(namespaced_ids, &masters, plugins_metadata)?;
+
+                self.data.record_ids = RecordIds::Resolved(record_ids);
+            }
+            RecordIds::None | RecordIds::Resolved(_) => {
+                // Do nothing.
+            }
         }
 
         Ok(())
@@ -314,26 +328,26 @@ impl Plugin {
             .map(|s| crate::le_slice_to_u32(&s.data()[count_offset..]))
     }
 
+    /// This needs records to be resolved first if run for Morrowind or Starfield.
     pub fn count_override_records(&self) -> Result<usize, Error> {
         match &self.data.record_ids {
             RecordIds::None => Ok(0),
-            RecordIds::FormIds(_) => Err(Error::UnresolvedFormIds(self.path.clone())),
-            RecordIds::ResolvedFormIds(form_ids) => {
+            RecordIds::FormIds(_) | RecordIds::NamespacedIds(_) => {
+                Err(Error::UnresolvedRecordIds(self.path.clone()))
+            }
+            RecordIds::Resolved(form_ids) => {
                 let count = form_ids.iter().filter(|f| f.is_overridden_record()).count();
                 Ok(count)
             }
-            RecordIds::NamespacedIds(_) => Ok(0), // FIXME: This gives misleading results for Morrowind plugins.
         }
     }
 
     pub fn overlaps_with(&self, other: &Self) -> Result<bool, Error> {
         use self::RecordIds::*;
         match (&self.data.record_ids, &other.data.record_ids) {
-            (FormIds(_), _) => Err(Error::UnresolvedFormIds(self.path.clone())),
-            (_, FormIds(_)) => Err(Error::UnresolvedFormIds(other.path.clone())),
-            (ResolvedFormIds(left), ResolvedFormIds(right)) => {
-                Ok(sorted_slices_intersect(left, right))
-            }
+            (FormIds(_), _) => Err(Error::UnresolvedRecordIds(self.path.clone())),
+            (_, FormIds(_)) => Err(Error::UnresolvedRecordIds(other.path.clone())),
+            (Resolved(left), Resolved(right)) => Ok(sorted_slices_intersect(left, right)),
             (NamespacedIds(left), NamespacedIds(right)) => Ok(sorted_slices_intersect(left, right)),
             _ => Ok(false),
         }
@@ -346,14 +360,16 @@ impl Plugin {
         use self::RecordIds::*;
 
         match &self.data.record_ids {
-            FormIds(_) => Err(Error::UnresolvedFormIds(self.path.clone())),
-            ResolvedFormIds(ids) => {
+            FormIds(_) => Err(Error::UnresolvedRecordIds(self.path.clone())),
+            Resolved(ids) => {
                 let mut count = 0;
                 for id in ids {
                     for other in others {
                         match &other.data.record_ids {
-                            FormIds(_) => return Err(Error::UnresolvedFormIds(other.path.clone())),
-                            ResolvedFormIds(master_ids) if master_ids.binary_search(id).is_ok() => {
+                            FormIds(_) => {
+                                return Err(Error::UnresolvedRecordIds(other.path.clone()))
+                            }
+                            Resolved(master_ids) if master_ids.binary_search(id).is_ok() => {
                                 count += 1;
                                 break;
                             }
@@ -386,14 +402,14 @@ impl Plugin {
         if self.game_id.supports_light_plugins() {
             match &self.data.record_ids {
                 RecordIds::None => Ok(true),
-                RecordIds::FormIds(_) => Err(Error::UnresolvedFormIds(self.path.clone())),
-                RecordIds::ResolvedFormIds(form_ids) => {
+                RecordIds::FormIds(_) => Err(Error::UnresolvedRecordIds(self.path.clone())),
+                RecordIds::Resolved(form_ids) => {
                     let valid_range = self.valid_light_form_id_range();
 
                     let is_valid = form_ids
                         .iter()
                         .filter(|f| !f.is_overridden_record())
-                        .all(|f| valid_range.contains(&f.object_index()));
+                        .all(|f| f.is_object_index_in(&valid_range));
 
                     Ok(is_valid)
                 }
@@ -408,14 +424,14 @@ impl Plugin {
         if self.game_id.supports_medium_plugins() {
             match &self.data.record_ids {
                 RecordIds::None => Ok(true),
-                RecordIds::FormIds(_) => Err(Error::UnresolvedFormIds(self.path.clone())),
-                RecordIds::ResolvedFormIds(form_ids) => {
+                RecordIds::FormIds(_) => Err(Error::UnresolvedRecordIds(self.path.clone())),
+                RecordIds::Resolved(form_ids) => {
                     let valid_range = self.valid_medium_form_id_range();
 
                     let is_valid = form_ids
                         .iter()
                         .filter(|f| !f.is_overridden_record())
-                        .all(|f| valid_range.contains(&f.object_index()));
+                        .all(|f| f.is_object_index_in(&valid_range));
 
                     Ok(is_valid)
                 }
@@ -434,9 +450,9 @@ impl Plugin {
             // invalid.
             match &self.data.record_ids {
                 RecordIds::None => Ok(true),
-                RecordIds::FormIds(_) => Err(Error::UnresolvedFormIds(self.path.clone())),
-                RecordIds::ResolvedFormIds(form_ids) => {
-                    Ok(form_ids.iter().all(HashedFormId::is_overridden_record))
+                RecordIds::FormIds(_) => Err(Error::UnresolvedRecordIds(self.path.clone())),
+                RecordIds::Resolved(form_ids) => {
+                    Ok(form_ids.iter().all(ResolvedRecordId::is_overridden_record))
                 }
                 RecordIds::NamespacedIds(_) => Ok(false), // this should never happen.
             }
@@ -522,6 +538,7 @@ impl Plugin {
 pub struct PluginMetadata {
     filename: String,
     scale: PluginScale,
+    record_ids: Box<[NamespacedId]>,
 }
 
 // Get PluginMetadata objects for a collection of loaded plugins.
@@ -533,9 +550,19 @@ pub fn plugins_metadata(plugins: &[&Plugin]) -> Result<Vec<PluginMetadata>, Erro
             .filename()
             .ok_or_else(|| Error::NoFilename(plugin.path().to_path_buf()))?;
 
+        let record_ids = if plugin.game_id == GameId::Morrowind {
+            match &plugin.data.record_ids {
+                RecordIds::NamespacedIds(ids) => ids.clone(),
+                _ => Vec::new(), // This should never happen.
+            }
+        } else {
+            Vec::new()
+        };
+
         let metadata = PluginMetadata {
             filename,
             scale: plugin.scale(),
+            record_ids: record_ids.into_boxed_slice(),
         };
 
         vec.push(metadata);
@@ -564,13 +591,13 @@ fn sorted_slices_intersect<T: PartialOrd>(left: &[T], right: &[T]) -> bool {
     false
 }
 
-fn hashed_form_ids(
+fn resolve_form_ids(
     game_id: GameId,
     form_ids: &[u32],
     plugin_metadata: PluginMetadata,
     masters: &[String],
     other_plugins_metadata: &[PluginMetadata],
-) -> Result<Vec<HashedFormId>, Error> {
+) -> Result<Vec<ResolvedRecordId>, Error> {
     let hashed_parent = hashed_parent(game_id, plugin_metadata);
     let hashed_masters = match game_id {
         GameId::Starfield => hashed_masters_for_starfield(masters, other_plugins_metadata)?,
@@ -579,12 +606,39 @@ fn hashed_form_ids(
 
     let mut form_ids: Vec<_> = form_ids
         .iter()
-        .map(|form_id| HashedFormId::new(hashed_parent, &hashed_masters, *form_id))
+        .map(|form_id| ResolvedRecordId::from_form_id(hashed_parent, &hashed_masters, *form_id))
         .collect();
 
     form_ids.sort();
 
     Ok(form_ids)
+}
+
+fn resolve_namespaced_ids(
+    namespaced_ids: &[NamespacedId],
+    masters: &[String],
+    other_plugins_metadata: &[PluginMetadata],
+) -> Result<Vec<ResolvedRecordId>, Error> {
+    let mut masters_record_ids: HashSet<NamespacedId> = HashSet::new();
+
+    for master in masters {
+        let master_record_ids = other_plugins_metadata
+            .iter()
+            .find(|m| unicase::eq(&m.filename, master))
+            .map(|m| &m.record_ids)
+            .ok_or_else(|| Error::PluginMetadataNotFound(master.clone()))?;
+
+        masters_record_ids.extend(master_record_ids.iter().cloned());
+    }
+
+    let mut resolved_ids: Vec<_> = namespaced_ids
+        .iter()
+        .map(|id| ResolvedRecordId::from_namespaced_id(id, &masters_record_ids))
+        .collect();
+
+    resolved_ids.sort();
+
+    Ok(resolved_ids)
 }
 
 fn hashed_parent(game_id: GameId, parent_metadata: PluginMetadata) -> SourcePlugin {
@@ -921,14 +975,39 @@ mod tests {
         }
 
         #[test]
-        fn count_override_records_should_return_0_even_when_override_records_are_present() {
+        fn count_override_records_should_error_if_record_ids_are_not_yet_resolved() {
             let mut plugin = Plugin::new(
                 GameId::Morrowind,
                 Path::new("testing-plugins/Morrowind/Data Files/Blank - Master Dependent.esm"),
             );
 
             assert!(plugin.parse_file(ParseOptions::whole_plugin()).is_ok());
-            assert_eq!(0, plugin.count_override_records().unwrap());
+
+            match plugin.count_override_records().unwrap_err() {
+                Error::UnresolvedRecordIds(path) => assert_eq!(plugin.path, path),
+                _ => panic!("Expected unresolved record IDs error"),
+            }
+        }
+
+        #[test]
+        fn count_override_records_should_count_how_many_records_are_also_present_in_masters() {
+            let mut plugin = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank - Master Dependent.esm"),
+            );
+            let mut master = Plugin::new(
+                GameId::Morrowind,
+                Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
+            );
+
+            assert!(plugin.parse_file(ParseOptions::whole_plugin()).is_ok());
+            assert!(master.parse_file(ParseOptions::whole_plugin()).is_ok());
+
+            let plugins_metadata = plugins_metadata(&[&master]).unwrap();
+
+            plugin.resolve_record_ids(&plugins_metadata).unwrap();
+
+            assert_eq!(4, plugin.count_override_records().unwrap());
         }
 
         #[test]
@@ -1124,8 +1203,8 @@ mod tests {
             assert!(plugin.parse_file(ParseOptions::whole_plugin()).is_ok());
 
             match plugin.data.record_ids {
-                RecordIds::ResolvedFormIds(ids) => assert_eq!(10, ids.len()),
-                _ => panic!("Expected hashed FormIDs"),
+                RecordIds::Resolved(ids) => assert_eq!(10, ids.len()),
+                _ => panic!("Expected resolved FormIDs"),
             }
         }
 
@@ -1818,7 +1897,7 @@ mod tests {
             assert!(plugin.resolve_record_ids(&[]).is_ok());
 
             match plugin.data.record_ids {
-                RecordIds::ResolvedFormIds(ids) => assert_eq!(10, ids.len()),
+                RecordIds::Resolved(ids) => assert_eq!(10, ids.len()),
                 _ => panic!("Expected resolved FormIDs"),
             }
         }
@@ -1835,14 +1914,14 @@ mod tests {
             assert!(plugin.resolve_record_ids(&[]).is_ok());
 
             let vec_ptr = match plugin.data.record_ids {
-                RecordIds::ResolvedFormIds(ref ids) => ids.as_ptr(),
+                RecordIds::Resolved(ref ids) => ids.as_ptr(),
                 _ => panic!("Expected resolved FormIDs"),
             };
 
             assert!(plugin.resolve_record_ids(&[]).is_ok());
 
             let vec_ptr_2 = match plugin.data.record_ids {
-                RecordIds::ResolvedFormIds(ref ids) => ids.as_ptr(),
+                RecordIds::Resolved(ref ids) => ids.as_ptr(),
                 _ => panic!("Expected resolved FormIDs"),
             };
 
@@ -2062,7 +2141,7 @@ mod tests {
             assert!(plugin.parse_file(ParseOptions::whole_plugin()).is_ok());
 
             match plugin.count_override_records().unwrap_err() {
-                Error::UnresolvedFormIds(path) => assert_eq!(plugin.path, path),
+                Error::UnresolvedRecordIds(path) => assert_eq!(plugin.path, path),
                 _ => panic!("Expected unresolved FormIDs error"),
             }
         }
@@ -2094,6 +2173,7 @@ mod tests {
             let plugin1_metadata = PluginMetadata {
                 filename: plugin1.filename().unwrap(),
                 scale: plugin1.scale(),
+                record_ids: Box::new([]),
             };
 
             assert!(plugin1.parse_file(ParseOptions::whole_plugin()).is_ok());
@@ -2101,7 +2181,7 @@ mod tests {
             assert!(plugin2.resolve_record_ids(&[plugin1_metadata]).is_ok());
 
             match plugin1.overlaps_with(&plugin2).unwrap_err() {
-                Error::UnresolvedFormIds(path) => assert_eq!(plugin1.path, path),
+                Error::UnresolvedRecordIds(path) => assert_eq!(plugin1.path, path),
                 _ => panic!("Expected unresolved FormIDs error"),
             }
         }
@@ -2122,7 +2202,7 @@ mod tests {
             assert!(plugin1.resolve_record_ids(&[]).is_ok());
 
             match plugin1.overlaps_with(&plugin2).unwrap_err() {
-                Error::UnresolvedFormIds(path) => assert_eq!(plugin2.path, path),
+                Error::UnresolvedRecordIds(path) => assert_eq!(plugin2.path, path),
                 _ => panic!("Expected unresolved FormIDs error"),
             }
         }
@@ -2140,6 +2220,7 @@ mod tests {
             let plugin1_metadata = PluginMetadata {
                 filename: plugin1.filename().unwrap(),
                 scale: plugin1.scale(),
+                record_ids: Box::new([]),
             };
 
             assert!(plugin1.parse_file(ParseOptions::whole_plugin()).is_ok());
@@ -2163,6 +2244,7 @@ mod tests {
             let plugin1_metadata = PluginMetadata {
                 filename: plugin1.filename().unwrap(),
                 scale: plugin1.scale(),
+                record_ids: Box::new([]),
             };
 
             assert!(plugin1.parse_file(ParseOptions::whole_plugin()).is_ok());
@@ -2170,7 +2252,7 @@ mod tests {
             assert!(plugin2.resolve_record_ids(&[plugin1_metadata]).is_ok());
 
             match plugin1.overlap_size(&[&plugin2]).unwrap_err() {
-                Error::UnresolvedFormIds(path) => assert_eq!(plugin1.path, path),
+                Error::UnresolvedRecordIds(path) => assert_eq!(plugin1.path, path),
                 _ => panic!("Expected unresolved FormIDs error"),
             }
         }
@@ -2191,7 +2273,7 @@ mod tests {
             assert!(plugin1.resolve_record_ids(&[]).is_ok());
 
             match plugin1.overlap_size(&[&plugin2]).unwrap_err() {
-                Error::UnresolvedFormIds(path) => assert_eq!(plugin2.path, path),
+                Error::UnresolvedRecordIds(path) => assert_eq!(plugin2.path, path),
                 _ => panic!("Expected unresolved FormIDs error"),
             }
         }
@@ -2209,6 +2291,7 @@ mod tests {
             let plugin1_metadata = PluginMetadata {
                 filename: plugin1.filename().unwrap(),
                 scale: plugin1.scale(),
+                record_ids: Box::new([]),
             };
 
             assert!(plugin1.parse_file(ParseOptions::whole_plugin()).is_ok());
@@ -2250,7 +2333,7 @@ mod tests {
             assert!(plugin.parse_file(ParseOptions::whole_plugin()).is_ok());
 
             match plugin.is_valid_as_light_plugin().unwrap_err() {
-                Error::UnresolvedFormIds(path) => assert_eq!(plugin.path, path),
+                Error::UnresolvedRecordIds(path) => assert_eq!(plugin.path, path),
                 _ => panic!("Expected unresolved FormIDs error"),
             }
         }
@@ -2277,7 +2360,7 @@ mod tests {
             assert!(plugin.parse_file(ParseOptions::whole_plugin()).is_ok());
 
             match plugin.is_valid_as_medium_plugin().unwrap_err() {
-                Error::UnresolvedFormIds(path) => assert_eq!(plugin.path, path),
+                Error::UnresolvedRecordIds(path) => assert_eq!(plugin.path, path),
                 _ => panic!("Expected unresolved FormIDs error"),
             }
         }
@@ -2304,7 +2387,7 @@ mod tests {
             assert!(plugin.parse_file(ParseOptions::whole_plugin()).is_ok());
 
             match plugin.is_valid_as_update_plugin().unwrap_err() {
-                Error::UnresolvedFormIds(path) => assert_eq!(plugin.path, path),
+                Error::UnresolvedRecordIds(path) => assert_eq!(plugin.path, path),
                 _ => panic!("Expected unresolved FormIDs error"),
             }
         }
@@ -2314,6 +2397,7 @@ mod tests {
             let master_metadata = PluginMetadata {
                 filename: "Blank.full.esm".to_string(),
                 scale: PluginScale::Full,
+                record_ids: Box::new([]),
             };
             let mut plugin = Plugin::new(
                 GameId::Starfield,
@@ -2330,6 +2414,7 @@ mod tests {
             let master_metadata = PluginMetadata {
                 filename: "Blank.full.esm".to_string(),
                 scale: PluginScale::Full,
+                record_ids: Box::new([]),
             };
             let mut plugin = Plugin::new(
                 GameId::Starfield,
@@ -2366,14 +2451,17 @@ mod tests {
                     PluginMetadata {
                         filename: "Blank.full.esm".to_string(),
                         scale: PluginScale::Full,
+                        record_ids: Box::new([]),
                     },
                     PluginMetadata {
                         filename: "Blank.medium.esm".to_string(),
                         scale: PluginScale::Medium,
+                        record_ids: Box::new([]),
                     },
                     PluginMetadata {
                         filename: "Blank.small.esm".to_string(),
                         scale: PluginScale::Small,
+                        record_ids: Box::new([]),
                     },
                 ],
                 metadata
@@ -2385,6 +2473,7 @@ mod tests {
             let metadata = PluginMetadata {
                 filename: "a".to_string(),
                 scale: PluginScale::Full,
+                record_ids: Box::new([]),
             };
 
             let plugin = hashed_parent(GameId::SkyrimSE, metadata);
@@ -2395,6 +2484,7 @@ mod tests {
             let metadata = PluginMetadata {
                 filename: "a".to_string(),
                 scale: PluginScale::Medium,
+                record_ids: Box::new([]),
             };
 
             let plugin = hashed_parent(GameId::SkyrimSE, metadata);
@@ -2405,6 +2495,7 @@ mod tests {
             let metadata = PluginMetadata {
                 filename: "a".to_string(),
                 scale: PluginScale::Small,
+                record_ids: Box::new([]),
             };
 
             let plugin = hashed_parent(GameId::SkyrimSE, metadata);
@@ -2418,6 +2509,7 @@ mod tests {
             let metadata = PluginMetadata {
                 filename: "a".to_string(),
                 scale: PluginScale::Full,
+                record_ids: Box::new([]),
             };
 
             let plugin = hashed_parent(GameId::Starfield, metadata);
@@ -2428,6 +2520,7 @@ mod tests {
             let metadata = PluginMetadata {
                 filename: "a".to_string(),
                 scale: PluginScale::Medium,
+                record_ids: Box::new([]),
             };
 
             let plugin = hashed_parent(GameId::Starfield, metadata);
@@ -2438,6 +2531,7 @@ mod tests {
             let metadata = PluginMetadata {
                 filename: "a".to_string(),
                 scale: PluginScale::Small,
+                record_ids: Box::new([]),
             };
 
             let plugin = hashed_parent(GameId::Starfield, metadata);
@@ -2468,10 +2562,12 @@ mod tests {
                 PluginMetadata {
                     filename: masters[0].clone(),
                     scale: PluginScale::Full,
+                    record_ids: Box::new([]),
                 },
                 PluginMetadata {
                     filename: masters[1].clone(),
                     scale: PluginScale::Full,
+                    record_ids: Box::new([]),
                 },
             ];
 
@@ -2487,6 +2583,7 @@ mod tests {
             let metadata = &[PluginMetadata {
                 filename: "A".to_string(),
                 scale: PluginScale::Full,
+                record_ids: Box::new([]),
             }];
 
             let hashed_masters = hashed_masters_for_starfield(masters, metadata).unwrap();
@@ -2505,30 +2602,37 @@ mod tests {
                 PluginMetadata {
                     filename: masters[0].clone(),
                     scale: PluginScale::Full,
+                    record_ids: Box::new([]),
                 },
                 PluginMetadata {
                     filename: masters[1].clone(),
                     scale: PluginScale::Medium,
+                    record_ids: Box::new([]),
                 },
                 PluginMetadata {
                     filename: masters[2].clone(),
                     scale: PluginScale::Small,
+                    record_ids: Box::new([]),
                 },
                 PluginMetadata {
                     filename: masters[3].clone(),
                     scale: PluginScale::Medium,
+                    record_ids: Box::new([]),
                 },
                 PluginMetadata {
                     filename: masters[4].clone(),
                     scale: PluginScale::Full,
+                    record_ids: Box::new([]),
                 },
                 PluginMetadata {
                     filename: masters[5].clone(),
                     scale: PluginScale::Small,
+                    record_ids: Box::new([]),
                 },
                 PluginMetadata {
                     filename: masters[6].clone(),
                     scale: PluginScale::Small,
+                    record_ids: Box::new([]),
                 },
             ];
 
@@ -2744,16 +2848,17 @@ mod tests {
     }
 
     #[test]
-    fn hashed_form_ids_should_use_plugin_names_case_insensitively() {
+    fn resolve_form_ids_should_use_plugin_names_case_insensitively() {
         let raw_form_ids = vec![0x0000_0001, 0x0100_0002];
 
         let masters = vec!["tést.esm".to_string()];
-        let form_ids = hashed_form_ids(
+        let form_ids = resolve_form_ids(
             GameId::SkyrimSE,
             &raw_form_ids,
             PluginMetadata {
                 filename: "Blàñk.esp".to_string(),
                 scale: PluginScale::Full,
+                record_ids: Box::new([]),
             },
             &masters,
             &[],
@@ -2761,12 +2866,13 @@ mod tests {
         .unwrap();
 
         let other_masters = vec!["TÉST.ESM".to_string()];
-        let other_form_ids = hashed_form_ids(
+        let other_form_ids = resolve_form_ids(
             GameId::SkyrimSE,
             &raw_form_ids,
             PluginMetadata {
                 filename: "BLÀÑK.ESP".to_string(),
                 scale: PluginScale::Full,
+                record_ids: Box::new([]),
             },
             &other_masters,
             &[],
