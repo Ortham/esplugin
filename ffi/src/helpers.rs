@@ -2,7 +2,7 @@ use std::ffi::{CStr, CString};
 
 use libc::{c_char, size_t};
 
-use esplugin::GameId;
+use esplugin::{GameId, Plugin};
 
 use crate::{constants::*, error::error};
 
@@ -43,15 +43,23 @@ pub fn to_c_string_array(strings: &[String]) -> Result<(*mut *mut c_char, size_t
     let mut c_strings = strings
         .iter()
         .map(|s| to_c_string(s))
-        .collect::<Result<Vec<*mut c_char>, u32>>()?;
-
-    c_strings.shrink_to_fit();
+        .collect::<Result<Box<[*mut c_char]>, u32>>()?;
 
     let pointer = c_strings.as_mut_ptr();
     let size = c_strings.len();
     std::mem::forget(c_strings);
 
     Ok((pointer, size))
+}
+
+pub unsafe fn to_plugin_refs_slice<'a>(
+    array: *const *const Plugin,
+    array_size: usize,
+) -> Option<Box<[&'a Plugin]>> {
+    std::slice::from_raw_parts(array, array_size)
+        .iter()
+        .map(|pointer| pointer.as_ref())
+        .collect()
 }
 
 pub fn map_game_id(game_id: u32) -> Result<GameId, u32> {

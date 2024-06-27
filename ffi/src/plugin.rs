@@ -489,21 +489,17 @@ pub unsafe extern "C" fn esp_plugin_records_overlap_size(
             error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
             let plugin = &*plugin_ptr;
-            let other_plugins: Option<Vec<&Plugin>> =
-                std::slice::from_raw_parts(other_plugins_ptr, other_plugins_ptr_count)
-                    .iter()
-                    .map(|pointer| pointer.as_ref())
-                    .collect();
 
-            let other_plugins = match other_plugins {
-                Some(p) => p,
-                None => {
-                    return error(
-                        ESP_ERROR_NULL_POINTER,
-                        "Null pointer passed in plugins array",
-                    )
-                }
-            };
+            let other_plugins =
+                match to_plugin_refs_slice(other_plugins_ptr, other_plugins_ptr_count) {
+                    Some(p) => p,
+                    None => {
+                        return error(
+                            ESP_ERROR_NULL_POINTER,
+                            "Null pointer passed in plugins array",
+                        )
+                    }
+                };
 
             match plugin.overlap_size(&other_plugins) {
                 Ok(x) => {

@@ -18,6 +18,7 @@ use self::error::error;
 use error::handle_error;
 use esplugin::Plugin;
 use esplugin::PluginMetadata;
+use helpers::to_plugin_refs_slice;
 use libc::size_t;
 
 pub use self::common::*;
@@ -40,12 +41,7 @@ pub unsafe extern "C" fn esp_get_plugins_metadata(
         if plugins.is_null() || plugins_metadata.is_null() {
             error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
-            let plugins: Option<Vec<&Plugin>> = std::slice::from_raw_parts(plugins, plugins_len)
-                .iter()
-                .map(|pointer| pointer.as_ref())
-                .collect();
-
-            let plugins = match plugins {
+            let plugins = match to_plugin_refs_slice(plugins, plugins_len) {
                 Some(p) => p,
                 None => {
                     return error(

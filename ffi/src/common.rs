@@ -38,8 +38,10 @@ pub unsafe extern "C" fn esp_string_array_free(array: *mut *mut c_char, size: si
         return;
     }
 
-    let vec = Vec::from_raw_parts(array, size, size);
-    for string in vec {
-        esp_string_free(string);
+    let strings = Box::from_raw(std::slice::from_raw_parts_mut(array, size));
+    for string in strings.iter() {
+        esp_string_free(*string);
     }
+
+    drop(strings);
 }
