@@ -2,6 +2,78 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [6.0.0] - 2024-06-27
+
+### Added
+
+- Support for the new medium plugin type introduced by Starfield 1.12.30.0.
+- Support for comparing FormIDs between Starfield plugins.
+- Support for counting the number of override records in Morrowind and Starfield
+  plugins.
+- `Plugin::is_medium_plugin()`, which checks if the given plugin is a medium
+  plugin.
+- `Plugin::is_valid_as_medium_plugin()`, which checks if the given plugin's
+  FormIDs fall within the valid range for a medium plugin.
+- `Error::UnresolvedFormIds` as a new error variant.
+- `Error::PluginMetadataNotFound` as a new error variant.
+- `plugins_metadata()`, which outputs an opaque struct that holds
+  metadata for all the given plugins that can be passed to
+  `Plugin::resolve_record_ids()`.
+- `PluginMetadata` as an opaque struct that holds metadata about a plugin.
+- `Plugin::resolve_record_ids()`, which is used to resolve Morrowind and
+  Starfield records using the metadata of their masters, which is provided by
+  the output of `plugins_metadata()`.
+- `Plugin::parse_reader()` as a more generic replacement for `Plugin::parse()`
+  and `Plugin::parse_open_file()`.
+- `ParseOptions` as an opaque struct holding configuration options for parsing a
+  plugin.
+
+### Changed
+
+- `Plugin::count_override_records()` now returns a `Result<usize, Error>`. It
+  will error if called on a Morrowind or Starfield plugin that has not had
+  `Plugin::resolve_record_ids()` run on it.
+- `Plugin::overlaps_with()` now returns a `Result<bool, Error>`. It will error
+  if called on a Starfield plugin that has not had
+  `Plugin::resolve_record_ids()` run on it.
+- `Plugin::overlap_size()` now returns a `Result<usize, Error>`. It will error
+  if called on a Starfield plugin that has not had
+  `Plugin::resolve_record_ids()` run on it.
+- `Plugin::is_valid_as_light_plugin()` now returns a `Result<bool, Error>`. It
+  will error if called on a Starfield plugin that has not had
+  `Plugin::resolve_record_ids()` run on it.
+- `Plugin::is_valid_as_override_plugin()` now returns a `Result<bool, Error>`.
+  It will error if called on a Starfield plugin that has not had
+  `Plugin::resolve_record_ids()` run on it.
+- `Plugin::game_id()` now returns a `GameId` instead of a `&GameId`.
+- `Plugin::is_override_plugin()` has been renamed to
+  `Plugin::is_update_plugin()` to reflect the terminology used by Starfield's
+  Creation Kit.
+- `Plugin::is_valid_as_override_plugin()` has been renamed to
+  `Plugin::is_valid_as_update_plugin()` to reflect the terminology used by
+  Starfield's Creation Kit.
+- `Plugin::parse_file()` and `Plugin::is_valid()` now take a `ParseOptions`
+  parameter object instead of a boolean indicating whether or not to only load
+  the plugin's header.
+- `Error::ParsingError`'s first field is now a `Box<[u8]>` instead of a
+  `Vec<u8>`.
+- `Error::DecodeError`'s first field is now a `Box<[u8]>` instead of a
+  `Vec<u8>`.
+
+### Fixed
+
+- `Plugin::is_master_file()` incorrectly used the file extension instead of the
+header flag for Morrowind plugins.
+
+### Removed
+
+- `Plugin::is_light_master()`: use `Plugin::is_light_plugin()` instead.
+- `Plugin::is_valid_as_light_master()`: use `Plugin::is_valid_as_light_plugin()`
+  instead.
+- `Plugin::parse()`: use `Plugin::parse_reader()` with a `std::io::Cursor`
+  instead.
+- `Plugin::parse_open_file()`: use `Plugin::parse_reader()` instead.
+
 ## [5.0.1] - 2024-05-02
 
 ### Changed

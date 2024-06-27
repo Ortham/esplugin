@@ -2,6 +2,49 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [6.0.0] - 2024-06-27
+
+### Added
+
+- `esp_get_error_message()`, which outputs a thread-local error message string
+  for the last error that occurred.
+- `esp_plugin_is_medium_plugin()`, which checks if the given plugin is a medium
+  plugin (as introduced by Starfield 1.12.30.0).
+- `esp_plugin_is_valid_as_medium_plugin()`, which checks if the given plugin's
+  FormIDs fall within the valid range for a medium plugin.
+- `esp_get_plugins_metadata()`, which outputs an opaque struct that holds
+  metadata for all the given plugins that can be passed to
+  `esp_plugin_resolve_record_ids()`.
+- `esp_plugins_metadata_free()`, which frees objects allocated by
+  `esp_get_plugins_metadata()`.
+- `esp_plugin_resolve_record_ids()`, which is used to resolve Morrowind and
+  Starfield records using the metadata of their masters, which is provided by
+  the output of `esp_get_plugins_metadata()`.
+- `ESP_ERROR_UNRESOLVED_RECORD_IDS` as a new error code.
+- `ESP_ERROR_PLUGIN_METADATA_NOT_FOUND` as a new error code.
+
+### Changed
+
+- Strings that contain null bytes now cause errors instead of being silently
+  truncated when read from:
+  - Plugin filenames
+  - Plugin masters
+  - Plugin descriptions (excluding Morrowind plugins, which still have their
+    descriptions truncated to the first null byte)
+- `esp_plugin_is_override_plugin()` has been renamed to
+  `esp_plugin_is_update_plugin()` to reflect the terminology used by Starfield's
+  Creation Kit.
+- `esp_plugin_is_valid_as_override_plugin()` has been renamed to
+  `esp_plugin_is_valid_as_update_plugin()` to reflect the terminology used by
+  Starfield's Creation Kit.
+- Updated to esplugin v6.0.0.
+
+### Removed
+
+- `esp_plugin_is_light_master()`: use `esp_plugin_is_light_plugin()` instead.
+- `esp_plugin_is_valid_as_light_master()`: use
+  `esp_plugin_is_valid_as_light_plugin()` instead.
+
 ## [5.0.1] - 2024-05-02
 
 ### Changed
@@ -17,7 +60,8 @@ After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
 ### Removed
 
-- The `ffi-headers` build feature: if you want to generate C or C++ headers, install and run cbindgen separately.
+- The `ffi-headers` build feature: if you want to generate C or C++ headers,
+  install and run cbindgen separately.
 
 ## [4.1.1] - 2023-12-06
 
