@@ -288,7 +288,7 @@ impl Plugin {
             if subrecord.subrecord_type() == target_subrecord_type {
                 if subrecord.data().len() <= description_offset {
                     return Err(Error::ParsingError(
-                        subrecord.data().to_vec(),
+                        subrecord.data().into(),
                         ParsingErrorKind::SubrecordDataTooShort(description_offset),
                     ));
                 }
@@ -298,7 +298,7 @@ impl Plugin {
                 return WINDOWS_1252
                     .decode_without_bom_handling_and_without_replacement(data)
                     .map(|s| Some(s.to_string()))
-                    .ok_or(Error::DecodeError(data.to_vec()));
+                    .ok_or(Error::DecodeError(data.into()));
             }
         }
 
@@ -729,9 +729,9 @@ fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
             WINDOWS_1252
                 .decode_without_bom_handling_and_without_replacement(d)
                 .map(|s| s.to_string())
-                .ok_or(Error::DecodeError(d.to_vec()))
+                .ok_or(Error::DecodeError(d.into()))
         })
-        .collect::<Result<Vec<String>, Error>>()
+        .collect()
 }
 
 fn read_form_ids<R: BufRead + Seek>(reader: &mut R, game_id: GameId) -> Result<Vec<u32>, Error> {

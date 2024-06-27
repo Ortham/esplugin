@@ -72,7 +72,7 @@ impl Record {
         if &header_bytes[0..4] != expected_type {
             // Take a copy of 16 bytes so the output includes the FormID.
             return Err(Error::ParsingError(
-                header_bytes[..16].to_vec(),
+                header_bytes[..16].into(),
                 ParsingErrorKind::UnexpectedRecordType(expected_type.to_vec()),
             ));
         }

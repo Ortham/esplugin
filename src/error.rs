@@ -30,8 +30,8 @@ pub enum Error {
     IoError(io::Error),
     NoFilename(PathBuf),
     ParsingIncomplete(MoreDataNeeded),
-    ParsingError(Vec<u8>, ParsingErrorKind),
-    DecodeError(Vec<u8>),
+    ParsingError(Box<[u8]>, ParsingErrorKind),
+    DecodeError(Box<[u8]>),
     UnresolvedRecordIds(PathBuf),
     PluginMetadataNotFound(String),
 }
@@ -46,7 +46,7 @@ impl From<Err<nom::error::Error<&[u8]>>> for Error {
                 Error::ParsingIncomplete(MoreDataNeeded::Size(size))
             }
             Err::Error(err) | Err::Failure(err) => Error::ParsingError(
-                err.input.to_vec(),
+                err.input.into(),
                 ParsingErrorKind::GenericParserError(err.code.description().to_string()),
             ),
         }
