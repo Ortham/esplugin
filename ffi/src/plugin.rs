@@ -3,7 +3,7 @@ use std::{f32, panic, ptr};
 
 use libc::{c_char, c_float, size_t};
 
-use esplugin::{GameId, ParseOptions, Plugin, PluginMetadata};
+use esplugin::{ParseOptions, Plugin, PluginMetadata};
 
 use crate::constants::*;
 use crate::error::{error, handle_error};
@@ -349,16 +349,10 @@ pub unsafe extern "C" fn esp_plugin_description(
 
             let c_string = match description_option {
                 None => ptr::null_mut(),
-                Some(d) => {
-                    if plugin.game_id() == GameId::Morrowind {
-                        to_truncated_c_string(&d)
-                    } else {
-                        match to_c_string(&d) {
-                            Ok(s) => s,
-                            Err(e) => return error(e, "The description contained a null byte"),
-                        }
-                    }
-                }
+                Some(d) => match to_c_string(&d) {
+                    Ok(s) => s,
+                    Err(e) => return error(e, "The description contained a null byte"),
+                },
             };
 
             *description = c_string;

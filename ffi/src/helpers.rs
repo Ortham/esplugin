@@ -27,18 +27,6 @@ pub fn to_c_string(string: &str) -> Result<*mut c_char, u32> {
     })
 }
 
-pub fn to_truncated_c_string(string: &str) -> *mut c_char {
-    CString::new(string)
-        .unwrap_or_else(|error| {
-            let nul_position = error.nul_position();
-            let mut bytes = error.into_vec();
-            bytes.truncate(nul_position + 1);
-
-            CString::from_vec_with_nul(bytes).expect("vec should end in a nul byte")
-        })
-        .into_raw()
-}
-
 pub fn to_c_string_array(strings: &[String]) -> Result<(*mut *mut c_char, size_t), u32> {
     let mut c_strings = strings
         .iter()
@@ -99,27 +87,5 @@ mod tests {
         let err = to_c_string("test\0with null").unwrap_err();
 
         assert_eq!(ESP_ERROR_TEXT_ENCODE_ERROR, err);
-    }
-
-    #[test]
-    fn to_truncated_c_string_should_return_full_string_if_it_does_not_contain_nul() {
-        let c_string = to_truncated_c_string("test without null");
-        let rust_c_string = unsafe { CStr::from_ptr(c_string) };
-
-        assert_eq!(
-            CString::new("test without null").unwrap().to_bytes(),
-            rust_c_string.to_bytes()
-        );
-    }
-
-    #[test]
-    fn to_truncated_c_string_should_truncate_string_to_first_nul() {
-        let c_string = to_truncated_c_string("test\0with null");
-        let rust_c_string = unsafe { CStr::from_ptr(c_string) };
-
-        assert_eq!(
-            CString::new("test").unwrap().to_bytes(),
-            rust_c_string.to_bytes()
-        );
     }
 }

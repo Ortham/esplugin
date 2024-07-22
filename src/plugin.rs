@@ -225,9 +225,9 @@ impl Plugin {
         match self.game_id {
             GameId::Fallout4 | GameId::SkyrimSE | GameId::Starfield => {
                 self.is_master_flag_set()
-                    || self.has_extension(FileExtension::Esm)
-                    // The .esl extension implies the master flag, but the light and medium flag do not.
-                    || self.has_extension(FileExtension::Esl)
+                     || self.has_extension(FileExtension::Esm)
+                     // The .esl extension implies the master flag, but the light and medium flag do not.
+                     || self.has_extension(FileExtension::Esl)
             }
             _ => self.is_master_flag_set(),
         }
@@ -293,7 +293,7 @@ impl Plugin {
                     ));
                 }
 
-                let data = &subrecord.data()[description_offset..(subrecord.data().len() - 1)];
+                let data = until_first_null(&subrecord.data()[description_offset..]);
 
                 return WINDOWS_1252
                     .decode_without_bom_handling_and_without_replacement(data)
@@ -724,7 +724,7 @@ fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
         .subrecords()
         .iter()
         .filter(|s| s.subrecord_type() == b"MAST")
-        .map(|s| &s.data()[0..(s.data().len() - 1)])
+        .map(|s| until_first_null(&s.data()[0..]))
         .map(|d| {
             WINDOWS_1252
                 .decode_without_bom_handling_and_without_replacement(d)
@@ -794,9 +794,19 @@ fn read_plugin<R: BufRead + Seek>(
     })
 }
 
+/// Return the slice up to and not including the first null byte. If there is no
+/// null byte, return the whole string.
+fn until_first_null(bytes: &[u8]) -> &[u8] {
+    if let Some(i) = memchr::memchr(0, bytes) {
+        bytes.split_at(i).0
+    } else {
+        bytes
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use std::fs::copy;
+    use std::fs::{copy, read};
     use std::io::Cursor;
     use tempfile::tempdir;
 
@@ -922,7 +932,7 @@ mod tests {
         }
 
         #[test]
-        fn description_should_return_plugin_header_hedr_subrecord_content() {
+        fn description_should_trim_nulls_in_plugin_header_hedr_subrecord_content() {
             let mut plugin = Plugin::new(
                 GameId::Morrowind,
                 Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
@@ -930,8 +940,7 @@ mod tests {
 
             assert!(plugin.parse_file(ParseOptions::header_only()).is_ok());
 
-            let expected_description = format!("{:\0<218}{:\0<38}\n\0\0", "v5.0", "\r");
-            assert_eq!(expected_description, plugin.description().unwrap().unwrap());
+            assert_eq!("v5.0", plugin.description().unwrap().unwrap());
         }
 
         #[test]
@@ -1191,7 +1200,7 @@ mod tests {
     }
 
     mod skyrim {
-        use super::super::*;
+        use super::*;
 
         #[test]
         fn parse_file_should_succeed() {
@@ -1291,12 +1300,31 @@ mod tests {
                 GameId::Skyrim,
                 Path::new(
                     "testing-plugins/Skyrim/Data/Blank - \
-                     Master Dependent.esm",
+                      Master Dependent.esm",
                 ),
             );
 
             assert!(plugin.parse_file(ParseOptions::header_only()).is_ok());
             assert_eq!("", plugin.description().unwrap().unwrap());
+        }
+
+        #[test]
+        fn description_should_trim_nulls_in_plugin_description_field_content() {
+            let mut plugin = Plugin::new(
+                GameId::Skyrim,
+                Path::new("testing-plugins/Skyrim/Data/Blank.esm"),
+            );
+
+            let mut bytes = read(plugin.path()).unwrap();
+
+            assert_eq!(0x2E, bytes[0x39]);
+            bytes[0x39] = 0;
+
+            assert!(plugin
+                .parse_reader(Cursor::new(bytes), ParseOptions::whole_plugin())
+                .is_ok());
+
+            assert_eq!("v5", plugin.description().unwrap().unwrap());
         }
 
         #[test]
@@ -1457,8 +1485,6 @@ mod tests {
 
     mod skyrimse {
         use super::*;
-
-        use std::fs::read;
 
         #[test]
         fn is_master_file_should_use_file_extension_and_flag() {
@@ -2677,9 +2703,9 @@ mod tests {
         let result = plugin.parse_file(ParseOptions::whole_plugin());
         assert!(result.is_err());
         assert_eq!(
-            "An error was encountered while parsing the plugin content [42, 53, 41, 00, 67, 00, 00, 00, 24, 00, 00, 00, 07, 07, 00, 00]: Expected record type [54, 45, 53, 34]",
-            result.unwrap_err().to_string()
-        );
+             "An error was encountered while parsing the plugin content [42, 53, 41, 00, 67, 00, 00, 00, 24, 00, 00, 00, 07, 07, 00, 00]: Expected record type [54, 45, 53, 34]",
+             result.unwrap_err().to_string()
+         );
     }
 
     #[test]
@@ -2775,7 +2801,7 @@ mod tests {
             GameId::Skyrim,
             Path::new(
                 "testing-plugins/Skyrim/Data/Blank - \
-                 Master Dependent.esm",
+                  Master Dependent.esm",
             ),
         );
 
@@ -2784,6 +2810,25 @@ mod tests {
         let masters = plugin.masters().unwrap();
         assert_eq!(1, masters.len());
         assert_eq!("Blank.esm", masters[0]);
+    }
+
+    #[test]
+    fn masters_should_only_read_up_to_the_first_null_for_each_master() {
+        let mut plugin = Plugin::new(
+            GameId::Skyrim,
+            Path::new("testing-plugins/Skyrim/Data/Blank - Master Dependent.esm"),
+        );
+
+        let mut bytes = read(plugin.path()).unwrap();
+
+        assert_eq!(0x2E, bytes[0x43]);
+        bytes[0x43] = 0;
+
+        assert!(plugin
+            .parse_reader(Cursor::new(bytes), ParseOptions::whole_plugin())
+            .is_ok());
+
+        assert_eq!("Blank", plugin.masters().unwrap()[0]);
     }
 
     #[test]
