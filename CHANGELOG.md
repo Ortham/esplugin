@@ -2,6 +2,14 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [6.0.1] - 2024-07-22
+
+### Fixed
+
+- `Plugin::masters()` and `Plugin::description()` now truncate the strings that
+  they return up to (and not including) their first null byte, to match the
+  behaviour of supported games and their official modding tools.
+
 ## [6.0.0] - 2024-06-27
 
 ### Added
