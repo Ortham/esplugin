@@ -272,6 +272,13 @@ impl Plugin {
             && self.masters().map(|m| !m.is_empty()).unwrap_or(false)
     }
 
+    pub fn is_blueprint_plugin(&self) -> bool {
+        match self.game_id {
+            GameId::Starfield => self.data.header_record.header().flags() & 0x800 != 0,
+            _ => false,
+        }
+    }
+
     pub fn is_valid(game_id: GameId, filepath: &Path, options: ParseOptions) -> bool {
         let mut plugin = Plugin::new(game_id, filepath);
 
@@ -2155,6 +2162,36 @@ mod tests {
             plugin.parse_file(ParseOptions::header_only()).unwrap();
 
             assert!(!plugin.is_update_plugin());
+        }
+
+        #[test]
+        fn is_blueprint_plugin_should_be_false_for_a_plugin_without_the_blueprint_flag_set() {
+            let mut plugin = Plugin::new(
+                GameId::Starfield,
+                Path::new("testing-plugins/Starfield/Data/Blank.full.esm"),
+            );
+            plugin.parse_file(ParseOptions::header_only()).unwrap();
+
+            assert!(!plugin.is_blueprint_plugin());
+        }
+
+        #[test]
+        fn is_blueprint_plugin_should_be_false_for_a_plugin_with_the_blueprint_flag_set() {
+            let mut plugin = Plugin::new(
+                GameId::Starfield,
+                Path::new("testing-plugins/Starfield/Data/Blank.full.esm"),
+            );
+
+            let mut bytes = read(plugin.path()).unwrap();
+
+            assert_eq!(0, bytes[0x09]);
+            bytes[0x09] = 8;
+
+            assert!(plugin
+                .parse_reader(Cursor::new(bytes), ParseOptions::header_only())
+                .is_ok());
+
+            assert!(plugin.is_blueprint_plugin());
         }
 
         #[test]
