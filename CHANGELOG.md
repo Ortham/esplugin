@@ -2,6 +2,13 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [6.1.0] - 2024-07-23
+
+### Added
+
+- `Plugin::is_blueprint_plugin()` returns true if the plugin is a Starfield
+  plugin that has the `0x800` flag set in its TES4 header record.
+
 ## [6.0.1] - 2024-07-22
 
 ### Fixed

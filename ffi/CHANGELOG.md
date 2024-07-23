@@ -2,6 +2,17 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [6.1.0] - 2024-07-23
+
+### Added
+
+- `esp_plugin_is_blueprint_plugin()`, which checks if the given plugin is a
+  blueprint plugin (as introduced by Starfield).
+
+### Changed
+
+- Updated to esplugin v6.1.0.
+
 ## [6.0.1] - 2024-07-22
 
 ### Changed
