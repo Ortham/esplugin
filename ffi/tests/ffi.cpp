@@ -179,6 +179,24 @@ void test_esp_plugin_is_update_plugin() {
   esp_plugin_free(plugin);
 }
 
+void test_esp_plugin_is_blueprint_plugin() {
+  printf("testing esp_plugin_is_blueprint_plugin()...\n");
+  Plugin * plugin;
+  // The Skyrim SE light flag is the same value as the Starfield update flag.
+  auto return_code = esp_plugin_new(&plugin, ESP_GAME_STARFIELD, "../../testing-plugins/Starfield/Data/Blank.full.esm");
+  assert(return_code == ESP_OK);
+
+  return_code = esp_plugin_parse(plugin, true);
+  assert(return_code == ESP_OK);
+
+  bool is_blueprint_plugin;
+  return_code = esp_plugin_is_blueprint_plugin(plugin, &is_blueprint_plugin);
+  assert(return_code == ESP_OK);
+  assert(!is_blueprint_plugin);
+
+  esp_plugin_free(plugin);
+}
+
 void test_esp_plugin_is_valid() {
   bool is_valid;
   auto return_code = esp_plugin_is_valid(ESP_GAME_SKYRIM, "../../testing-plugins/Skyrim/Data/Blank.esm", true, &is_valid);
@@ -391,6 +409,7 @@ int main() {
   test_esp_plugin_is_light_plugin();
   test_esp_plugin_is_medium_plugin();
   test_esp_plugin_is_update_plugin();
+  test_esp_plugin_is_blueprint_plugin();
   test_esp_plugin_is_valid();
   test_esp_plugin_description();
   test_esp_plugin_header_version();
