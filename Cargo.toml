@@ -17,7 +17,7 @@ coveralls = { repository = "Ortham/esplugin" }
 encoding_rs = "0.8.17"
 memchr = "2.7.4"
 nom = "7.0.0"
-flate2 = { version = "1.0.1", optional = true }
+flate2 = { version = "1.0.31", optional = true }
 unicase = "2.7.0"
 
 [dev-dependencies]
