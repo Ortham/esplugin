@@ -235,7 +235,7 @@ impl Plugin {
     fn scale(&self) -> PluginScale {
         if self.is_light_plugin() {
             PluginScale::Small
-        } else if self.is_medium_plugin() {
+        } else if self.is_medium_flag_set() {
             PluginScale::Medium
         } else {
             PluginScale::Full
