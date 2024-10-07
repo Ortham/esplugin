@@ -46,6 +46,18 @@ fn criterion_benchmark(c: &mut Criterion) {
             assert_eq!(plugin.count_override_records().unwrap(), 1272);
         });
     });
+
+    c.bench_function("Plugin.is_master_file()", |b| {
+        let mut plugin = Plugin::new(
+            GAME_ID,
+            Path::new("testing-plugins/SkyrimSE/Data/Blank.esp"),
+        );
+        assert!(plugin.parse_file(ParseOptions::header_only()).is_ok());
+
+        b.iter(|| {
+            assert!(!plugin.is_master_file());
+        });
+    });
 }
 
 criterion::criterion_group!(benches, criterion_benchmark);
