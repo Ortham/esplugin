@@ -2,6 +2,15 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [6.1.1] - 2024-10-07
+
+### Changed
+
+- Improved the performance of `Plugin::is_master_file()`,
+  `Plugin::is_light_plugin()`, and `Plugin::is_medium_plugin()` when the file
+  extension is checked.
+- Updated flate2 to 1.0.34.
+
 ## [6.1.0] - 2024-07-23
 
 ### Added
