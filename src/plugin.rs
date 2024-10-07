@@ -18,11 +18,11 @@
  */
 
 use std::collections::HashSet;
+use std::ffi::OsStr;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Seek};
 use std::ops::RangeInclusive;
 use std::path::{Path, PathBuf};
-use std::str;
 
 use encoding_rs::WINDOWS_1252;
 
@@ -36,25 +36,22 @@ use crate::record_id::{NamespacedId, ObjectIndexMask, RecordId, ResolvedRecordId
 enum FileExtension {
     Esm,
     Esl,
+    Ghost,
+    Unrecognised,
 }
 
-impl PartialEq<&std::borrow::Cow<'_, str>> for FileExtension {
-    fn eq(&self, other: &&std::borrow::Cow<'_, str>) -> bool {
-        const ESM: &str = "esm";
-        const ESL: &str = "esl";
-
-        // Lowercasing strings isn't generally a good way to compare them, but
-        // here the strings are of the correct length and they're being compared
-        // against ASCII literals.
-        match self {
-            FileExtension::Esm => other.len() == ESM.len() && other.to_lowercase() == ESM,
-            FileExtension::Esl => other.len() == ESL.len() && other.to_lowercase() == ESL,
+impl From<&OsStr> for FileExtension {
+    fn from(value: &OsStr) -> Self {
+        if value.eq_ignore_ascii_case("esm") {
+            FileExtension::Esm
+        } else if value.eq_ignore_ascii_case("esl") {
+            FileExtension::Esl
+        } else if value.eq_ignore_ascii_case("ghost") {
+            FileExtension::Ghost
+        } else {
+            FileExtension::Unrecognised
         }
     }
-}
-
-fn is_ghost_file_extension(extension: &str) -> bool {
-    extension.eq_ignore_ascii_case("ghost")
 }
 
 #[derive(Clone, Default, PartialEq, Eq, Debug, Hash)]
@@ -203,31 +200,33 @@ impl Plugin {
         masters(&self.data.header_record)
     }
 
-    fn has_extension(&self, extension: FileExtension) -> bool {
-        let path_extension = self.path.extension().map(|e| e.to_string_lossy());
-        match path_extension {
-            Some(ref e) if extension == e => true,
-            Some(ref e) if is_ghost_file_extension(e) => {
-                let path_extension = self
+    fn file_extension(&self) -> FileExtension {
+        if let Some(p) = self.path.extension() {
+            match FileExtension::from(p) {
+                FileExtension::Ghost => self
                     .path
                     .file_stem()
                     .map(Path::new)
-                    .and_then(|p| p.extension())
-                    .map(|e| e.to_string_lossy());
-
-                matches!(path_extension, Some(ref e) if extension == e)
+                    .and_then(Path::extension)
+                    .map(FileExtension::from)
+                    .unwrap_or(FileExtension::Unrecognised),
+                e => e,
             }
-            _ => false,
+        } else {
+            FileExtension::Unrecognised
         }
     }
 
     pub fn is_master_file(&self) -> bool {
         match self.game_id {
             GameId::Fallout4 | GameId::SkyrimSE | GameId::Starfield => {
+                // The .esl extension implies the master flag, but the light and
+                // medium flags do not.
                 self.is_master_flag_set()
-                     || self.has_extension(FileExtension::Esm)
-                     // The .esl extension implies the master flag, but the light and medium flag do not.
-                     || self.has_extension(FileExtension::Esl)
+                    || matches!(
+                        self.file_extension(),
+                        FileExtension::Esm | FileExtension::Esl
+                    )
             }
             _ => self.is_master_flag_set(),
         }
@@ -249,9 +248,9 @@ impl Plugin {
                 // If the inject flag is set, it prevents the .esl extension from
                 // causing the light flag to be forcibly set on load.
                 self.is_light_flag_set()
-                    || (!self.is_update_flag_set() && self.has_extension(FileExtension::Esl))
+                    || (!self.is_update_flag_set() && self.file_extension() == FileExtension::Esl)
             } else {
-                self.is_light_flag_set() || self.has_extension(FileExtension::Esl)
+                self.is_light_flag_set() || self.file_extension() == FileExtension::Esl
             }
         } else {
             false
