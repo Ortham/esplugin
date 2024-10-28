@@ -14,7 +14,7 @@ edition = "2021"
 coveralls = { repository = "Ortham/esplugin" }
 
 [dependencies]
-encoding_rs = "0.8.17"
+encoding_rs = "0.8.35"
 memchr = "2.7.4"
 nom = "7.0.0"
 flate2 = { version = "1.0.34", optional = true }
