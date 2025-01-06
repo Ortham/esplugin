@@ -22,7 +22,7 @@ unicase = "2.8.1"
 
 [dev-dependencies]
 criterion = "0.5.1"
-tempfile = "3.14.0"
+tempfile = "3.15.0"
 
 [features]
 default = []
