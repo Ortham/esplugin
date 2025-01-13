@@ -116,7 +116,7 @@ impl<'a> SubrecordRef<'a> {
         ))
     }
 
-    pub fn subrecord_type(&'a self) -> &SubrecordType {
+    pub fn subrecord_type(&'a self) -> &'a SubrecordType {
         &self.subrecord_type
     }
 
