@@ -873,7 +873,7 @@ mod tests {
 
         #[test]
         fn game_id_should_return_the_plugins_associated_game_id() {
-            let plugin = Plugin::new(GameId::Morrowind, &Path::new("Data/Blank.esm"));
+            let plugin = Plugin::new(GameId::Morrowind, Path::new("Data/Blank.esm"));
 
             assert_eq!(GameId::Morrowind, plugin.game_id());
         }
@@ -1237,7 +1237,7 @@ mod tests {
 
         #[test]
         fn game_id_should_return_the_plugins_associated_game_id() {
-            let plugin = Plugin::new(GameId::Skyrim, &Path::new("Data/Blank.esm"));
+            let plugin = Plugin::new(GameId::Skyrim, Path::new("Data/Blank.esm"));
 
             assert_eq!(GameId::Skyrim, plugin.game_id());
         }
@@ -2659,7 +2659,7 @@ mod tests {
         #[test]
         fn hashed_masters_for_starfield_should_count_mod_indexes_separately_for_different_plugin_scales(
         ) {
-            let masters: Vec<_> = (0..7).into_iter().map(|i| i.to_string()).collect();
+            let masters: Vec<_> = (0..7).map(|i| i.to_string()).collect();
             let metadata = &[
                 PluginMetadata {
                     filename: masters[0].clone(),
