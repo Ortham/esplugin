@@ -30,8 +30,8 @@ use nom::bytes::complete::take;
 use nom::combinator::map;
 use nom::multi::length_data;
 use nom::number::complete::{le_u16, le_u32};
-use nom::sequence::{pair, preceded, separated_pair, tuple};
-use nom::IResult;
+use nom::sequence::{pair, preceded, separated_pair};
+use nom::{IResult, Parser};
 
 use crate::game_id::GameId;
 
@@ -143,23 +143,24 @@ fn subrecord_type(input: &[u8]) -> IResult<&[u8], SubrecordType> {
     map(take(SUBRECORD_TYPE_LENGTH), |s: &[u8]| {
         s.try_into()
             .expect("subrecord type slice should be the required length")
-    })(input)
+    })
+    .parse(input)
 }
 
 fn morrowind_subrecord(input: &[u8]) -> IResult<&[u8], (SubrecordType, &[u8])> {
-    tuple((subrecord_type, length_data(le_u32)))(input)
+    (subrecord_type, length_data(le_u32)).parse(input)
 }
 
 fn simple_subrecord(input: &[u8]) -> IResult<&[u8], (SubrecordType, &[u8])> {
-    tuple((subrecord_type, length_data(le_u16)))(input)
+    (subrecord_type, length_data(le_u16)).parse(input)
 }
 
 fn presized_subrecord(input: &[u8], data_length: u32) -> IResult<&[u8], (SubrecordType, &[u8])> {
-    separated_pair(subrecord_type, le_u16, take(data_length))(input)
+    separated_pair(subrecord_type, le_u16, take(data_length)).parse(input)
 }
 
 pub fn parse_subrecord_data_as_u32(input: &[u8]) -> IResult<&[u8], u32> {
-    preceded(pair(subrecord_type, le_u16), le_u32)(input)
+    preceded(pair(subrecord_type, le_u16), le_u32).parse(input)
 }
 
 #[cfg(test)]

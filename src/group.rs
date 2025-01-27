@@ -22,7 +22,7 @@ use nom::bytes::complete::{tag, take};
 use nom::combinator::{all_consuming, map};
 use nom::number::complete::le_u32;
 use nom::sequence::delimited;
-use nom::IResult;
+use nom::{IResult, Parser};
 
 use crate::error::Error;
 use crate::game_id::GameId;
@@ -48,7 +48,7 @@ impl Group {
         reader.read_exact(header_bytes)?;
 
         let (_, size_of_records) =
-            all_consuming(parse_header(group_header_length, skip_length))(header_bytes)?;
+            all_consuming(parse_header(group_header_length, skip_length)).parse(header_bytes)?;
 
         read_records(reader, game_id, form_ids, header_buffer, size_of_records)
     }
@@ -74,7 +74,8 @@ fn parse_header(group_header_length: u8, skip_length: u8) -> impl Fn(&[u8]) -> I
         map(
             delimited(tag(GROUP_TYPE), le_u32, take(skip_length)),
             move |group_size| group_size - u32::from(group_header_length),
-        )(input)
+        )
+        .parse(input)
     }
 }
 
@@ -98,7 +99,7 @@ fn read_records<R: BufRead + Seek>(
         bytes_read += u32::from(group_header_length);
 
         if &header_bytes[..GROUP_TYPE.len()] == GROUP_TYPE {
-            let (_, size_of_records) = all_consuming(&parse_header)(header_bytes)?;
+            let (_, size_of_records) = all_consuming(&parse_header).parse(header_bytes)?;
 
             read_records(reader, game_id, form_ids, header_buffer, size_of_records)?;
             bytes_read += size_of_records;

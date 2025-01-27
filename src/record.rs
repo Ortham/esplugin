@@ -23,8 +23,7 @@ use std::num::NonZeroU32;
 use nom::bytes::complete::take;
 use nom::combinator::{cond, map};
 use nom::number::complete::le_u32;
-use nom::sequence::tuple;
-use nom::IResult;
+use nom::{IResult, Parser};
 
 use crate::error::{Error, ParsingErrorKind};
 use crate::game_id::GameId;
@@ -164,7 +163,7 @@ fn parse_morrowind_record_id<'a>(
 
 fn all_consuming<I, T, E>(result: IResult<I, T, E>) -> Result<T, nom::Err<E>>
 where
-    I: nom::InputLength,
+    I: nom::Input,
     E: nom::error::ParseError<I>,
 {
     let (remaining_input, value) = result?;
@@ -275,12 +274,13 @@ fn record_type(input: &[u8]) -> IResult<&[u8], RecordType> {
     map(take(RECORD_TYPE_LENGTH), |s: &[u8]| {
         s.try_into()
             .expect("record type slice should be the required length")
-    })(input)
+    })
+    .parse(input)
 }
 
 fn record_header(input: &[u8], game_id: GameId) -> IResult<&[u8], RecordHeader> {
     map(
-        tuple((
+        (
             record_type,
             le_u32,
             cond(game_id == GameId::Morrowind, take(4usize)),
@@ -291,14 +291,15 @@ fn record_header(input: &[u8], game_id: GameId) -> IResult<&[u8], RecordHeader> 
                 game_id != GameId::Morrowind && game_id != GameId::Oblivion,
                 take(4usize),
             ),
-        )),
+        ),
         |(record_type, size_of_subrecords, _, flags, form_id, _, _)| RecordHeader {
             record_type,
             flags,
             form_id: form_id.and_then(NonZeroU32::new),
             size_of_subrecords,
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_subrecords(
