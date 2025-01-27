@@ -39,6 +39,9 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Install cbindgen
+        run: cargo install --force cbindgen --version 0.27.0
+
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
         if: startsWith(runner.os, 'Linux')
