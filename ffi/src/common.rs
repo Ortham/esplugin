@@ -1,6 +1,6 @@
-use std::ffi::CString;
+use std::ffi::{c_char, CString};
 
-use libc::{c_char, size_t};
+use libc::size_t;
 
 /// Free the memory allocated for the given string.
 ///

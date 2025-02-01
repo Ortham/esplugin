@@ -1,7 +1,8 @@
+use std::ffi::{c_char, c_float};
 use std::path::Path;
 use std::{f32, panic, ptr};
 
-use libc::{c_char, c_float, size_t};
+use libc::size_t;
 
 use esplugin::{ParseOptions, Plugin, PluginMetadata};
 

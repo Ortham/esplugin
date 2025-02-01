@@ -1,6 +1,6 @@
-use std::ffi::{CStr, CString};
+use std::ffi::{c_char, CStr, CString};
 
-use libc::{c_char, size_t};
+use libc::size_t;
 
 use esplugin::{GameId, Plugin};
 
