@@ -22,7 +22,7 @@ unicase = "2.8.1"
 
 [dev-dependencies]
 criterion = "0.5.1"
-tempfile = "3.19.0"
+tempfile = "3.19.1"
 
 [features]
 default = []
