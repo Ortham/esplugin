@@ -214,7 +214,7 @@ dependencies = [
 
 [[package]]
 name = "esplugin"
-version = "6.1.1"
+version = "6.1.2"
 dependencies = [
  "criterion",
  "encoding_rs",
@@ -227,7 +227,7 @@ dependencies = [
 
 [[package]]
 name = "esplugin-ffi"
-version = "6.1.1"
+version = "6.1.2"
 dependencies = [
  "esplugin",
  "libc",

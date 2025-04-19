@@ -2,6 +2,15 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [6.1.2] - 2025-04-19
+
+### Changed
+
+- Updated encoding_rs to 0.8.35.
+- Updated flate2 to 1.1.1.
+- Updated nom to 8.0.0.
+- Updated unicase to 2.8.1.
+
 ## [6.1.1] - 2024-10-07
 
 ### Changed
