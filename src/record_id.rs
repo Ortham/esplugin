@@ -22,7 +22,7 @@ use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use std::ops::RangeInclusive;
 
-pub enum RecordId {
+pub(crate) enum RecordId {
     FormId(std::num::NonZeroU32),
     NamespacedId(NamespacedId),
 }
@@ -31,13 +31,13 @@ pub enum RecordId {
 /// Record IDs with the same data in the same namespace refer to the same record
 /// but if the data or namespace is different, the IDs refer to different records.
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
-pub struct NamespacedId {
+pub(crate) struct NamespacedId {
     namespace: Namespace,
     hashed_id: u64,
 }
 
 impl NamespacedId {
-    pub fn new(record_type: [u8; 4], id_data: &[u8]) -> Self {
+    pub(crate) fn new(record_type: [u8; 4], id_data: &[u8]) -> Self {
         let mut hasher = DefaultHasher::new();
         id_data.hash(&mut hasher);
 
@@ -73,28 +73,31 @@ pub enum Namespace {
 
 impl From<[u8; 4]> for Namespace {
     fn from(record_type: [u8; 4]) -> Namespace {
-        use self::Namespace::*;
         match &record_type {
-            b"RACE" => Race,
-            b"CLAS" => Class,
-            b"BSGN" => Birthsign,
-            b"SCPT" => Script,
-            b"CELL" => Cell,
-            b"FACT" => Faction,
-            b"SOUN" => Sound,
-            b"GLOB" => Global,
-            b"REGN" => Region,
-            b"SKIL" => Skill,
-            b"MGEF" => MagicEffect,
-            b"LAND" => Land,
-            b"PGRD" => PathGrid,
-            b"DIAL" => Dialog,
-            _ => Other,
+            b"RACE" => Self::Race,
+            b"CLAS" => Self::Class,
+            b"BSGN" => Self::Birthsign,
+            b"SCPT" => Self::Script,
+            b"CELL" => Self::Cell,
+            b"FACT" => Self::Faction,
+            b"SOUN" => Self::Sound,
+            b"GLOB" => Self::Global,
+            b"REGN" => Self::Region,
+            b"SKIL" => Self::Skill,
+            b"MGEF" => Self::MagicEffect,
+            b"LAND" => Self::Land,
+            b"PGRD" => Self::PathGrid,
+            b"DIAL" => Self::Dialog,
+            _ => Self::Other,
         }
     }
 }
 
 impl From<Namespace> for u32 {
+    #[expect(
+        clippy::as_conversions,
+        reason = "No better way to convert unit enum variant to its value"
+    )]
     fn from(value: Namespace) -> u32 {
         value as u32
     }
@@ -108,13 +111,17 @@ pub enum ObjectIndexMask {
 }
 
 impl From<ObjectIndexMask> for u32 {
+    #[expect(
+        clippy::as_conversions,
+        reason = "No better way to convert unit enum variant to its value"
+    )]
     fn from(value: ObjectIndexMask) -> u32 {
         value as u32
     }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct SourcePlugin {
+pub(crate) struct SourcePlugin {
     pub hashed_name: u64,
     /// mod_index_mask is not used when the SourcePlugin is used to represent the plugin that a FormID is found in.
     pub mod_index_mask: u32,
@@ -122,7 +129,11 @@ pub struct SourcePlugin {
 }
 
 impl SourcePlugin {
-    pub fn master(name: &str, mod_index_mask: u32, object_index_mask: ObjectIndexMask) -> Self {
+    pub(crate) fn master(
+        name: &str,
+        mod_index_mask: u32,
+        object_index_mask: ObjectIndexMask,
+    ) -> Self {
         let object_index_mask = u32::from(object_index_mask);
 
         SourcePlugin {
@@ -132,7 +143,7 @@ impl SourcePlugin {
         }
     }
 
-    pub fn parent(name: &str, object_index_mask: ObjectIndexMask) -> Self {
+    pub(crate) fn parent(name: &str, object_index_mask: ObjectIndexMask) -> Self {
         let object_index_mask = u32::from(object_index_mask);
 
         // Set mod_index_mask to object_index_mask because it should be unused but needs a value, and object_index_mask is obviously wrong (if a parent SourcePlugin is used as a master SourcePlugin, it'll never match any of the plugin's raw FormIDs).
@@ -145,13 +156,13 @@ impl SourcePlugin {
 }
 
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
-pub enum RecordIdType {
+pub(crate) enum RecordIdType {
     FormId,
     NamespacedId,
 }
 
 #[derive(Clone, Debug)]
-pub struct ResolvedRecordId {
+pub(crate) struct ResolvedRecordId {
     record_id_type: RecordIdType,
     overridden_record: bool,
     hashed_data: u64,
@@ -159,7 +170,7 @@ pub struct ResolvedRecordId {
 }
 
 impl ResolvedRecordId {
-    pub fn from_form_id(
+    pub(crate) fn from_form_id(
         parent_plugin: SourcePlugin,
         masters: &[SourcePlugin],
         raw_form_id: u32,
@@ -168,29 +179,26 @@ impl ResolvedRecordId {
             .iter()
             .find(|m| (raw_form_id & !m.object_index_mask) == m.mod_index_mask);
 
-        match source_master {
-            Some(hashed_master) => {
-                let object_index = raw_form_id & hashed_master.object_index_mask;
-                ResolvedRecordId {
-                    record_id_type: RecordIdType::FormId,
-                    overridden_record: true,
-                    hashed_data: hashed_master.hashed_name,
-                    other_data: object_index,
-                }
+        if let Some(hashed_master) = source_master {
+            let object_index = raw_form_id & hashed_master.object_index_mask;
+            ResolvedRecordId {
+                record_id_type: RecordIdType::FormId,
+                overridden_record: true,
+                hashed_data: hashed_master.hashed_name,
+                other_data: object_index,
             }
-            None => {
-                let object_index = raw_form_id & parent_plugin.object_index_mask;
-                ResolvedRecordId {
-                    record_id_type: RecordIdType::FormId,
-                    overridden_record: false,
-                    hashed_data: parent_plugin.hashed_name,
-                    other_data: object_index,
-                }
+        } else {
+            let object_index = raw_form_id & parent_plugin.object_index_mask;
+            ResolvedRecordId {
+                record_id_type: RecordIdType::FormId,
+                overridden_record: false,
+                hashed_data: parent_plugin.hashed_name,
+                other_data: object_index,
             }
         }
     }
 
-    pub fn from_namespaced_id(
+    pub(crate) fn from_namespaced_id(
         namespaced_id: &NamespacedId,
         masters_record_ids: &HashSet<NamespacedId>,
     ) -> Self {
@@ -204,11 +212,11 @@ impl ResolvedRecordId {
         }
     }
 
-    pub fn is_overridden_record(&self) -> bool {
+    pub(crate) fn is_overridden_record(&self) -> bool {
         self.overridden_record
     }
 
-    pub fn is_object_index_in(&self, range: &RangeInclusive<u32>) -> bool {
+    pub(crate) fn is_object_index_in(&self, range: &RangeInclusive<u32>) -> bool {
         match self.record_id_type {
             RecordIdType::FormId => range.contains(&self.other_data),
             RecordIdType::NamespacedId => false,
@@ -252,7 +260,7 @@ impl Hash for ResolvedRecordId {
     }
 }
 
-pub fn calculate_filename_hash(string: &str) -> u64 {
+pub(crate) fn calculate_filename_hash(string: &str) -> u64 {
     let mut hasher = DefaultHasher::new();
     string.to_lowercase().hash(&mut hasher);
     hasher.finish()
@@ -321,6 +329,7 @@ mod tests {
         }
     }
 
+    #[expect(clippy::as_conversions, reason = "Unavoidable in const expressions")]
     mod resolved_record_id {
         use super::*;
 
@@ -367,25 +376,25 @@ mod tests {
 
         #[test]
         fn new_should_match_override_record_to_master_based_on_mod_index() {
-            let form_id = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x00456789);
+            let form_id = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x0045_6789);
 
             assert!(form_id.is_overridden_record());
-            assert_eq!(0x456789, form_id.other_data);
+            assert_eq!(0x0045_6789, form_id.other_data);
             assert_eq!(MASTERS[0].hashed_name, form_id.hashed_data);
 
-            let form_id = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x12456789);
+            let form_id = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x1245_6789);
 
             assert!(form_id.is_overridden_record());
-            assert_eq!(0x456789, form_id.other_data);
+            assert_eq!(0x0045_6789, form_id.other_data);
             assert_eq!(MASTERS[1].hashed_name, form_id.hashed_data);
 
-            let form_id = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0xFD126789);
+            let form_id = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0xFD12_6789);
 
             assert!(form_id.is_overridden_record());
             assert_eq!(0x6789, form_id.other_data);
             assert_eq!(MASTERS[2].hashed_name, form_id.hashed_data);
 
-            let form_id = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0xFE123789);
+            let form_id = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0xFE12_3789);
 
             assert!(form_id.is_overridden_record());
             assert_eq!(0x789, form_id.other_data);
@@ -394,28 +403,28 @@ mod tests {
 
         #[test]
         fn new_should_create_non_override_formid_if_no_master_mod_indexes_match() {
-            let form_id = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x01456789);
+            let form_id = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x0145_6789);
 
             assert!(!form_id.is_overridden_record());
-            assert_eq!(0x456789, form_id.other_data);
+            assert_eq!(0x0045_6789, form_id.other_data);
             assert_eq!(PARENT_PLUGIN_NAME, form_id.hashed_data);
 
-            let form_id = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x20456789);
+            let form_id = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x2045_6789);
 
             assert!(!form_id.is_overridden_record());
-            assert_eq!(0x456789, form_id.other_data);
+            assert_eq!(0x0045_6789, form_id.other_data);
             assert_eq!(PARENT_PLUGIN_NAME, form_id.hashed_data);
 
-            let form_id = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0xFD216789);
+            let form_id = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0xFD21_6789);
 
             assert!(!form_id.is_overridden_record());
-            assert_eq!(0x216789, form_id.other_data);
+            assert_eq!(0x0021_6789, form_id.other_data);
             assert_eq!(PARENT_PLUGIN_NAME, form_id.hashed_data);
 
-            let form_id = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0xFE321789);
+            let form_id = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0xFE32_1789);
 
             assert!(!form_id.is_overridden_record());
-            assert_eq!(0x321789, form_id.other_data);
+            assert_eq!(0x0032_1789, form_id.other_data);
             assert_eq!(PARENT_PLUGIN_NAME, form_id.hashed_data);
         }
 
@@ -426,10 +435,10 @@ mod tests {
                 mod_index_mask: u32::from(ObjectIndexMask::Full),
                 object_index_mask: u32::from(ObjectIndexMask::Full),
             };
-            let form_id = ResolvedRecordId::from_form_id(parent_plugin, MASTERS, 0x01456789);
+            let form_id = ResolvedRecordId::from_form_id(parent_plugin, MASTERS, 0x0145_6789);
 
             assert!(!form_id.is_overridden_record());
-            assert_eq!(0x456789, form_id.other_data);
+            assert_eq!(0x0045_6789, form_id.other_data);
             assert_eq!(PARENT_PLUGIN_NAME, form_id.hashed_data);
 
             let parent_plugin = SourcePlugin {
@@ -437,7 +446,7 @@ mod tests {
                 mod_index_mask: u32::from(ObjectIndexMask::Medium),
                 object_index_mask: u32::from(ObjectIndexMask::Medium),
             };
-            let form_id = ResolvedRecordId::from_form_id(parent_plugin, MASTERS, 0xFD216789);
+            let form_id = ResolvedRecordId::from_form_id(parent_plugin, MASTERS, 0xFD21_6789);
 
             assert!(!form_id.is_overridden_record());
             assert_eq!(0x6789, form_id.other_data);
@@ -448,7 +457,7 @@ mod tests {
                 mod_index_mask: u32::from(ObjectIndexMask::Small),
                 object_index_mask: u32::from(ObjectIndexMask::Small),
             };
-            let form_id = ResolvedRecordId::from_form_id(parent_plugin, MASTERS, 0xFE321789);
+            let form_id = ResolvedRecordId::from_form_id(parent_plugin, MASTERS, 0xFE32_1789);
 
             assert!(!form_id.is_overridden_record());
             assert_eq!(0x789, form_id.other_data);
@@ -458,7 +467,8 @@ mod tests {
         #[test]
         fn form_ids_should_not_be_equal_if_plugin_names_are_unequal() {
             let form_id1 = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x01);
-            let form_id2 = ResolvedRecordId::from_form_id(OTHER_PARENT_PLUGIN, MASTERS, 0x05000001);
+            let form_id2 =
+                ResolvedRecordId::from_form_id(OTHER_PARENT_PLUGIN, MASTERS, 0x0500_0001);
 
             assert_ne!(form_id1, form_id2);
         }
@@ -474,7 +484,7 @@ mod tests {
         #[test]
         fn form_ids_with_equal_plugin_names_and_object_ids_should_be_equal() {
             let form_id1 = ResolvedRecordId::from_form_id(PARENT_PLUGIN, NO_MASTERS, 0x01);
-            let form_id2 = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x05000001);
+            let form_id2 = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x0500_0001);
 
             assert_eq!(form_id1, form_id2);
         }
@@ -482,7 +492,7 @@ mod tests {
         #[test]
         fn form_ids_can_be_equal_if_one_is_an_override_record_and_the_other_is_not() {
             let form_id1 = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x01);
-            let form_id2 = ResolvedRecordId::from_form_id(MASTERS[0], NO_MASTERS, 0x05000001);
+            let form_id2 = ResolvedRecordId::from_form_id(MASTERS[0], NO_MASTERS, 0x0500_0001);
 
             assert_ne!(form_id1.overridden_record, form_id2.overridden_record);
             assert_eq!(form_id1, form_id2);
@@ -496,8 +506,9 @@ mod tests {
             assert_eq!(Ordering::Less, form_id1.cmp(&form_id2));
             assert_eq!(Ordering::Greater, form_id2.cmp(&form_id1));
 
-            let form_id1 = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x05000001);
-            let form_id2 = ResolvedRecordId::from_form_id(OTHER_PARENT_PLUGIN, MASTERS, 0x05000001);
+            let form_id1 = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x0500_0001);
+            let form_id2 =
+                ResolvedRecordId::from_form_id(OTHER_PARENT_PLUGIN, MASTERS, 0x0500_0001);
 
             assert_eq!(Ordering::Less, form_id1.cmp(&form_id2));
             assert_eq!(Ordering::Greater, form_id2.cmp(&form_id1));
@@ -506,7 +517,7 @@ mod tests {
         #[test]
         fn form_ids_should_not_be_ordered_according_to_override_record_flag_value() {
             let form_id1 = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x01);
-            let form_id2 = ResolvedRecordId::from_form_id(MASTERS[0], NO_MASTERS, 0x05000001);
+            let form_id2 = ResolvedRecordId::from_form_id(MASTERS[0], NO_MASTERS, 0x0500_0001);
 
             assert_ne!(form_id1.overridden_record, form_id2.overridden_record);
             assert_eq!(Ordering::Equal, form_id2.cmp(&form_id1));
@@ -515,7 +526,8 @@ mod tests {
         #[test]
         fn form_id_hashes_should_not_be_equal_if_plugin_names_are_unequal() {
             let form_id1 = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x01);
-            let form_id2 = ResolvedRecordId::from_form_id(OTHER_PARENT_PLUGIN, MASTERS, 0x05000001);
+            let form_id2 =
+                ResolvedRecordId::from_form_id(OTHER_PARENT_PLUGIN, MASTERS, 0x0500_0001);
 
             assert_ne!(hash(&form_id1), hash(&form_id2));
         }
@@ -531,7 +543,7 @@ mod tests {
         #[test]
         fn form_id_hashes_with_equal_plugin_names_and_object_ids_should_be_equal() {
             let form_id1 = ResolvedRecordId::from_form_id(PARENT_PLUGIN, NO_MASTERS, 0x01);
-            let form_id2 = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x05000001);
+            let form_id2 = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x0500_0001);
 
             assert_eq!(hash(&form_id1), hash(&form_id2));
         }
@@ -539,7 +551,7 @@ mod tests {
         #[test]
         fn form_id_hashes_can_be_equal_with_unequal_override_record_flag_values() {
             let form_id1 = ResolvedRecordId::from_form_id(PARENT_PLUGIN, MASTERS, 0x01);
-            let form_id2 = ResolvedRecordId::from_form_id(MASTERS[0], NO_MASTERS, 0x05000001);
+            let form_id2 = ResolvedRecordId::from_form_id(MASTERS[0], NO_MASTERS, 0x0500_0001);
 
             assert_ne!(form_id1.overridden_record, form_id2.overridden_record);
             assert_eq!(hash(&form_id1), hash(&form_id2));

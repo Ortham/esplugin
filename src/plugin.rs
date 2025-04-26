@@ -95,7 +95,7 @@ pub struct Plugin {
     data: PluginData,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct ParseOptions {
     header_only: bool,
 }
@@ -143,8 +143,8 @@ impl Plugin {
 
     /// plugins_metadata can be empty for all games other than Starfield, and for Starfield plugins with no masters.
     pub fn resolve_record_ids(&mut self, plugins_metadata: &[PluginMetadata]) -> Result<(), Error> {
-        match self.data.record_ids {
-            RecordIds::FormIds(ref form_ids) => {
+        match &self.data.record_ids {
+            RecordIds::FormIds(form_ids) => {
                 let filename = self
                     .filename()
                     .ok_or_else(|| Error::NoFilename(self.path.clone()))?;
@@ -158,14 +158,14 @@ impl Plugin {
                 let form_ids = resolve_form_ids(
                     self.game_id,
                     form_ids,
-                    parent_metadata,
+                    &parent_metadata,
                     &masters,
                     plugins_metadata,
                 )?;
 
                 self.data.record_ids = RecordIds::Resolved(form_ids);
             }
-            RecordIds::NamespacedIds(ref namespaced_ids) => {
+            RecordIds::NamespacedIds(namespaced_ids) => {
                 let masters = self.masters()?;
 
                 let record_ids =
@@ -208,8 +208,7 @@ impl Plugin {
                     .file_stem()
                     .map(Path::new)
                     .and_then(Path::extension)
-                    .map(FileExtension::from)
-                    .unwrap_or(FileExtension::Unrecognised),
+                    .map_or(FileExtension::Unrecognised, FileExtension::from),
                 e => e,
             }
         } else {
@@ -292,14 +291,16 @@ impl Plugin {
 
         for subrecord in self.data.header_record.subrecords() {
             if subrecord.subrecord_type() == target_subrecord_type {
-                if subrecord.data().len() <= description_offset {
-                    return Err(Error::ParsingError(
-                        subrecord.data().into(),
-                        ParsingErrorKind::SubrecordDataTooShort(description_offset),
-                    ));
-                }
-
-                let data = until_first_null(&subrecord.data()[description_offset..]);
+                let data = subrecord
+                    .data()
+                    .get(description_offset..)
+                    .map(until_first_null)
+                    .ok_or_else(|| {
+                        Error::ParsingError(
+                            subrecord.data().into(),
+                            ParsingErrorKind::SubrecordDataTooShort(description_offset),
+                        )
+                    })?;
 
                 return WINDOWS_1252
                     .decode_without_bom_handling_and_without_replacement(data)
@@ -316,8 +317,8 @@ impl Plugin {
             .header_record
             .subrecords()
             .iter()
-            .find(|s| s.subrecord_type() == b"HEDR" && s.data().len() > 3)
-            .map(|s| crate::le_slice_to_f32(s.data()))
+            .find(|s| s.subrecord_type() == b"HEDR")
+            .and_then(|s| crate::le_slice_to_f32(s.data()).ok())
     }
 
     pub fn record_and_group_count(&self) -> Option<u32> {
@@ -330,8 +331,9 @@ impl Plugin {
             .header_record
             .subrecords()
             .iter()
-            .find(|s| s.subrecord_type() == b"HEDR" && s.data().len() > count_offset)
-            .map(|s| crate::le_slice_to_u32(&s.data()[count_offset..]))
+            .find(|s| s.subrecord_type() == b"HEDR")
+            .and_then(|s| s.data().get(count_offset..))
+            .and_then(|d| crate::le_slice_to_u32(d).ok())
     }
 
     /// This needs records to be resolved first if run for Morrowind or Starfield.
@@ -349,7 +351,7 @@ impl Plugin {
     }
 
     pub fn overlaps_with(&self, other: &Self) -> Result<bool, Error> {
-        use self::RecordIds::*;
+        use RecordIds::{FormIds, NamespacedIds, Resolved};
         match (&self.data.record_ids, &other.data.record_ids) {
             (FormIds(_), _) => Err(Error::UnresolvedRecordIds(self.path.clone())),
             (_, FormIds(_)) => Err(Error::UnresolvedRecordIds(other.path.clone())),
@@ -363,7 +365,7 @@ impl Plugin {
     /// the others passed. If more than one other contains the same record, it
     /// is only counted once.
     pub fn overlap_size(&self, others: &[&Self]) -> Result<usize, Error> {
-        use self::RecordIds::*;
+        use RecordIds::{FormIds, NamespacedIds, None, Resolved};
 
         match &self.data.record_ids {
             FormIds(_) => Err(Error::UnresolvedRecordIds(self.path.clone())),
@@ -483,8 +485,7 @@ impl Plugin {
                 .iter()
                 .find(|s| s.subrecord_type() == b"HEDR")
                 .and_then(|s| s.data().get(4))
-                .map(|b| b & 0x1 != 0)
-                .unwrap_or(false),
+                .is_some_and(|b| b & 0x1 != 0),
             _ => self.data.header_record.header().flags() & 0x1 != 0,
         }
     }
@@ -600,7 +601,7 @@ fn sorted_slices_intersect<T: PartialOrd>(left: &[T], right: &[T]) -> bool {
 fn resolve_form_ids(
     game_id: GameId,
     form_ids: &[u32],
-    plugin_metadata: PluginMetadata,
+    plugin_metadata: &PluginMetadata,
     masters: &[String],
     other_plugins_metadata: &[PluginMetadata],
 ) -> Result<Vec<ResolvedRecordId>, Error> {
@@ -625,7 +626,7 @@ fn resolve_namespaced_ids(
     masters: &[String],
     other_plugins_metadata: &[PluginMetadata],
 ) -> Result<Vec<ResolvedRecordId>, Error> {
-    let mut masters_record_ids: HashSet<NamespacedId> = HashSet::new();
+    let mut record_ids: HashSet<NamespacedId> = HashSet::new();
 
     for master in masters {
         let master_record_ids = other_plugins_metadata
@@ -634,12 +635,12 @@ fn resolve_namespaced_ids(
             .map(|m| &m.record_ids)
             .ok_or_else(|| Error::PluginMetadataNotFound(master.clone()))?;
 
-        masters_record_ids.extend(master_record_ids.iter().cloned());
+        record_ids.extend(master_record_ids.iter().cloned());
     }
 
     let mut resolved_ids: Vec<_> = namespaced_ids
         .iter()
-        .map(|id| ResolvedRecordId::from_namespaced_id(id, &masters_record_ids))
+        .map(|id| ResolvedRecordId::from_namespaced_id(id, &record_ids))
         .collect();
 
     resolved_ids.sort();
@@ -647,7 +648,7 @@ fn resolve_namespaced_ids(
     Ok(resolved_ids)
 }
 
-fn hashed_parent(game_id: GameId, parent_metadata: PluginMetadata) -> SourcePlugin {
+fn hashed_parent(game_id: GameId, parent_metadata: &PluginMetadata) -> SourcePlugin {
     match game_id {
         GameId::Starfield => {
             // The Creation Kit can create plugins that contain new records that use mod indexes that don't match the plugin's scale (full/medium/small), e.g. a medium plugin might have new records with FormIDs that don't start with 0xFD. However, at runtime the mod index part is replaced with the mod index of the plugin, according to the plugin's scale, so the plugin's scale is what matters when resolving FormIDs for comparison between plugins.
@@ -667,9 +668,15 @@ fn hashed_masters(masters: &[String]) -> Vec<SourcePlugin> {
     masters
         .iter()
         .enumerate()
-        .map(|(i, m)| {
-            let mod_index_mask = u32::try_from(i << 24).expect("master index to fit in a u32");
-            SourcePlugin::master(m, mod_index_mask, ObjectIndexMask::Full)
+        .filter_map(|(i, m)| {
+            // If the index is somehow > 256 then this isn't a valid master so skip it.
+            let i = u8::try_from(i).ok()?;
+            let mod_index_mask = u32::from(i) << 24u8;
+            Some(SourcePlugin::master(
+                m,
+                mod_index_mask,
+                ObjectIndexMask::Full,
+            ))
         })
         .collect()
 }
@@ -730,7 +737,7 @@ fn masters(header_record: &Record) -> Result<Vec<String>, Error> {
         .subrecords()
         .iter()
         .filter(|s| s.subrecord_type() == b"MAST")
-        .map(|s| until_first_null(&s.data()[0..]))
+        .map(|s| until_first_null(s.data()))
         .map(|d| {
             WINDOWS_1252
                 .decode_without_bom_handling_and_without_replacement(d)
@@ -821,9 +828,6 @@ mod tests {
     mod morrowind {
         use super::*;
 
-        use std::collections::HashSet;
-        use std::iter::FromIterator;
-
         #[test]
         fn parse_file_should_succeed() {
             let mut plugin = Plugin::new(
@@ -850,7 +854,7 @@ mod tests {
 
             match plugin.data.record_ids {
                 RecordIds::NamespacedIds(ids) => {
-                    let set: HashSet<NamespacedId> = HashSet::from_iter(ids.iter().cloned());
+                    let set: HashSet<NamespacedId> = ids.iter().cloned().collect();
                     assert_eq!(set.len(), ids.len());
                 }
                 _ => panic!("Expected namespaced record IDs"),
@@ -949,6 +953,7 @@ mod tests {
             assert_eq!("v5.0", plugin.description().unwrap().unwrap());
         }
 
+        #[expect(clippy::float_cmp, reason = "float values should be exactly equal")]
         #[test]
         fn header_version_should_return_plugin_header_hedr_subrecord_field() {
             let mut plugin = Plugin::new(
@@ -1169,6 +1174,7 @@ mod tests {
             assert!(!plugin.is_medium_plugin());
         }
 
+        #[expect(clippy::float_cmp, reason = "float values should be exactly equal")]
         #[test]
         fn header_version_should_return_plugin_header_hedr_subrecord_field() {
             let mut plugin = Plugin::new(
@@ -1300,7 +1306,10 @@ mod tests {
             );
 
             assert!(plugin.parse_file(ParseOptions::header_only()).is_ok());
-            assert_eq!("€ƒŠ", plugin.description().unwrap().unwrap());
+            assert_eq!(
+                "\u{20ac}\u{192}\u{160}",
+                plugin.description().unwrap().unwrap()
+            );
 
             let mut plugin = Plugin::new(
                 GameId::Skyrim,
@@ -1333,6 +1342,7 @@ mod tests {
             assert_eq!("v5", plugin.description().unwrap().unwrap());
         }
 
+        #[expect(clippy::float_cmp, reason = "float values should be exactly equal")]
         #[test]
         fn header_version_should_return_plugin_header_hedr_subrecord_field() {
             let mut plugin = Plugin::new(
@@ -1584,6 +1594,7 @@ mod tests {
             assert!(!plugin.is_medium_plugin());
         }
 
+        #[expect(clippy::float_cmp, reason = "float values should be exactly equal")]
         #[test]
         fn header_version_should_return_plugin_header_hedr_subrecord_field() {
             let mut plugin = Plugin::new(
@@ -1787,8 +1798,6 @@ mod tests {
     mod fallout4 {
         use super::*;
 
-        use std::fs::read;
-
         #[test]
         fn is_master_file_should_use_file_extension_and_flag() {
             let tmp_dir = tempdir().unwrap();
@@ -1945,15 +1954,15 @@ mod tests {
 
             assert!(plugin.resolve_record_ids(&[]).is_ok());
 
-            let vec_ptr = match plugin.data.record_ids {
-                RecordIds::Resolved(ref ids) => ids.as_ptr(),
+            let vec_ptr = match &plugin.data.record_ids {
+                RecordIds::Resolved(ids) => ids.as_ptr(),
                 _ => panic!("Expected resolved FormIDs"),
             };
 
             assert!(plugin.resolve_record_ids(&[]).is_ok());
 
-            let vec_ptr_2 = match plugin.data.record_ids {
-                RecordIds::Resolved(ref ids) => ids.as_ptr(),
+            let vec_ptr_2 = match &plugin.data.record_ids {
+                RecordIds::Resolved(ids) => ids.as_ptr(),
                 _ => panic!("Expected resolved FormIDs"),
             };
 
@@ -2457,7 +2466,7 @@ mod tests {
         #[test]
         fn is_valid_as_update_plugin_should_be_true_if_the_plugin_has_no_new_records() {
             let master_metadata = PluginMetadata {
-                filename: "Blank.full.esm".to_string(),
+                filename: "Blank.full.esm".to_owned(),
                 scale: PluginScale::Full,
                 record_ids: Box::new([]),
             };
@@ -2474,7 +2483,7 @@ mod tests {
         #[test]
         fn is_valid_as_update_plugin_should_be_false_if_the_plugin_has_new_records() {
             let master_metadata = PluginMetadata {
-                filename: "Blank.full.esm".to_string(),
+                filename: "Blank.full.esm".to_owned(),
                 scale: PluginScale::Full,
                 record_ids: Box::new([]),
             };
@@ -2511,17 +2520,17 @@ mod tests {
             assert_eq!(
                 vec![
                     PluginMetadata {
-                        filename: "Blank.full.esm".to_string(),
+                        filename: "Blank.full.esm".to_owned(),
                         scale: PluginScale::Full,
                         record_ids: Box::new([]),
                     },
                     PluginMetadata {
-                        filename: "Blank.medium.esm".to_string(),
+                        filename: "Blank.medium.esm".to_owned(),
                         scale: PluginScale::Medium,
                         record_ids: Box::new([]),
                     },
                     PluginMetadata {
-                        filename: "Blank.small.esm".to_string(),
+                        filename: "Blank.small.esm".to_owned(),
                         scale: PluginScale::Small,
                         record_ids: Box::new([]),
                     },
@@ -2533,34 +2542,34 @@ mod tests {
         #[test]
         fn hashed_parent_should_use_full_object_index_mask_for_games_other_than_starfield() {
             let metadata = PluginMetadata {
-                filename: "a".to_string(),
+                filename: "a".to_owned(),
                 scale: PluginScale::Full,
                 record_ids: Box::new([]),
             };
 
-            let plugin = hashed_parent(GameId::SkyrimSE, metadata);
+            let plugin = hashed_parent(GameId::SkyrimSE, &metadata);
 
             assert_eq!(u32::from(ObjectIndexMask::Full), plugin.mod_index_mask);
             assert_eq!(u32::from(ObjectIndexMask::Full), plugin.object_index_mask);
 
             let metadata = PluginMetadata {
-                filename: "a".to_string(),
+                filename: "a".to_owned(),
                 scale: PluginScale::Medium,
                 record_ids: Box::new([]),
             };
 
-            let plugin = hashed_parent(GameId::SkyrimSE, metadata);
+            let plugin = hashed_parent(GameId::SkyrimSE, &metadata);
 
             assert_eq!(u32::from(ObjectIndexMask::Full), plugin.mod_index_mask);
             assert_eq!(u32::from(ObjectIndexMask::Full), plugin.object_index_mask);
 
             let metadata = PluginMetadata {
-                filename: "a".to_string(),
+                filename: "a".to_owned(),
                 scale: PluginScale::Small,
                 record_ids: Box::new([]),
             };
 
-            let plugin = hashed_parent(GameId::SkyrimSE, metadata);
+            let plugin = hashed_parent(GameId::SkyrimSE, &metadata);
 
             assert_eq!(u32::from(ObjectIndexMask::Full), plugin.mod_index_mask);
             assert_eq!(u32::from(ObjectIndexMask::Full), plugin.object_index_mask);
@@ -2569,34 +2578,34 @@ mod tests {
         #[test]
         fn hashed_parent_should_use_object_index_mask_matching_the_plugin_scale_for_starfield() {
             let metadata = PluginMetadata {
-                filename: "a".to_string(),
+                filename: "a".to_owned(),
                 scale: PluginScale::Full,
                 record_ids: Box::new([]),
             };
 
-            let plugin = hashed_parent(GameId::Starfield, metadata);
+            let plugin = hashed_parent(GameId::Starfield, &metadata);
 
             assert_eq!(u32::from(ObjectIndexMask::Full), plugin.mod_index_mask);
             assert_eq!(u32::from(ObjectIndexMask::Full), plugin.object_index_mask);
 
             let metadata = PluginMetadata {
-                filename: "a".to_string(),
+                filename: "a".to_owned(),
                 scale: PluginScale::Medium,
                 record_ids: Box::new([]),
             };
 
-            let plugin = hashed_parent(GameId::Starfield, metadata);
+            let plugin = hashed_parent(GameId::Starfield, &metadata);
 
             assert_eq!(u32::from(ObjectIndexMask::Medium), plugin.mod_index_mask);
             assert_eq!(u32::from(ObjectIndexMask::Medium), plugin.object_index_mask);
 
             let metadata = PluginMetadata {
-                filename: "a".to_string(),
+                filename: "a".to_owned(),
                 scale: PluginScale::Small,
                 record_ids: Box::new([]),
             };
 
-            let plugin = hashed_parent(GameId::Starfield, metadata);
+            let plugin = hashed_parent(GameId::Starfield, &metadata);
 
             assert_eq!(u32::from(ObjectIndexMask::Small), plugin.mod_index_mask);
             assert_eq!(u32::from(ObjectIndexMask::Small), plugin.object_index_mask);
@@ -2604,7 +2613,7 @@ mod tests {
 
         #[test]
         fn hashed_masters_should_use_vec_index_as_mod_index() {
-            let masters = &["a".to_string(), "b".to_string(), "c".to_string()];
+            let masters = &["a".to_owned(), "b".to_owned(), "c".to_owned()];
             let hashed_masters = hashed_masters(masters);
 
             assert_eq!(
@@ -2619,7 +2628,7 @@ mod tests {
 
         #[test]
         fn hashed_masters_for_starfield_should_error_if_it_cannot_find_a_masters_metadata() {
-            let masters = &["a".to_string(), "b".to_string(), "c".to_string()];
+            let masters = &["a".to_owned(), "b".to_owned(), "c".to_owned()];
             let metadata = &[
                 PluginMetadata {
                     filename: masters[0].clone(),
@@ -2641,9 +2650,9 @@ mod tests {
 
         #[test]
         fn hashed_masters_for_starfield_should_match_names_to_metadata_case_insensitively() {
-            let masters = &["a".to_string()];
+            let masters = &["a".to_owned()];
             let metadata = &[PluginMetadata {
-                filename: "A".to_string(),
+                filename: "A".to_owned(),
                 scale: PluginScale::Full,
                 record_ids: Box::new([]),
             }];
@@ -2659,7 +2668,7 @@ mod tests {
         #[test]
         fn hashed_masters_for_starfield_should_count_mod_indexes_separately_for_different_plugin_scales(
         ) {
-            let masters: Vec<_> = (0..7).map(|i| i.to_string()).collect();
+            let masters: Vec<_> = (0u8..7u8).map(|i| i.to_string()).collect();
             let metadata = &[
                 PluginMetadata {
                     filename: masters[0].clone(),
@@ -2739,7 +2748,7 @@ mod tests {
         let result = plugin.parse_file(ParseOptions::whole_plugin());
         assert!(result.is_err());
         assert_eq!(
-             "An error was encountered while parsing the plugin content [42, 53, 41, 00, 67, 00, 00, 00, 24, 00, 00, 00, 07, 07, 00, 00]: Expected record type [54, 45, 53, 34]",
+             "An error was encountered while parsing the plugin content \"BSA\\x00g\\x00\\x00\\x00$\\x00\\x00\\x00\\x07\\x07\\x00\\x00\": Expected record type \"TES4\"",
              result.unwrap_err().to_string()
          );
     }
@@ -2755,7 +2764,7 @@ mod tests {
 
         let result = plugin.parse_file(ParseOptions::header_only());
         assert!(result.is_err());
-        assert_eq!("An error was encountered while parsing the plugin content [00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00]: Expected record type [54, 45, 53, 34]", result.unwrap_err().to_string());
+        assert_eq!("An error was encountered while parsing the plugin content \"\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\": Expected record type \"TES4\"", result.unwrap_err().to_string());
     }
 
     #[test]
@@ -2769,7 +2778,7 @@ mod tests {
 
         let result = plugin.parse_file(ParseOptions::whole_plugin());
         assert!(result.is_err());
-        assert_eq!("An error was encountered while parsing the plugin content [00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00]: Expected record type [54, 45, 53, 34]", result.unwrap_err().to_string());
+        assert_eq!("An error was encountered while parsing the plugin content \"\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\": Expected record type \"TES4\"", result.unwrap_err().to_string());
     }
 
     #[test]
@@ -2887,7 +2896,7 @@ mod tests {
 
         let result = plugin.description();
         assert!(result.is_err());
-        assert_eq!("An error was encountered while parsing the plugin content [9A, 99, 99, 3F, 01, 00, 00, 00]: Subrecord data field too short, expected at least 40 bytes", result.unwrap_err().to_string());
+        assert_eq!("An error was encountered while parsing the plugin content \"\\x9a\\x99\\x99?\\x01\\x00\\x00\\x00\": Subrecord data field too short, expected at least 40 bytes", result.unwrap_err().to_string());
     }
 
     #[test]
@@ -2932,12 +2941,12 @@ mod tests {
     fn resolve_form_ids_should_use_plugin_names_case_insensitively() {
         let raw_form_ids = vec![0x0000_0001, 0x0100_0002];
 
-        let masters = vec!["tést.esm".to_string()];
+        let masters = vec!["t\u{e9}st.esm".to_owned()];
         let form_ids = resolve_form_ids(
             GameId::SkyrimSE,
             &raw_form_ids,
-            PluginMetadata {
-                filename: "Blàñk.esp".to_string(),
+            &PluginMetadata {
+                filename: "Bl\u{e0}\u{f1}k.esp".to_owned(),
                 scale: PluginScale::Full,
                 record_ids: Box::new([]),
             },
@@ -2946,12 +2955,12 @@ mod tests {
         )
         .unwrap();
 
-        let other_masters = vec!["TÉST.ESM".to_string()];
+        let other_masters = vec!["T\u{c9}ST.ESM".to_owned()];
         let other_form_ids = resolve_form_ids(
             GameId::SkyrimSE,
             &raw_form_ids,
-            PluginMetadata {
-                filename: "BLÀÑK.ESP".to_string(),
+            &PluginMetadata {
+                filename: "BL\u{c0}\u{d1}K.ESP".to_owned(),
                 scale: PluginScale::Full,
                 record_ids: Box::new([]),
             },

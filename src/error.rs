@@ -25,6 +25,7 @@ use std::path::PathBuf;
 
 use nom::Err;
 
+#[expect(clippy::error_impl_error)]
 #[derive(Debug)]
 pub enum Error {
     IoError(io::Error),
@@ -47,7 +48,7 @@ impl From<Err<nom::error::Error<&[u8]>>> for Error {
             }
             Err::Error(err) | Err::Failure(err) => Error::ParsingError(
                 err.input.into(),
-                ParsingErrorKind::GenericParserError(err.code.description().to_string()),
+                ParsingErrorKind::GenericParserError(err.code.description().to_owned()),
             ),
         }
     }
@@ -63,20 +64,37 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::IoError(x) => x.fmt(f),
-            Error::NoFilename(path) => write!(f, "The plugin path {path:?} has no filename part"),
-            Error::ParsingIncomplete(MoreDataNeeded::UnknownSize) => write!(f, "An unknown number of bytes of additional input was expected by the plugin parser"),
-            Error::ParsingIncomplete(MoreDataNeeded::Size(size)) => write!(f, "{size} bytes of additional input was expected by the plugin parser"),
+            Error::NoFilename(path) => write!(
+                f,
+                "The plugin path \"{}\" has no filename part",
+                path.display()
+            ),
+            Error::ParsingIncomplete(MoreDataNeeded::UnknownSize) => write!(
+                f,
+                "An unknown number of bytes of additional input was expected by the plugin parser"
+            ),
+            Error::ParsingIncomplete(MoreDataNeeded::Size(size)) => write!(
+                f,
+                "{size} bytes of additional input was expected by the plugin parser"
+            ),
             Error::ParsingError(input, kind) => write!(
                 f,
-                "An error was encountered while parsing the plugin content {:02X?}: {}",
-                input, kind
+                "An error was encountered while parsing the plugin content \"{}\": {kind}",
+                input.escape_ascii()
             ),
             Error::DecodeError(bytes) => write!(
                 f,
-                "Plugin string content could not be decoded from Windows-1252, bytes are {bytes:02X?}"
+                "Plugin string content could not be decoded from Windows-1252, content is \"{}\"",
+                bytes.escape_ascii()
             ),
-            Error::UnresolvedRecordIds(path) => write!(f, "Record IDs are unresolved for plugin at {path:?}"),
-            Error::PluginMetadataNotFound(plugin) => write!(f, "Plugin metadata for \"{plugin}\" not found")
+            Error::UnresolvedRecordIds(path) => write!(
+                f,
+                "Record IDs are unresolved for plugin at \"{}\"",
+                path.display()
+            ),
+            Error::PluginMetadataNotFound(plugin) => {
+                write!(f, "Plugin metadata for \"{plugin}\" not found")
+            }
         }
     }
 }
@@ -104,14 +122,13 @@ impl fmt::Display for ParsingErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ParsingErrorKind::UnexpectedRecordType(v) => {
-                write!(f, "Expected record type {:02X?}", v)
+                write!(f, "Expected record type \"{}\"", v.escape_ascii())
             }
             ParsingErrorKind::SubrecordDataTooShort(s) => write!(
                 f,
-                "Subrecord data field too short, expected at least {} bytes",
-                s
+                "Subrecord data field too short, expected at least {s} bytes",
             ),
-            ParsingErrorKind::GenericParserError(e) => write!(f, "Error in parser: {}", e),
+            ParsingErrorKind::GenericParserError(e) => write!(f, "Error in parser: {e}"),
         }
     }
 }

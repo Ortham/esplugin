@@ -4,9 +4,17 @@ use libc::size_t;
 
 use esplugin::{GameId, Plugin};
 
-use crate::{constants::*, error::error};
+use crate::{
+    constants::{
+        ESP_ERROR_INVALID_GAME_ID, ESP_ERROR_NOT_UTF8, ESP_ERROR_NULL_POINTER,
+        ESP_ERROR_TEXT_ENCODE_ERROR, ESP_GAME_FALLOUT3, ESP_GAME_FALLOUT4, ESP_GAME_FALLOUTNV,
+        ESP_GAME_MORROWIND, ESP_GAME_OBLIVION, ESP_GAME_SKYRIM, ESP_GAME_SKYRIMSE,
+        ESP_GAME_STARFIELD,
+    },
+    error::error,
+};
 
-pub unsafe fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32> {
+pub(crate) unsafe fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32> {
     if c_string.is_null() {
         return Err(error(ESP_ERROR_NULL_POINTER, "Null pointer passed"));
     }
@@ -15,11 +23,11 @@ pub unsafe fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32> {
 
     rust_c_string
         .to_str()
-        .map_err(|_| error(ESP_ERROR_NOT_UTF8, "Non-UTF-8 string passed"))
+        .map_err(|_e| error(ESP_ERROR_NOT_UTF8, "Non-UTF-8 string passed"))
 }
 
-pub fn to_c_string(string: &str) -> Result<*mut c_char, u32> {
-    CString::new(string).map(CString::into_raw).map_err(|_| {
+pub(crate) fn to_c_string(string: &str) -> Result<*mut c_char, u32> {
+    CString::new(string).map(CString::into_raw).map_err(|_e| {
         error(
             ESP_ERROR_TEXT_ENCODE_ERROR,
             "String could not be converted to a C string as it contained a null byte",
@@ -27,20 +35,23 @@ pub fn to_c_string(string: &str) -> Result<*mut c_char, u32> {
     })
 }
 
-pub fn to_c_string_array(strings: &[String]) -> Result<(*mut *mut c_char, size_t), u32> {
-    let mut c_strings = strings
+pub(crate) fn to_c_string_array(strings: &[String]) -> Result<(*mut *mut c_char, size_t), u32> {
+    let c_strings = strings
         .iter()
         .map(|s| to_c_string(s))
         .collect::<Result<Box<[*mut c_char]>, u32>>()?;
 
-    let pointer = c_strings.as_mut_ptr();
     let size = c_strings.len();
-    std::mem::forget(c_strings);
 
-    Ok((pointer, size))
+    // Although this is a pointer for the box and we want a pointer to the
+    // start of the slice in the box, they're actually the same value, and we
+    // can recover the box as well as the slice from the pointer and size.
+    let pointer = Box::into_raw(c_strings);
+
+    Ok((pointer.cast(), size))
 }
 
-pub unsafe fn to_plugin_refs_slice<'a>(
+pub(crate) unsafe fn to_plugin_refs_slice<'a>(
     array: *const *const Plugin,
     array_size: usize,
 ) -> Option<Box<[&'a Plugin]>> {
@@ -50,7 +61,7 @@ pub unsafe fn to_plugin_refs_slice<'a>(
         .collect()
 }
 
-pub fn map_game_id(game_id: u32) -> Result<GameId, u32> {
+pub(crate) fn map_game_id(game_id: u32) -> Result<GameId, u32> {
     match game_id {
         x if x == ESP_GAME_OBLIVION => Ok(GameId::Oblivion),
         x if x == ESP_GAME_SKYRIM => Ok(GameId::Skyrim),
@@ -62,7 +73,7 @@ pub fn map_game_id(game_id: u32) -> Result<GameId, u32> {
         x if x == ESP_GAME_STARFIELD => Ok(GameId::Starfield),
         _ => Err(error(
             ESP_ERROR_INVALID_GAME_ID,
-            &format!("Invalid game ID: {}", game_id),
+            &format!("Invalid game ID: {game_id}"),
         )),
     }
 }

@@ -4,7 +4,12 @@ use std::panic::catch_unwind;
 
 use esplugin::Error;
 
-use crate::constants::*;
+use crate::constants::{
+    ESP_ERROR_FILE_NOT_FOUND, ESP_ERROR_IO_ERROR, ESP_ERROR_IO_PERMISSION_DENIED,
+    ESP_ERROR_NO_FILENAME, ESP_ERROR_NULL_POINTER, ESP_ERROR_PANICKED, ESP_ERROR_PARSE_ERROR,
+    ESP_ERROR_PLUGIN_METADATA_NOT_FOUND, ESP_ERROR_TEXT_DECODE_ERROR,
+    ESP_ERROR_UNRESOLVED_RECORD_IDS, ESP_OK,
+};
 
 thread_local!(static ERROR_MESSAGE: RefCell<CString> = RefCell::new(CString::default()));
 
@@ -16,7 +21,7 @@ thread_local!(static ERROR_MESSAGE: RefCell<CString> = RefCell::new(CString::def
 ///
 /// Returns `ESP_OK` if successful, otherwise a `ESP_ERROR_*` code is returned.
 #[no_mangle]
-pub unsafe extern "C" fn esp_get_error_message(message: *mut *const c_char) -> c_uint {
+pub(crate) unsafe extern "C" fn esp_get_error_message(message: *mut *const c_char) -> c_uint {
     catch_unwind(|| {
         if message.is_null() {
             error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
@@ -35,16 +40,17 @@ pub unsafe extern "C" fn esp_get_error_message(message: *mut *const c_char) -> c
     .unwrap_or(ESP_ERROR_PANICKED)
 }
 
-pub fn error(code: c_uint, message: &str) -> c_uint {
+pub(crate) fn error(code: c_uint, message: &str) -> c_uint {
     ERROR_MESSAGE.with(|f| {
-        *f.borrow_mut() = unsafe { CString::from_vec_unchecked(message.as_bytes().to_vec()) }
+        *f.borrow_mut() =
+            CString::new(message.as_bytes()).unwrap_or(c"Failed to retrieve error message".into());
     });
     code
 }
 
-pub fn handle_error(err: Error) -> c_uint {
-    let code = map_error(&err);
-    error(code, &format!("{}", err))
+pub(crate) fn handle_error(err: &Error) -> c_uint {
+    let code = map_error(err);
+    error(code, &format!("{err}"))
 }
 
 fn map_io_error(err: &std::io::Error) -> c_uint {
@@ -56,11 +62,10 @@ fn map_io_error(err: &std::io::Error) -> c_uint {
 }
 
 fn map_error(err: &Error) -> c_uint {
-    match *err {
-        Error::IoError(ref x) => map_io_error(x),
+    match err {
+        Error::IoError(x) => map_io_error(x),
         Error::NoFilename(_) => ESP_ERROR_NO_FILENAME,
-        Error::ParsingIncomplete(_) => ESP_ERROR_PARSE_ERROR,
-        Error::ParsingError(_, _) => ESP_ERROR_PARSE_ERROR,
+        Error::ParsingIncomplete(_) | Error::ParsingError(_, _) => ESP_ERROR_PARSE_ERROR,
         Error::DecodeError(_) => ESP_ERROR_TEXT_DECODE_ERROR,
         Error::UnresolvedRecordIds(_) => ESP_ERROR_UNRESOLVED_RECORD_IDS,
         Error::PluginMetadataNotFound(_) => ESP_ERROR_PLUGIN_METADATA_NOT_FOUND,

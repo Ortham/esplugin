@@ -6,9 +6,9 @@ use libc::size_t;
 
 use esplugin::{ParseOptions, Plugin, PluginMetadata};
 
-use crate::constants::*;
+use crate::constants::{ESP_ERROR_NULL_POINTER, ESP_ERROR_PANICKED, ESP_OK};
 use crate::error::{error, handle_error};
-use crate::helpers::*;
+use crate::helpers::{map_game_id, to_c_string, to_c_string_array, to_plugin_refs_slice, to_str};
 
 /// Create a new Plugin handle for the plugin at the given path.
 ///
@@ -17,9 +17,9 @@ use crate::helpers::*;
 /// constant.
 ///
 /// The path must be encoded as UTF-8. This function does not read the file at
-/// the given `path`: use [esp_plugin_parse] to do so.
+/// the given `path`: use [`esp_plugin_parse`] to do so.
 ///
-/// Returns [ESP_OK] if successful, otherwise an `ESP_ERROR_*` code is returned.
+/// Returns [`ESP_OK`] if successful, otherwise an `ESP_ERROR_*` code is returned.
 ///
 /// # Safety
 ///
@@ -27,7 +27,7 @@ use crate::helpers::*;
 ///
 /// The lifetime of the output plugin handle is independent of the lifetimes of
 /// the inputs, and ownership is passed of it is passed to the caller. It must
-/// only be deallocated using [esp_plugin_free].
+/// only be deallocated using [`esp_plugin_free`].
 ///
 /// It is only safe to call this function more than once in parallel with the
 /// if each call is passed a different value for `plugin_ptr_ptr`.
@@ -61,7 +61,7 @@ pub unsafe extern "C" fn esp_plugin_new(
 /// # Safety
 ///
 /// The given `plugin_ptr` must be null or the output of a call to
-/// [esp_plugin_new], though a null pointer will cause nothing to happen.
+/// [`esp_plugin_new`], though a null pointer will cause nothing to happen.
 ///
 /// This function must not be called twice for the same `plugin_ptr` value. This
 /// function invalidates `plugin_ptr`, which must not be dereferenced after this
@@ -81,17 +81,17 @@ pub unsafe extern "C" fn esp_plugin_free(plugin_ptr: *mut Plugin) {
 /// If `load_header_only` is true then only the plugin's header will be read.
 /// Loading only the header will affect the output of the following functions:
 ///
-/// * [esp_plugin_count_override_records]
-/// * [esp_plugin_do_records_overlap]
-/// * [esp_plugin_records_overlap_size]
-/// * [esp_plugin_is_valid_as_light_plugin]
-/// * [esp_plugin_is_valid_as_update_plugin]
+/// * [`esp_plugin_count_override_records`]
+/// * [`esp_plugin_do_records_overlap`]
+/// * [`esp_plugin_records_overlap_size`]
+/// * [`esp_plugin_is_valid_as_light_plugin`]
+/// * [`esp_plugin_is_valid_as_update_plugin`]
 ///
-/// Returns [ESP_OK] if successful, otherwise an `ESP_ERROR_*` code is returned.
+/// Returns [`ESP_OK`] if successful, otherwise an `ESP_ERROR_*` code is returned.
 ///
 /// # Safety
 ///
-/// `plugin_ptr` must be null or the output of a call to [esp_plugin_new],
+/// `plugin_ptr` must be null or the output of a call to [`esp_plugin_new`],
 /// though a null pointer will cause an error to be returned.
 ///
 /// It is not safe to call this function in parallel with any function that is
@@ -111,8 +111,8 @@ pub unsafe extern "C" fn esp_plugin_parse(plugin_ptr: *mut Plugin, load_header_o
             };
 
             match plugin.parse_file(options) {
-                Ok(_) => ESP_OK,
-                Err(e) => handle_error(e),
+                Ok(()) => ESP_OK,
+                Err(e) => handle_error(&e),
             }
         }
     })
@@ -136,8 +136,8 @@ pub unsafe extern "C" fn esp_plugin_resolve_record_ids(
             };
 
             match plugin.resolve_record_ids(plugins_metadata) {
-                Ok(_) => ESP_OK,
-                Err(e) => handle_error(e),
+                Ok(()) => ESP_OK,
+                Err(e) => handle_error(&e),
             }
         }
     })
@@ -148,22 +148,22 @@ pub unsafe extern "C" fn esp_plugin_resolve_record_ids(
 ///
 /// The filename string will be encoded in UTF-8.
 ///
-/// Returns [ESP_OK] if successful, otherwise an `ESP_ERROR_*` code is returned.
+/// Returns [`ESP_OK`] if successful, otherwise an `ESP_ERROR_*` code is returned.
 ///
 /// # Safety
 ///
-/// `plugin_ptr` must be null or the output of a call to [esp_plugin_new],
+/// `plugin_ptr` must be null or the output of a call to [`esp_plugin_new`],
 /// though a null pointer will cause an error to be returned.
 ///
 /// `filename` must be a valid pointer.
 ///
 /// The lifetime of the output `filename` is independent of the lifetime of
 /// the plugin handle, and ownership is passed of it is passed to the caller. It
-/// must only be deallocated using [super::esp_string_free].
+/// must only be deallocated using [`super::esp_string_free`].
 ///
 /// It is safe to call this function in parallel with any function so long as
 /// that function does not mutate the same data. I.e. it is not safe to call
-/// this function in parallel with [esp_plugin_free] or [esp_plugin_parse], or
+/// this function in parallel with [`esp_plugin_free`] or [`esp_plugin_parse`], or
 /// to call this function multiple times in parallel while sharing the same
 /// `filename` value between calls.
 #[no_mangle]
@@ -205,7 +205,7 @@ pub unsafe extern "C" fn esp_plugin_masters(
 
             let masters = match plugin.masters() {
                 Ok(x) => x,
-                Err(e) => return handle_error(e),
+                Err(e) => return handle_error(&e),
             };
 
             match to_c_string_array(&masters) {
@@ -364,7 +364,7 @@ pub unsafe extern "C" fn esp_plugin_description(
 
             let description_option = match plugin.description() {
                 Ok(x) => x,
-                Err(e) => return handle_error(e),
+                Err(e) => return handle_error(&e),
             };
 
             let c_string = match description_option {
@@ -459,7 +459,7 @@ pub unsafe extern "C" fn esp_plugin_count_override_records(
                     *count = c;
                     ESP_OK
                 }
-                Err(e) => handle_error(e),
+                Err(e) => handle_error(&e),
             }
         }
     })
@@ -484,7 +484,7 @@ pub unsafe extern "C" fn esp_plugin_do_records_overlap(
                     *overlap = x;
                     ESP_OK
                 }
-                Err(e) => handle_error(e),
+                Err(e) => handle_error(&e),
             }
         }
     })
@@ -504,23 +504,21 @@ pub unsafe extern "C" fn esp_plugin_records_overlap_size(
         } else {
             let plugin = &*plugin_ptr;
 
-            let other_plugins =
-                match to_plugin_refs_slice(other_plugins_ptr, other_plugins_ptr_count) {
-                    Some(p) => p,
-                    None => {
-                        return error(
-                            ESP_ERROR_NULL_POINTER,
-                            "Null pointer passed in plugins array",
-                        )
-                    }
-                };
+            let Some(other_plugins) =
+                to_plugin_refs_slice(other_plugins_ptr, other_plugins_ptr_count)
+            else {
+                return error(
+                    ESP_ERROR_NULL_POINTER,
+                    "Null pointer passed in plugins array",
+                );
+            };
 
             match plugin.overlap_size(&other_plugins) {
                 Ok(x) => {
                     *overlap_size = x;
                     ESP_OK
                 }
-                Err(e) => handle_error(e),
+                Err(e) => handle_error(&e),
             }
         }
     })
@@ -543,7 +541,7 @@ pub unsafe extern "C" fn esp_plugin_is_valid_as_light_plugin(
                     *is_valid = x;
                     ESP_OK
                 }
-                Err(e) => handle_error(e),
+                Err(e) => handle_error(&e),
             }
         }
     })
@@ -566,7 +564,7 @@ pub unsafe extern "C" fn esp_plugin_is_valid_as_medium_plugin(
                     *is_valid = x;
                     ESP_OK
                 }
-                Err(e) => handle_error(e),
+                Err(e) => handle_error(&e),
             }
         }
     })
@@ -589,7 +587,7 @@ pub unsafe extern "C" fn esp_plugin_is_valid_as_update_plugin(
                     *is_valid = x;
                     ESP_OK
                 }
-                Err(e) => handle_error(e),
+                Err(e) => handle_error(&e),
             }
         }
     })

@@ -7,7 +7,7 @@ use libc::size_t;
 /// # Safety
 ///
 /// The given `string` must have been allocated by esplugin, e.g. it could be
-/// the output of [super::esp_plugin_filename].
+/// the output of [`super::esp_plugin_filename`].
 ///
 /// This function must not be called twice for the same `string` value.
 ///
@@ -24,7 +24,7 @@ pub unsafe extern "C" fn esp_string_free(string: *mut c_char) {
 /// # Safety
 ///
 /// The given `array` must have been allocated by esplugin, e.g. it could be
-/// the output of [super::esp_plugin_masters].
+/// the output of [`super::esp_plugin_masters`].
 ///
 /// The given `size` must be the size of the array that was allocated by
 /// esplugin, i.e. it's not valid to free only part of `array`.
@@ -39,7 +39,7 @@ pub unsafe extern "C" fn esp_string_array_free(array: *mut *mut c_char, size: si
     }
 
     let strings = Box::from_raw(std::slice::from_raw_parts_mut(array, size));
-    for string in strings.iter() {
+    for string in &strings {
         esp_string_free(*string);
     }
 

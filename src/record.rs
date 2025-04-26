@@ -16,12 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with esplugin. If not, see <http://www.gnu.org/licenses/>.
  */
-use std::convert::TryInto;
 use std::io;
 use std::num::NonZeroU32;
 
 use nom::bytes::complete::take;
-use nom::combinator::{cond, map};
+use nom::combinator::{cond, map, map_res};
 use nom::number::complete::le_u32;
 use nom::{IResult, Parser};
 
@@ -31,12 +30,12 @@ use crate::record_id::{NamespacedId, RecordId};
 use crate::subrecord::{parse_subrecord_data_as_u32, Subrecord, SubrecordRef, SubrecordType};
 use crate::u32_to_usize;
 
-pub const MAX_RECORD_HEADER_LENGTH: usize = 24;
+pub(crate) const MAX_RECORD_HEADER_LENGTH: usize = 24;
 const RECORD_TYPE_LENGTH: usize = 4;
-pub type RecordType = [u8; 4];
+pub(crate) type RecordType = [u8; 4];
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
-pub struct RecordHeader {
+pub(crate) struct RecordHeader {
     record_type: RecordType,
     flags: u32,
     form_id: Option<NonZeroU32>,
@@ -48,19 +47,19 @@ impl RecordHeader {
         (self.flags & 0x0004_0000) != 0
     }
 
-    pub fn flags(&self) -> u32 {
+    pub(crate) fn flags(&self) -> u32 {
         self.flags
     }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
-pub struct Record {
+pub(crate) struct Record {
     header: RecordHeader,
     subrecords: Vec<Subrecord>,
 }
 
 impl Record {
-    pub fn read<R: std::io::Read>(
+    pub(crate) fn read<R: std::io::Read>(
         reader: &mut R,
         game_id: GameId,
         expected_type: &[u8],
@@ -68,10 +67,10 @@ impl Record {
         let mut header_bytes: Vec<u8> = vec![0; usize::from(header_length(game_id))];
         reader.read_exact(&mut header_bytes)?;
 
-        if &header_bytes[0..4] != expected_type {
+        if !header_bytes.starts_with(expected_type) {
             // Take a copy of 16 bytes so the output includes the FormID.
             return Err(Error::ParsingError(
-                header_bytes[..16].into(),
+                header_bytes.get(..16).unwrap_or(&header_bytes).into(),
                 ParsingErrorKind::UnexpectedRecordType(expected_type.to_vec()),
             ));
         }
@@ -90,23 +89,31 @@ impl Record {
         Ok(Record { header, subrecords })
     }
 
-    pub fn read_record_id<R: io::BufRead + io::Seek>(
+    pub(crate) fn read_record_id<R: io::BufRead + io::Seek>(
         reader: &mut R,
         game_id: GameId,
-        mut header_buffer: &mut [u8],
+        header_buffer: &mut [u8],
         header_already_read: bool,
     ) -> Result<(u32, Option<RecordId>), Error> {
-        let header_length_read = if !header_already_read {
+        let (header, header_length_read) = if header_already_read {
+            let header = all_consuming(record_header(header_buffer, game_id))?;
+            (header, 0)
+        } else {
             let header_length = header_length(game_id);
 
-            header_buffer = &mut header_buffer[..usize::from(header_length)];
-            reader.read_exact(header_buffer)?;
-            header_length
-        } else {
-            0
-        };
+            // Get a slice of the right size from the header buffer.
+            if let Some(header_bytes) = header_buffer.get_mut(..usize::from(header_length)) {
+                reader.read_exact(header_bytes)?;
 
-        let header = all_consuming(record_header(header_buffer, game_id))?;
+                let header = all_consuming(record_header(header_bytes, game_id))?;
+                (header, header_length)
+            } else {
+                return Err(Error::ParsingError(
+                    header_buffer.to_vec().into_boxed_slice(),
+                    ParsingErrorKind::GenericParserError("Record::read_record_id".into()),
+                ));
+            }
+        };
 
         if game_id == GameId::Morrowind {
             let mut subrecords_data = vec![0; u32_to_usize(header.size_of_subrecords)];
@@ -134,11 +141,11 @@ impl Record {
         }
     }
 
-    pub fn header(&self) -> &RecordHeader {
+    pub(crate) fn header(&self) -> &RecordHeader {
         &self.header
     }
 
-    pub fn subrecords(&self) -> &[Subrecord] {
+    pub(crate) fn subrecords(&self) -> &[Subrecord] {
         &self.subrecords
     }
 }
@@ -148,7 +155,9 @@ fn parse_morrowind_record_id<'a>(
     header: &RecordHeader,
 ) -> IResult<&'a [u8], Option<RecordId>> {
     let types = record_id_subrecord_types(header.record_type);
-    if !types.is_empty() {
+    if types.is_empty() {
+        Ok((subrecords_data, None))
+    } else {
         let (remaining_input, subrecords) = parse_id_subrecords(subrecords_data, types)?;
         let data = record_id_subrecord_mapper(header.record_type, &subrecords);
 
@@ -156,8 +165,6 @@ fn parse_morrowind_record_id<'a>(
             data.map(|data| RecordId::NamespacedId(NamespacedId::new(header.record_type, data)));
 
         Ok((remaining_input, namespaced_id))
-    } else {
-        Ok((subrecords_data, None))
     }
 }
 
@@ -181,8 +188,7 @@ fn map_scpt_id_data<'a>(subrecords: &[SubrecordRef<'a>]) -> Option<&'a [u8]> {
     subrecords
         .first()
         .map(SubrecordRef::data)
-        .filter(|d| d.len() > 32)
-        .map(|d| &d[..32])
+        .and_then(|d| d.get(..32))
 }
 
 fn map_generic_id_data<'a>(subrecords: &[SubrecordRef<'a>]) -> Option<&'a [u8]> {
@@ -193,40 +199,46 @@ fn map_cell_id_data<'a>(subrecords: &[SubrecordRef<'a>]) -> Option<&'a [u8]> {
     // Cell logic: if an exterior cell, use the data subrecord, otherwise
     // use the name. However, name appears before cell, so need to collect
     // both before deciding.
-    if subrecords.len() != 2
-        || subrecords[0].subrecord_type() != b"NAME"
-        || subrecords[1].subrecord_type() != b"DATA"
-    {
+    let [sub1, sub2] = subrecords else {
+        return None;
+    };
+
+    if sub1.subrecord_type() != b"NAME" || sub2.subrecord_type() != b"DATA" {
         return None;
     }
 
-    let name = subrecords[0].data();
-    let data = subrecords[1].data();
+    let name = sub1.data();
+    let data = sub2.data();
 
-    if data.len() == 12 && data[0] & 0x01 == 0 {
-        Some(&data[4..])
-    } else if name.len() > 1 {
-        Some(name)
-    } else {
-        None
+    if let Ok(data) = <&[u8; 12]>::try_from(data) {
+        if data[0] & 0x01 == 0 {
+            return Some(&data[4..]);
+        }
     }
+
+    (name.len() > 1).then_some(name)
 }
 
 fn map_pgrd_id_data<'a>(subrecords: &[SubrecordRef<'a>]) -> Option<&'a [u8]> {
     // PGRD logic: use data subrecord if grid coord is not empty, otherwise
     // use name. data comes before name.
-    if subrecords.len() != 2
-        || subrecords[0].subrecord_type() != b"DATA"
-        || subrecords[1].subrecord_type() != b"NAME"
-    {
+    let [sub1, sub2] = subrecords else {
+        return None;
+    };
+
+    if sub1.subrecord_type() != b"DATA" || sub2.subrecord_type() != b"NAME" {
         return None;
     }
 
-    let data = subrecords[0].data();
-    let name = subrecords[1].data();
+    let data = sub1.data();
+    let name = sub2.data();
 
-    if data.len() > 8 && data[..8] != [0; 8] {
-        Some(&data[..8])
+    if let Some(prefix) = data.get(..8) {
+        if prefix == [0; 8] {
+            Some(name)
+        } else {
+            Some(prefix)
+        }
     } else {
         Some(name)
     }
@@ -271,11 +283,7 @@ fn header_length(game_id: GameId) -> u8 {
 }
 
 fn record_type(input: &[u8]) -> IResult<&[u8], RecordType> {
-    map(take(RECORD_TYPE_LENGTH), |s: &[u8]| {
-        s.try_into()
-            .expect("record type slice should be the required length")
-    })
-    .parse(input)
+    map_res(take(RECORD_TYPE_LENGTH), |s: &[u8]| s.try_into()).parse(input)
 }
 
 fn record_header(input: &[u8], game_id: GameId) -> IResult<&[u8], RecordHeader> {
@@ -430,7 +438,7 @@ mod tests {
                 RecordId::NamespacedId(_) => {
                     // Do nothing
                 }
-                _ => panic!("Expected a namespaced ID"),
+                RecordId::FormId(_) => panic!("Expected a namespaced ID"),
             }
         }
 
@@ -679,9 +687,9 @@ mod tests {
 
             match form_id {
                 RecordId::FormId(f) => {
-                    assert_eq!(0xCF0, f.get())
+                    assert_eq!(0xCF0, f.get());
                 }
-                _ => panic!("Expected a FormID"),
+                RecordId::NamespacedId(_) => panic!("Expected a FormID"),
             }
         }
     }
@@ -730,7 +738,7 @@ mod tests {
 
             let result = Record::read(&mut Cursor::new(data), GameId::Skyrim, b"TES3");
             assert!(result.is_err());
-            assert_eq!("An error was encountered while parsing the plugin content [54, 45, 53, 34, 3E, 00, 00, 00, 01, 00, 00, 00, 00, 00, 00, 00]: Expected record type [54, 45, 53, 33]", result.unwrap_err().to_string());
+            assert_eq!("An error was encountered while parsing the plugin content \"TES4>\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x00\": Expected record type \"TES3\"", result.unwrap_err().to_string());
         }
 
         #[test]
@@ -751,7 +759,7 @@ mod tests {
         #[test]
         #[cfg(feature = "compressed-fields")]
         fn read_should_read_compressed_subrecords_correctly() {
-            const DATA: &'static [u8] = &[
+            const DATA: &[u8] = &[
                 0x42, 0x50, 0x54, 0x44, //type
                 0x23, 0x00, 0x00, 0x00, //size
                 0x00, 0x00, 0x04, 0x00, //flags
@@ -772,7 +780,7 @@ mod tests {
             let record = Record::read(&mut Cursor::new(DATA), GameId::Skyrim, b"BPTD").unwrap();
 
             assert_eq!(0xCEC, record.header.form_id.unwrap().get());
-            assert_eq!(0x00040000, record.header.flags);
+            assert_eq!(0x0004_0000, record.header.flags);
             assert_eq!(1, record.subrecords.len());
 
             let decompressed_data = record.subrecords[0].decompress_data().unwrap();
@@ -799,9 +807,9 @@ mod tests {
 
             match form_id {
                 RecordId::FormId(f) => {
-                    assert_eq!(0xCEC, f.get())
+                    assert_eq!(0xCEC, f.get());
                 }
-                _ => panic!("Expected a FormID"),
+                RecordId::NamespacedId(_) => panic!("Expected a FormID"),
             }
         }
     }

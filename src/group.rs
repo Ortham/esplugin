@@ -28,14 +28,15 @@ use crate::error::Error;
 use crate::game_id::GameId;
 use crate::record::Record;
 use crate::record_id::RecordId;
+use crate::ParsingErrorKind;
 
 const GROUP_TYPE: &[u8] = b"GRUP";
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
-pub struct Group;
+pub(crate) struct Group;
 
 impl Group {
-    pub fn read_form_ids<R: BufRead + Seek>(
+    pub(crate) fn read_form_ids<R: BufRead + Seek>(
         reader: &mut R,
         game_id: GameId,
         form_ids: &mut Vec<u32>,
@@ -44,7 +45,13 @@ impl Group {
         let group_header_length = group_or_record_header_length(game_id);
         let skip_length = get_header_length_to_skip(game_id);
 
-        let header_bytes = &mut header_buffer[..usize::from(group_header_length)];
+        // Get a slice of the right size from the header buffer.
+        let Some(header_bytes) = header_buffer.get_mut(..usize::from(group_header_length)) else {
+            return Err(Error::ParsingError(
+                header_buffer.to_vec().into_boxed_slice(),
+                ParsingErrorKind::GenericParserError("Group::read_form_ids".into()),
+            ));
+        };
         reader.read_exact(header_bytes)?;
 
         let (_, size_of_records) =
@@ -86,19 +93,27 @@ fn read_records<R: BufRead + Seek>(
     header_buffer: &mut [u8],
     size_of_records: u32,
 ) -> Result<(), Error> {
-    let group_header_length = group_or_record_header_length(game_id);
+    let header_length = group_or_record_header_length(game_id);
     let skip_length = get_header_length_to_skip(game_id);
-    let parse_header = parse_header(group_header_length, skip_length);
+    let parse_header = parse_header(header_length, skip_length);
 
     let mut bytes_read = 0;
 
     while bytes_read < size_of_records {
         // Read the next group/record header.
-        let header_bytes = &mut header_buffer[..usize::from(group_header_length)];
-        reader.read_exact(header_bytes)?;
-        bytes_read += u32::from(group_header_length);
 
-        if &header_bytes[..GROUP_TYPE.len()] == GROUP_TYPE {
+        // Get a slice of the right size from the header buffer.
+        let Some(header_bytes) = header_buffer.get_mut(..usize::from(header_length)) else {
+            return Err(Error::ParsingError(
+                header_buffer.to_vec().into_boxed_slice(),
+                ParsingErrorKind::GenericParserError("read_records".into()),
+            ));
+        };
+
+        reader.read_exact(header_bytes)?;
+        bytes_read += u32::from(header_length);
+
+        if header_bytes.starts_with(GROUP_TYPE) {
             let (_, size_of_records) = all_consuming(&parse_header).parse(header_bytes)?;
 
             read_records(reader, game_id, form_ids, header_buffer, size_of_records)?;
@@ -143,8 +158,8 @@ mod tests {
         assert_eq!(8, form_ids.len());
         // Also check three FormIDs from near the beginning, middle and end of the group.
         assert!(form_ids.contains(&0xCF0));
-        assert!(form_ids.contains(&0x1000CEB));
-        assert!(form_ids.contains(&0x1000CED));
+        assert!(form_ids.contains(&0x0100_0CEB));
+        assert!(form_ids.contains(&0x0100_0CED));
     }
 
     #[test]

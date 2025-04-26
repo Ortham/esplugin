@@ -17,7 +17,6 @@
  * along with esplugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::convert::TryInto;
 #[cfg(feature = "compressed-fields")]
 use std::io;
 #[cfg(feature = "compressed-fields")]
@@ -27,7 +26,7 @@ use std::io::Read;
 use flate2::read::DeflateDecoder;
 
 use nom::bytes::complete::take;
-use nom::combinator::map;
+use nom::combinator::map_res;
 use nom::multi::length_data;
 use nom::number::complete::{le_u16, le_u32};
 use nom::sequence::{pair, preceded, separated_pair};
@@ -36,17 +35,18 @@ use nom::{IResult, Parser};
 use crate::game_id::GameId;
 
 const SUBRECORD_TYPE_LENGTH: usize = 4;
-pub type SubrecordType = [u8; 4];
+pub(crate) type SubrecordType = [u8; 4];
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
-pub struct Subrecord {
+pub(crate) struct Subrecord {
+    #[expect(clippy::struct_field_names, reason = "type is a keyword")]
     subrecord_type: SubrecordType,
     data: Vec<u8>,
     is_compressed: bool,
 }
 
 impl Subrecord {
-    pub fn new(
+    pub(crate) fn new(
         input: &[u8],
         game_id: GameId,
         data_length_override: u32,
@@ -65,41 +65,41 @@ impl Subrecord {
     }
 
     #[cfg(feature = "compressed-fields")]
-    pub fn decompress_data(&self) -> Result<Vec<u8>, io::Error> {
+    pub(crate) fn decompress_data(&self) -> Result<Vec<u8>, io::Error> {
         if !self.is_compressed {
             return Ok(self.data.clone());
         }
 
-        if self.data.len() < 5 {
+        let Some(data) = self.data.get(4..) else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "Compressed subrecord is too small",
             ));
-        }
+        };
 
-        let mut deflater = DeflateDecoder::new(&self.data[4..]);
+        let mut deflater = DeflateDecoder::new(data);
         let mut decompressed_data: Vec<u8> = Vec::new();
         deflater.read_to_end(&mut decompressed_data)?;
 
         Ok(decompressed_data)
     }
 
-    pub fn subrecord_type(&self) -> &SubrecordType {
+    pub(crate) fn subrecord_type(&self) -> &SubrecordType {
         &self.subrecord_type
     }
 
-    pub fn data(&self) -> &[u8] {
+    pub(crate) fn data(&self) -> &[u8] {
         &self.data
     }
 }
 
-pub struct SubrecordRef<'a> {
+pub(crate) struct SubrecordRef<'a> {
     subrecord_type: SubrecordType,
     data: &'a [u8],
 }
 
 impl<'a> SubrecordRef<'a> {
-    pub fn new(
+    pub(crate) fn new(
         input: &'a [u8],
         game_id: GameId,
         data_length_override: u32,
@@ -116,11 +116,11 @@ impl<'a> SubrecordRef<'a> {
         ))
     }
 
-    pub fn subrecord_type(&'a self) -> &'a SubrecordType {
+    pub(crate) fn subrecord_type(&'a self) -> &'a SubrecordType {
         &self.subrecord_type
     }
 
-    pub fn data(&self) -> &'a [u8] {
+    pub(crate) fn data(&self) -> &'a [u8] {
         self.data
     }
 }
@@ -140,11 +140,7 @@ fn parse(
 }
 
 fn subrecord_type(input: &[u8]) -> IResult<&[u8], SubrecordType> {
-    map(take(SUBRECORD_TYPE_LENGTH), |s: &[u8]| {
-        s.try_into()
-            .expect("subrecord type slice should be the required length")
-    })
-    .parse(input)
+    map_res(take(SUBRECORD_TYPE_LENGTH), |s: &[u8]| s.try_into()).parse(input)
 }
 
 fn morrowind_subrecord(input: &[u8]) -> IResult<&[u8], (SubrecordType, &[u8])> {
@@ -159,7 +155,7 @@ fn presized_subrecord(input: &[u8], data_length: u32) -> IResult<&[u8], (Subreco
     separated_pair(subrecord_type, le_u16, take(data_length)).parse(input)
 }
 
-pub fn parse_subrecord_data_as_u32(input: &[u8]) -> IResult<&[u8], u32> {
+pub(crate) fn parse_subrecord_data_as_u32(input: &[u8]) -> IResult<&[u8], u32> {
     preceded(pair(subrecord_type, le_u16), le_u32).parse(input)
 }
 
@@ -273,7 +269,7 @@ mod tests {
         #[test]
         #[cfg(feature = "compressed-fields")]
         fn decompress_data_should_read_a_compressed_subrecord_correctly() {
-            const DATA: &'static [u8] = &[
+            const DATA: &[u8] = &[
                 0x42, 0x50, 0x54, 0x4E, //field type
                 0x1D, 0x00, //field size
                 0x19, 0x00, 0x00, 0x00, //decompressed field size
@@ -298,7 +294,7 @@ mod tests {
         #[test]
         #[cfg(feature = "compressed-fields")]
         fn decompress_data_should_error_if_the_compressed_data_is_invalid() {
-            const DATA: &'static [u8] = &[
+            const DATA: &[u8] = &[
                 0x42, 0x50, 0x54, 0x4E, //field type
                 0x1D, 0x00, //field size
                 0x19, 0x00, 0x00, 0x00, //decompressed field size
@@ -317,7 +313,7 @@ mod tests {
         #[test]
         #[cfg(feature = "compressed-fields")]
         fn decompress_data_should_error_if_the_compressed_data_is_too_small() {
-            const DATA: &'static [u8] = &[
+            const DATA: &[u8] = &[
                 0x42, 0x50, 0x54, 0x4E, //field type
                 0x02, 0x00, //field size
                 0x19, 0x00, //field data
