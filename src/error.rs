@@ -21,7 +21,9 @@ use std::error;
 use std::fmt;
 use std::io;
 use std::num::NonZeroUsize;
+use std::path::Path;
 use std::path::PathBuf;
+use std::slice::EscapeAscii;
 
 use nom::Err;
 
@@ -64,11 +66,13 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::IoError(x) => x.fmt(f),
-            Error::NoFilename(path) => write!(
-                f,
-                "The plugin path \"{}\" has no filename part",
-                path.display()
-            ),
+            Error::NoFilename(path) => {
+                write!(
+                    f,
+                    "The plugin path \"{}\" has no filename part",
+                    escape_ascii(path)
+                )
+            }
             Error::ParsingIncomplete(MoreDataNeeded::UnknownSize) => write!(
                 f,
                 "An unknown number of bytes of additional input was expected by the plugin parser"
@@ -87,11 +91,13 @@ impl fmt::Display for Error {
                 "Plugin string content could not be decoded from Windows-1252, content is \"{}\"",
                 bytes.escape_ascii()
             ),
-            Error::UnresolvedRecordIds(path) => write!(
-                f,
-                "Record IDs are unresolved for plugin at \"{}\"",
-                path.display()
-            ),
+            Error::UnresolvedRecordIds(path) => {
+                write!(
+                    f,
+                    "Record IDs are unresolved for plugin at \"{}\"",
+                    escape_ascii(path)
+                )
+            }
             Error::PluginMetadataNotFound(plugin) => {
                 write!(f, "Plugin metadata for \"{plugin}\" not found")
             }
@@ -106,6 +112,10 @@ impl error::Error for Error {
             _ => None,
         }
     }
+}
+
+fn escape_ascii(path: &Path) -> EscapeAscii {
+    path.as_os_str().as_encoded_bytes().escape_ascii()
 }
 
 #[derive(Debug)]
