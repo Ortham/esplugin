@@ -2,6 +2,18 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [6.1.3] - 2025-04-28
+
+### Fixed
+
+- If an error message contains a nul byte, instead of using it and causing the
+  message to be truncated and leaking the rest of the string, the nul byte will
+  be escaped and that escaped message will be used instead.
+
+### Changed
+
+- Updated to esplugin v6.1.3.
+
 ## [6.1.2] - 2025-04-19
 
 ### Changed

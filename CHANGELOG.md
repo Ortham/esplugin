@@ -2,6 +2,18 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [6.1.3] - 2025-04-28
+
+### Changed
+
+- Several cases where mismatches between buffer sizes and their expected sizes
+  could cause panics now cause errors instead.
+- If a malformed plugin has more than 256 masters, those past that limit will be
+  ignored during parsing instead of causing a panic.
+- Binary content in error messages (including paths) will now be output as ASCII
+  strings with character escapes instead of hexadecimal byte arrays.
+- Many code quality improvements.
+
 ## [6.1.2] - 2025-04-19
 
 ### Changed
