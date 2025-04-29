@@ -38,7 +38,7 @@ jobs:
     strategy:
       matrix:
         os:
-          - windows-2019
+          - windows-2025
           - ubuntu-24.04
 
     runs-on: ${{ matrix.os }}
