@@ -15,3 +15,6 @@ libc = "0.2"
 
 [lib]
 crate-type = ["staticlib"]
+
+[lints]
+workspace = true

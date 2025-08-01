@@ -1,3 +1,4 @@
+#![allow(clippy::missing_assert_message, clippy::unwrap_used)]
 use std::path::Path;
 
 use criterion::Criterion;
@@ -15,7 +16,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         let mut plugin = Plugin::new(GAME_ID, Path::new(PLUGIN_TO_PARSE));
 
         b.iter(|| {
-            assert!(plugin.parse_file(ParseOptions::header_only()).is_ok());
+            plugin.parse_file(ParseOptions::header_only()).unwrap();
         });
     });
 
@@ -23,14 +24,14 @@ fn criterion_benchmark(c: &mut Criterion) {
         let mut plugin = Plugin::new(GAME_ID, Path::new(PLUGIN_TO_PARSE));
 
         b.iter(|| {
-            assert!(plugin.parse_file(ParseOptions::whole_plugin()).is_ok());
+            plugin.parse_file(ParseOptions::whole_plugin()).unwrap();
         });
     });
 
     c.bench_function("Plugin.overlaps_with()", |b| {
         let mut plugin = Plugin::new(GAME_ID, Path::new(PLUGIN_TO_PARSE));
 
-        assert!(plugin.parse_file(ParseOptions::whole_plugin()).is_ok());
+        plugin.parse_file(ParseOptions::whole_plugin()).unwrap();
 
         b.iter(|| {
             assert!(plugin.overlaps_with(&plugin).unwrap());
@@ -40,7 +41,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("Plugin.count_override_records()", |b| {
         let mut plugin = Plugin::new(GAME_ID, Path::new(PLUGIN_TO_PARSE));
 
-        assert!(plugin.parse_file(ParseOptions::whole_plugin()).is_ok());
+        plugin.parse_file(ParseOptions::whole_plugin()).unwrap();
 
         b.iter(|| {
             assert_eq!(plugin.count_override_records().unwrap(), 1272);
@@ -52,7 +53,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             GAME_ID,
             Path::new("testing-plugins/SkyrimSE/Data/Blank.esp"),
         );
-        assert!(plugin.parse_file(ParseOptions::header_only()).is_ok());
+        plugin.parse_file(ParseOptions::header_only()).unwrap();
 
         b.iter(|| {
             assert!(!plugin.is_master_file());
