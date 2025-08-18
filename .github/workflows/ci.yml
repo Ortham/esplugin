@@ -74,6 +74,7 @@ jobs:
 
       - name: Upload code coverage to Coveralls
         uses: coverallsapp/github-action@v2
+        continue-on-error: true
 
       # Need to rebuild the FFI wrapper so that its binary is given a filename
       # without a hash.
