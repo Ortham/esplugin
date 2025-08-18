@@ -114,7 +114,7 @@ impl error::Error for Error {
     }
 }
 
-fn escape_ascii(path: &Path) -> EscapeAscii {
+fn escape_ascii(path: &Path) -> EscapeAscii<'_> {
     path.as_os_str().as_encoded_bytes().escape_ascii()
 }
 
