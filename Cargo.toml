@@ -17,7 +17,7 @@ unicase = "2.8.1"
 
 [dev-dependencies]
 criterion = "0.7.0"
-tempfile = "3.21.0"
+tempfile = "3.22.0"
 
 [features]
 default = []
