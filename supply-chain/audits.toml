@@ -1,6 +1,12 @@
 
 # cargo-vet audits file
 
+[[audits.clap]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "4.5.32 -> 4.5.37"
+notes = "This just incremented the version of the clap_builder dependency."
+
 [[audits.crossbeam-utils]]
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"

@@ -19,10 +19,6 @@ url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
 [policy.esplugin]
 audit-as-crates-io = false
 
-[[exemptions.clap]]
-version = "4.5.37"
-criteria = "safe-to-run"
-
 [[exemptions.clap_builder]]
 version = "4.5.37"
 criteria = "safe-to-run"
