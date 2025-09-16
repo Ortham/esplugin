@@ -75,10 +75,6 @@ criteria = "safe-to-run"
 version = "2.7.5"
 criteria = "safe-to-deploy"
 
-[[exemptions.miniz_oxide]]
-version = "0.8.8"
-criteria = "safe-to-deploy"
-
 [[exemptions.nom]]
 version = "8.0.0"
 criteria = "safe-to-deploy"
