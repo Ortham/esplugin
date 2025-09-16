@@ -107,10 +107,6 @@ criteria = "safe-to-run"
 version = "2.0.100"
 criteria = "safe-to-run"
 
-[[exemptions.tempfile]]
-version = "3.22.0"
-criteria = "safe-to-run"
-
 [[exemptions.walkdir]]
 version = "2.5.0"
 criteria = "safe-to-run"

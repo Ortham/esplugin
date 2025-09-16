@@ -1,7 +1,11 @@
 
 # cargo-vet audits file
 
-[audits]
+[[audits.tempfile]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "3.21.0 -> 3.22.0"
+notes = "The only significant change is updating its maximum accepted version of the windows-sys dependency to allow v0.61.x."
 
 [[trusted.flate2]]
 criteria = "safe-to-deploy"
