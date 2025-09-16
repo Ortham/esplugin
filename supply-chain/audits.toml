@@ -2,3 +2,17 @@
 # cargo-vet audits file
 
 [audits]
+
+[[trusted.flate2]]
+criteria = "safe-to-deploy"
+user-id = 980 # Sebastian Thiel (Byron)
+start = "2023-08-15"
+end = "2026-09-16"
+notes = "flate2 is owned by the rust-lang organization on GitHub, so is hopefully as trustworthy as the Rust toolchain."
+
+[[trusted.libc]]
+criteria = "safe-to-deploy"
+user-id = 55123 # rust-lang-owner
+start = "2024-08-15"
+end = "2026-09-16"
+notes = "rust-lang-owner is a bot run by the Rust Infrastructure Team, so libc is hopefully as trustworthy as the Rust toolchain."

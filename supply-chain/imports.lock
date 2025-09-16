@@ -15,6 +15,19 @@ user-id = 4484
 user-login = "hsivonen"
 user-name = "Henri Sivonen"
 
+[[publisher.flate2]]
+version = "1.1.2"
+when = "2025-06-07"
+user-id = 980
+user-login = "Byron"
+user-name = "Sebastian Thiel"
+
+[[publisher.libc]]
+version = "0.2.175"
+when = "2025-08-11"
+user-id = 55123
+user-login = "rust-lang-owner"
+
 [[publisher.wit-bindgen-rt]]
 version = "0.39.0"
 when = "2025-02-05"
