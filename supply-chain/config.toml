@@ -7,6 +7,9 @@ version = "0.10"
 [imports.google]
 url = "https://raw.githubusercontent.com/google/supply-chain/main/audits.toml"
 
+[imports.mozilla]
+url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
+
 [policy.esplugin]
 audit-as-crates-io = true
 
@@ -45,14 +48,6 @@ criteria = "safe-to-run"
 [[exemptions.crossbeam-utils]]
 version = "0.8.21"
 criteria = "safe-to-run"
-
-[[exemptions.crunchy]]
-version = "0.2.3"
-criteria = "safe-to-run"
-
-[[exemptions.encoding_rs]]
-version = "0.8.35"
-criteria = "safe-to-deploy"
 
 [[exemptions.errno]]
 version = "0.3.11"
