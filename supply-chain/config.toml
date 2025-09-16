@@ -39,10 +39,6 @@ criteria = "safe-to-run"
 version = "0.8.6"
 criteria = "safe-to-run"
 
-[[exemptions.crossbeam-utils]]
-version = "0.8.21"
-criteria = "safe-to-run"
-
 [[exemptions.errno]]
 version = "0.3.11"
 criteria = "safe-to-run"
