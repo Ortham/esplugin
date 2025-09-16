@@ -7,18 +7,17 @@ criteria = "safe-to-deploy"
 delta = "0.8.15 -> 0.8.14"
 notes = "This is an audit of a downgrade to fill a gap between third-party audits. The only behavioural difference in the newer version is better handling of integer overflow when providing a timeout for parking a thread."
 
+[[audits.flate2]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "1.1.0 -> 1.1.2"
+notes = "The only changes are clippy / code style tweaks."
+
 [[audits.tempfile]]
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"
 delta = "3.21.0 -> 3.22.0"
 notes = "The only significant change is updating its maximum accepted version of the windows-sys dependency to allow v0.61.x."
-
-[[trusted.flate2]]
-criteria = "safe-to-deploy"
-user-id = 980 # Sebastian Thiel (Byron)
-start = "2023-08-15"
-end = "2026-09-16"
-notes = "flate2 is owned by the rust-lang organization on GitHub, so is hopefully as trustworthy as the Rust toolchain."
 
 [[trusted.libc]]
 criteria = "safe-to-deploy"
