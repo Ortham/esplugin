@@ -32,7 +32,7 @@ version = "0.8.6"
 criteria = "safe-to-run"
 
 [[exemptions.errno]]
-version = "0.3.11"
+version = "0.3.14"
 criteria = "safe-to-run"
 
 [[exemptions.js-sys]]
@@ -40,7 +40,7 @@ version = "0.3.77"
 criteria = "safe-to-run"
 
 [[exemptions.linux-raw-sys]]
-version = "0.9.4"
+version = "0.11.0"
 criteria = "safe-to-run"
 
 [[exemptions.memchr]]
@@ -72,7 +72,7 @@ version = "5.2.0"
 criteria = "safe-to-run"
 
 [[exemptions.rustix]]
-version = "1.0.5"
+version = "1.1.2"
 criteria = "safe-to-run"
 
 [[exemptions.ryu]]
