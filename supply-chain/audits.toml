@@ -36,6 +36,11 @@ criteria = "safe-to-deploy"
 delta = "1.0.94 -> 1.0.95"
 notes = "The only changes were to reflect changes in semver-exempt APIs to support nightly Rust changes."
 
+[[audits.syn]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "2.0.98 -> 2.0.100"
+
 [[audits.tempfile]]
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"

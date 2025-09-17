@@ -79,10 +79,6 @@ criteria = "safe-to-run"
 version = "1.0.20"
 criteria = "safe-to-run"
 
-[[exemptions.syn]]
-version = "2.0.100"
-criteria = "safe-to-run"
-
 [[exemptions.walkdir]]
 version = "2.5.0"
 criteria = "safe-to-run"
