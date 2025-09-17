@@ -47,12 +47,25 @@ criteria = "safe-to-deploy"
 delta = "3.21.0 -> 3.22.0"
 notes = "The only significant change is updating its maximum accepted version of the windows-sys dependency to allow v0.61.x."
 
+[[audits.winapi-util]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "0.1.9 -> 0.1.11"
+notes = "The only change is to the allowed range of windows-sys dependency versions."
+
 [[trusted.libc]]
 criteria = "safe-to-deploy"
 user-id = 55123 # rust-lang-owner
 start = "2024-08-15"
 end = "2026-09-16"
 notes = "rust-lang-owner is a bot run by the Rust Infrastructure Team, so libc is hopefully as trustworthy as the Rust toolchain."
+
+[[trusted.windows-link]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2024-07-17"
+end = "2026-09-17"
+notes = "kennykerr is on the Windows team at Microsoft."
 
 [[trusted.windows-sys]]
 criteria = "safe-to-deploy"
@@ -65,61 +78,5 @@ notes = "kennykerr is on the Windows team at Microsoft."
 criteria = "safe-to-deploy"
 user-id = 64539 # Kenny Kerr (kennykerr)
 start = "2022-09-09"
-end = "2026-09-17"
-notes = "kennykerr is on the Windows team at Microsoft."
-
-[[trusted.windows_aarch64_gnullvm]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2022-09-01"
-end = "2026-09-17"
-notes = "kennykerr is on the Windows team at Microsoft."
-
-[[trusted.windows_aarch64_msvc]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2021-11-05"
-end = "2026-09-17"
-notes = "kennykerr is on the Windows team at Microsoft."
-
-[[trusted.windows_i686_gnu]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2021-10-28"
-end = "2026-09-17"
-notes = "kennykerr is on the Windows team at Microsoft."
-
-[[trusted.windows_i686_gnullvm]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2024-04-02"
-end = "2026-09-17"
-notes = "kennykerr is on the Windows team at Microsoft."
-
-[[trusted.windows_i686_msvc]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2021-10-27"
-end = "2026-09-17"
-notes = "kennykerr is on the Windows team at Microsoft."
-
-[[trusted.windows_x86_64_gnu]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2021-10-28"
-end = "2026-09-17"
-notes = "kennykerr is on the Windows team at Microsoft."
-
-[[trusted.windows_x86_64_gnullvm]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2022-09-01"
-end = "2026-09-17"
-notes = "kennykerr is on the Windows team at Microsoft."
-
-[[trusted.windows_x86_64_msvc]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2021-10-27"
 end = "2026-09-17"
 notes = "kennykerr is on the Windows team at Microsoft."
