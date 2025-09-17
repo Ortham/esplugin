@@ -34,6 +34,29 @@ jobs:
           cargo clippy -- --version
           cargo clippy --workspace --all-targets -- -Dwarnings
 
+  cargo-vet:
+    runs-on: ubuntu-24.04
+
+    env:
+      CARGO_VET_VERSION: 0.10.1
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/cache@v4
+      with:
+        path: ${{ runner.tool_cache }}/cargo-vet
+        key: cargo-vet-bin-${{ env.CARGO_VET_VERSION }}
+
+    - name: Add the tool cache directory to the search path
+      run: echo "${{ runner.tool_cache }}/cargo-vet/bin" >> $GITHUB_PATH
+
+    - name: Ensure that the tool cache is populated with the cargo-vet binary
+      run: cargo install --root ${{ runner.tool_cache }}/cargo-vet --version ${{ env.CARGO_VET_VERSION }} cargo-vet
+
+    - name: Invoke cargo-vet
+      run: cargo vet --locked
+
   build:
     strategy:
       matrix:
