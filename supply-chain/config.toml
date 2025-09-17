@@ -67,10 +67,6 @@ criteria = "safe-to-run"
 version = "0.3.7"
 criteria = "safe-to-run"
 
-[[exemptions.proc-macro2]]
-version = "1.0.95"
-criteria = "safe-to-run"
-
 [[exemptions.r-efi]]
 version = "5.2.0"
 criteria = "safe-to-run"

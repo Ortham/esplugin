@@ -30,6 +30,12 @@ criteria = "safe-to-deploy"
 delta = "2.5.0 -> 2.6.0"
 notes = "The only changes are to derive additional zerocopy traits and to fix some dependency minimum versions."
 
+[[audits.proc-macro2]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "1.0.94 -> 1.0.95"
+notes = "The only changes were to reflect changes in semver-exempt APIs to support nightly Rust changes."
+
 [[audits.tempfile]]
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"
