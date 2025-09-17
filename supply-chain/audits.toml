@@ -24,6 +24,12 @@ criteria = "safe-to-deploy"
 delta = "1.1.0 -> 1.1.2"
 notes = "The only changes are clippy / code style tweaks."
 
+[[audits.half]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "2.5.0 -> 2.6.0"
+notes = "The only changes are to derive additional zerocopy traits and to fix some dependency minimum versions."
+
 [[audits.tempfile]]
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"

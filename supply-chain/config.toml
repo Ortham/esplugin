@@ -35,10 +35,6 @@ criteria = "safe-to-run"
 version = "0.3.11"
 criteria = "safe-to-run"
 
-[[exemptions.half]]
-version = "2.6.0"
-criteria = "safe-to-run"
-
 [[exemptions.js-sys]]
 version = "0.3.77"
 criteria = "safe-to-run"
