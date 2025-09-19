@@ -27,10 +27,6 @@ criteria = "safe-to-run"
 version = "0.6.0"
 criteria = "safe-to-run"
 
-[[exemptions.crossbeam-deque]]
-version = "0.8.6"
-criteria = "safe-to-run"
-
 [[exemptions.errno]]
 version = "0.3.14"
 criteria = "safe-to-run"
