@@ -9,15 +9,15 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-encoding_rs = "0.8.35"
-memchr = "2.7.5"
-nom = "8.0.0"
-flate2 = { version = "1.1.2", optional = true }
-unicase = "2.8.1"
+encoding_rs = "0.8"
+memchr = "2"
+nom = "8"
+flate2 = { version = "1", optional = true }
+unicase = "2"
 
 [dev-dependencies]
-criterion = "0.7.0"
-tempfile = "3.22.0"
+criterion = "0.7"
+tempfile = "3"
 
 [features]
 default = []
