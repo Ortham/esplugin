@@ -16,7 +16,7 @@ flate2 = { version = ">= 0.2.10, < 2", optional = true }
 unicase = "2"
 
 [dev-dependencies]
-criterion = "0.7"
+criterion = ">= 0.3.5, < 0.8"
 tempfile = "3"
 
 [features]
