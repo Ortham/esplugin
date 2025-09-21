@@ -10,7 +10,7 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-esplugin = { version = "6.1.3", path = ".." }
+esplugin = { path = ".." }
 libc = "0.2"
 
 [lib]
