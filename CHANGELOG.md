@@ -2,6 +2,20 @@
 
 As of v1.0.4, version numbers are shared between esplugin and esplugin-ffi.
 
+## [6.1.4] - 2025-09-29
+
+### Changed
+
+- Releases are now published to crates.io using Trusted Publishing.
+- The accepted dependency version ranges have been widened to include older
+  versions. The oldest accepted version for each dependency is the oldest that
+  esplugin will build and pass its tests with on x86-64 Windows and Linux.
+- Most of the Cargo.toml package fields are now inherited from workspace fields
+  that are now shared with esplugin-ffi.
+- Most of the lint configuration has been moved from Rust attributes to
+  workspace configuration, leaving only the configuration that is specific to
+  esplugin.
+
 ## [6.1.3] - 2025-04-28
 
 ### Changed

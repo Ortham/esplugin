@@ -2,6 +2,25 @@
 
 After v1.0.3, version numbers are shared between esplugin and esplugin-ffi.
 
+## [6.1.4] - 2025-09-29
+
+### Changed
+
+- The esplugin dependency is no longer declared with a version number, so
+  esplugin-ffi can now only be built using the esplugin crate in the parent
+  directory.
+- Updated flate2 to 1.1.2.
+- Updated libc to 0.2.175.
+- Updated memchr to 2.7.5.
+- Updated miniz_oxide to 0.8.9.
+- Changes to non-dev dependency versions in Cargo.lock will now be tracked in
+  this changelog.
+- Most of the Cargo.toml package fields are now inherited from workspace fields
+  that are now shared with esplugin.
+- Most of the lint configuration has been moved from Rust attributes to
+  workspace configuration, leaving only the configuration that is specific to
+  esplugin-ffi.
+
 ## [6.1.3] - 2025-04-28
 
 ### Fixed

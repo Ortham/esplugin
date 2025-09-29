@@ -34,7 +34,7 @@ harness = false
 members = ["ffi"]
 
 [workspace.package]
-version = "6.1.3"
+version = "6.1.4"
 authors = ["Oliver Hamlet <oliver@ortham.net>"]
 repository = "https://github.com/Ortham/esplugin.git"
 categories = ["games", "parsing"]
