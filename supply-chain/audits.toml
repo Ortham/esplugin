@@ -73,10 +73,3 @@ user-id = 64539 # Kenny Kerr (kennykerr)
 start = "2021-11-15"
 end = "2026-09-17"
 notes = "kennykerr is on the Windows team at Microsoft."
-
-[[trusted.windows-targets]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2022-09-09"
-end = "2026-09-17"
-notes = "kennykerr is on the Windows team at Microsoft."
