@@ -91,7 +91,9 @@ jobs:
         if: steps.cache-cargo.outputs.cache-hit != 'true'
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
+        uses: taiki-e/install-action@d6d752794628f1e1fffa3c4d3c8874e06f043d50 # v2.62.15
+        with:
+          tool: cargo-llvm-cov@0.6.19
 
       - name: Prepare test resources
         shell: bash
@@ -104,7 +106,7 @@ jobs:
         run: cargo llvm-cov --workspace --all-features --lcov --output-path lcov.info
 
       - name: Upload code coverage to Coveralls
-        uses: coverallsapp/github-action@v2
+        uses: coverallsapp/github-action@648a8eb78e6d50909eff900e4ec85cab4524a45b # v2.3.6
         continue-on-error: true
 
       # Need to rebuild the FFI wrapper so that its binary is given a filename
