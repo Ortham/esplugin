@@ -83,3 +83,13 @@ const fn u32_to_usize(input: u32) -> usize {
     const _: () = assert!(u32::BITS <= usize::BITS, "cannot fit a u32 into a usize!");
     input as usize
 }
+
+#[cfg(test)]
+fn read_test_data(
+    path: impl AsRef<std::path::Path>,
+    byte_range: impl std::ops::RangeBounds<usize>,
+) -> Vec<u8> {
+    let path = std::path::Path::new("testing-plugins").join(path);
+
+    std::fs::read(path).unwrap().drain(byte_range).collect()
+}

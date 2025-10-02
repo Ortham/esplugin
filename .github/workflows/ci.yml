@@ -22,13 +22,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Prepare test resources
-        shell: bash
-        run: |
-          curl -sSfLO "https://github.com/Ortham/testing-plugins/archive/${{ env.TESTING_PLUGINS_VERSION }}.zip"
-          7z x "${{ env.TESTING_PLUGINS_VERSION }}.zip"
-          mv "testing-plugins-${{ env.TESTING_PLUGINS_VERSION }}" testing-plugins
-
       - name: Run clippy
         run: |
           cargo clippy -- --version

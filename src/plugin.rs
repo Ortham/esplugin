@@ -823,6 +823,8 @@ mod tests {
     use std::io::Cursor;
     use tempfile::tempdir;
 
+    use crate::read_test_data;
+
     use super::*;
 
     mod morrowind {
@@ -2883,8 +2885,7 @@ mod tests {
             Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
         );
 
-        let mut data =
-            include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x20].to_vec();
+        let mut data = read_test_data("Morrowind/Data Files/Blank.esm", ..0x20);
         data[0x04] = 16;
         data[0x05] = 0;
         data[0x14] = 8;
@@ -2906,8 +2907,7 @@ mod tests {
             Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
         );
 
-        let mut data =
-            include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x1B].to_vec();
+        let mut data = read_test_data("Morrowind/Data Files/Blank.esm", ..0x1B);
         data[0x04] = 11;
         data[0x05] = 0;
         data[0x14] = 3;
@@ -2926,8 +2926,7 @@ mod tests {
             Path::new("testing-plugins/Morrowind/Data Files/Blank.esm"),
         );
 
-        let mut data =
-            include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x140].to_vec();
+        let mut data = read_test_data("Morrowind/Data Files/Blank.esm", ..0x140);
         data[0x04] = 0x30;
         data[0x14] = 0x28;
 

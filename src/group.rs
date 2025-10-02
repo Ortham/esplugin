@@ -136,14 +136,13 @@ fn read_records<R: BufRead + Seek>(
 mod tests {
     use std::io::Cursor;
 
-    use crate::record::MAX_RECORD_HEADER_LENGTH;
+    use crate::{read_test_data, record::MAX_RECORD_HEADER_LENGTH};
 
     use super::*;
 
     #[test]
     fn new_should_store_formids_for_all_records_in_a_group() {
-        let data =
-            &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")[0x56..];
+        let data = read_test_data("Skyrim/Data/Blank - Master Dependent.esm", 0x56..);
 
         let mut form_ids: Vec<u32> = Vec::new();
         let mut header_buf = [0; MAX_RECORD_HEADER_LENGTH];
@@ -164,7 +163,7 @@ mod tests {
 
     #[test]
     fn new_should_store_formids_for_all_records_in_subgroups() {
-        let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esm")[0x1004C..0x10114];
+        let data = read_test_data("Skyrim/Data/Blank.esm", 0x1004C..0x10114);
 
         let mut form_ids: Vec<u32> = Vec::new();
         let mut header_buf = [0; MAX_RECORD_HEADER_LENGTH];

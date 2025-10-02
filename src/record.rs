@@ -366,6 +366,8 @@ fn parse_id_subrecords<'a>(
 mod tests {
     use std::io::Cursor;
 
+    use crate::read_test_data;
+
     use super::*;
 
     mod morrowind {
@@ -378,8 +380,7 @@ mod tests {
 
         #[test]
         fn read_should_read_tes3_header_correctly() {
-            let data =
-                &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
+            let data = read_test_data("Morrowind/Data Files/Blank.esm", ..0x144);
 
             let record = Record::read(&mut Cursor::new(data), GameId::Morrowind, b"TES3").unwrap();
 
@@ -392,8 +393,7 @@ mod tests {
 
         #[test]
         fn read_should_set_form_id_to_none_for_all_records() {
-            let data =
-                &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[0x144..0x16F];
+            let data = read_test_data("Morrowind/Data Files/Blank.esm", 0x144..0x16F);
 
             let record = Record::read(&mut Cursor::new(data), GameId::Morrowind, b"GMST").unwrap();
 
@@ -402,8 +402,7 @@ mod tests {
 
         #[test]
         fn read_record_id_should_return_none_for_tes3_header() {
-            let data =
-                &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[..0x144];
+            let data = read_test_data("Morrowind/Data Files/Blank.esm", ..0x144);
 
             let mut header_buf = [0; MAX_RECORD_HEADER_LENGTH];
             let form_id = Record::read_record_id(
@@ -420,8 +419,7 @@ mod tests {
 
         #[test]
         fn read_record_id_should_return_some_namespaced_id_for_gmst() {
-            let data =
-                &include_bytes!("../testing-plugins/Morrowind/Data Files/Blank.esm")[0x144..0x16F];
+            let data = read_test_data("Morrowind/Data Files/Blank.esm", 0x144..0x16F);
 
             let mut header_buf = [0; MAX_RECORD_HEADER_LENGTH];
             let form_id = Record::read_record_id(
@@ -648,7 +646,7 @@ mod tests {
 
         #[test]
         fn read_should_read_tes4_header_correctly() {
-            let data = &include_bytes!("../testing-plugins/Oblivion/Data/Blank.esm")[..0x144];
+            let data = read_test_data("Oblivion/Data/Blank.esm", ..0x144);
 
             let record = Record::read(&mut Cursor::new(data), GameId::Oblivion, b"TES4").unwrap();
 
@@ -663,7 +661,7 @@ mod tests {
 
         #[test]
         fn read_should_set_non_zero_form_id_for_non_header_records() {
-            let data = &include_bytes!("../testing-plugins/Oblivion/Data/Blank.esm")[0x4C..0x70];
+            let data = read_test_data("Oblivion/Data/Blank.esm", 0x4C..0x70);
 
             let record = Record::read(&mut Cursor::new(data), GameId::Oblivion, b"BOOK").unwrap();
 
@@ -672,7 +670,7 @@ mod tests {
 
         #[test]
         fn parse_record_id_should_return_the_form_id() {
-            let data = &include_bytes!("../testing-plugins/Oblivion/Data/Blank.esm")[0x4C..0x70];
+            let data = read_test_data("Oblivion/Data/Blank.esm", 0x4C..0x70);
 
             let mut header_buf = [0; MAX_RECORD_HEADER_LENGTH];
             let form_id = Record::read_record_id(
@@ -704,9 +702,7 @@ mod tests {
 
         #[test]
         fn read_should_read_tes4_header_correctly() {
-            let data =
-                &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")
-                    [..0x56];
+            let data = read_test_data("Skyrim/Data/Blank - Master Dependent.esm", ..0x56);
 
             let record = Record::read(&mut Cursor::new(data), GameId::Skyrim, b"TES4").unwrap();
 
@@ -723,7 +719,7 @@ mod tests {
 
         #[test]
         fn read_should_set_non_zero_form_id_for_non_header_records() {
-            let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esp")[0x53..0xEF];
+            let data = read_test_data("Skyrim/Data/Blank.esp", 0x53..0xEF);
 
             let record = Record::read(&mut Cursor::new(data), GameId::Skyrim, b"BPTD").unwrap();
 
@@ -732,9 +728,7 @@ mod tests {
 
         #[test]
         fn read_should_fail_if_the_type_is_unexpected() {
-            let data =
-                &include_bytes!("../testing-plugins/Skyrim/Data/Blank - Master Dependent.esm")
-                    [..0x56];
+            let data = read_test_data("Skyrim/Data/Blank - Master Dependent.esm", ..0x56);
 
             let result = Record::read(&mut Cursor::new(data), GameId::Skyrim, b"TES3");
             assert!(result.is_err());
@@ -743,7 +737,7 @@ mod tests {
 
         #[test]
         fn read_should_read_large_subrecords_correctly() {
-            let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esm")[..0x1004C];
+            let data = read_test_data("Skyrim/Data/Blank.esm", ..0x1004C);
 
             let record = Record::read(&mut Cursor::new(data), GameId::Skyrim, b"TES4").unwrap();
 
@@ -792,7 +786,7 @@ mod tests {
 
         #[test]
         fn parse_record_id_should_return_the_form_id() {
-            let data = &include_bytes!("../testing-plugins/Skyrim/Data/Blank.esp")[0x53..0xEF];
+            let data = read_test_data("Skyrim/Data/Blank.esp", 0x53..0xEF);
 
             let mut header_buf = [0; MAX_RECORD_HEADER_LENGTH];
             let form_id = Record::read_record_id(
