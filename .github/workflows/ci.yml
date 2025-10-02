@@ -5,6 +5,7 @@ on: [push, pull_request]
 env:
   CARGO_TERM_COLOR: always
   TESTING_PLUGINS_VERSION: "1.6.2"
+  TESTING_PLUGINS_HASH: 01f7c8ae31e6527f0a1c1155d73653cf3af80a6af1e636ec0b33d7130e68182e
 
 jobs:
   rustfmt:
@@ -92,6 +93,7 @@ jobs:
         shell: bash
         run: |
           curl -sSfLO "https://github.com/Ortham/testing-plugins/archive/${{ env.TESTING_PLUGINS_VERSION }}.zip"
+          sha256sum -c <<< "${{ env.TESTING_PLUGINS_HASH }} ${{ env.TESTING_PLUGINS_VERSION }}.zip"
           7z x "${{ env.TESTING_PLUGINS_VERSION }}.zip"
           mv "testing-plugins-${{ env.TESTING_PLUGINS_VERSION }}" testing-plugins
 
