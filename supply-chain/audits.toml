@@ -24,6 +24,12 @@ criteria = "safe-to-deploy"
 delta = "1.1.0 -> 1.1.2"
 notes = "The only changes are clippy / code style tweaks."
 
+[[audits.flate2]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "1.1.2 -> 1.1.4"
+notes = "Features some more unsafe code, but it looks fine."
+
 [[audits.half]]
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"
