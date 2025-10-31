@@ -7,6 +7,9 @@ env:
   TESTING_PLUGINS_VERSION: "1.6.2"
   TESTING_PLUGINS_HASH: 01f7c8ae31e6527f0a1c1155d73653cf3af80a6af1e636ec0b33d7130e68182e
 
+permissions:
+  contents: read
+
 jobs:
   rustfmt:
     runs-on: ubuntu-24.04
