@@ -88,7 +88,7 @@ jobs:
         if: steps.cache-cargo.outputs.cache-hit != 'true'
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@d6d752794628f1e1fffa3c4d3c8874e06f043d50 # v2.62.15
+        uses: taiki-e/install-action@81ee1d48d9194cdcab880cbdc7d36e87d39874cb # v2.62.45
         with:
           tool: cargo-llvm-cov@0.6.19
 
