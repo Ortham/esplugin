@@ -38,7 +38,7 @@ pub unsafe extern "C" fn esp_string_array_free(array: *mut *mut c_char, size: si
         return;
     }
 
-    let strings = Box::from_raw(std::slice::from_raw_parts_mut(array, size));
+    let strings = Box::from_raw(std::ptr::slice_from_raw_parts_mut(array, size));
     for string in &strings {
         esp_string_free(*string);
     }
