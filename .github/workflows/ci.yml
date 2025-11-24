@@ -4,8 +4,6 @@ on: [push, pull_request]
 
 env:
   CARGO_TERM_COLOR: always
-  TESTING_PLUGINS_VERSION: "1.6.2"
-  TESTING_PLUGINS_HASH: 01f7c8ae31e6527f0a1c1155d73653cf3af80a6af1e636ec0b33d7130e68182e
 
 permissions:
   contents: read
@@ -68,6 +66,11 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
+    env:
+      CARGO_LLVM_COV_VERSION: v0.6.19
+      TESTING_PLUGINS_VERSION: "1.6.2"
+      TESTING_PLUGINS_HASH: 01f7c8ae31e6527f0a1c1155d73653cf3af80a6af1e636ec0b33d7130e68182e
+
     steps:
       - uses: actions/checkout@v5
 
@@ -88,9 +91,21 @@ jobs:
         if: steps.cache-cargo.outputs.cache-hit != 'true'
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@d6d752794628f1e1fffa3c4d3c8874e06f043d50 # v2.62.15
-        with:
-          tool: cargo-llvm-cov@0.6.19
+        shell: bash
+        run: |
+          host=$(rustc -vV | grep '^host:' | cut -d' ' -f2)
+          curl --proto '=https' --tlsv1.2 -fsSLO "https://github.com/taiki-e/cargo-llvm-cov/releases/download/$CARGO_LLVM_COV_VERSION/cargo-llvm-cov-$host.tar.gz"
+
+          if [[ "${{ runner.os }}" == "Windows" ]]
+          then
+            EXPECTED_HASH=dcf8e75e10b07f8348c900a600e429585cccaf4239533b7247a76c7ceaca0b3f
+          else
+            EXPECTED_HASH=aa53c5963beb832f8ea04fea8dcbcece55a99e0c31a8d1e8d514d59ed5942160
+          fi
+
+          sha256sum -c <<< "$EXPECTED_HASH cargo-llvm-cov-$host.tar.gz"
+
+          tar xzf cargo-llvm-cov-$host.tar.gz -C "$HOME/.cargo/bin"
 
       - name: Prepare test resources
         shell: bash
