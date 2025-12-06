@@ -1,7 +1,5 @@
 use std::ffi::{c_char, CString};
 
-use libc::size_t;
-
 /// Free the memory allocated for the given string.
 ///
 /// # Safety
@@ -33,7 +31,7 @@ pub unsafe extern "C" fn esp_string_free(string: *mut c_char) {
 ///
 /// This function is thread-safe.
 #[no_mangle]
-pub unsafe extern "C" fn esp_string_array_free(array: *mut *mut c_char, size: size_t) {
+pub unsafe extern "C" fn esp_string_array_free(array: *mut *mut c_char, size: usize) {
     if array.is_null() || size == 0 {
         return;
     }

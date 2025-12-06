@@ -2,8 +2,6 @@ use std::ffi::{c_char, c_float};
 use std::path::Path;
 use std::{f32, panic, ptr};
 
-use libc::size_t;
-
 use esplugin::{ParseOptions, Plugin, PluginMetadata};
 
 use crate::constants::{ESP_ERROR_NULL_POINTER, ESP_ERROR_PANICKED, ESP_OK};
@@ -195,7 +193,7 @@ pub unsafe extern "C" fn esp_plugin_filename(
 pub unsafe extern "C" fn esp_plugin_masters(
     plugin_ptr: *const Plugin,
     plugin_masters: *mut *mut *mut c_char,
-    num_plugin_masters: *mut size_t,
+    num_plugin_masters: *mut usize,
 ) -> u32 {
     panic::catch_unwind(|| {
         if plugin_masters.is_null() || plugin_ptr.is_null() {
@@ -446,7 +444,7 @@ pub unsafe extern "C" fn esp_plugin_record_and_group_count(
 #[no_mangle]
 pub unsafe extern "C" fn esp_plugin_count_override_records(
     plugin_ptr: *const Plugin,
-    count: *mut size_t,
+    count: *mut usize,
 ) -> u32 {
     panic::catch_unwind(|| {
         if plugin_ptr.is_null() || count.is_null() {
@@ -495,8 +493,8 @@ pub unsafe extern "C" fn esp_plugin_do_records_overlap(
 pub unsafe extern "C" fn esp_plugin_records_overlap_size(
     plugin_ptr: *const Plugin,
     other_plugins_ptr: *const *const Plugin,
-    other_plugins_ptr_count: size_t,
-    overlap_size: *mut size_t,
+    other_plugins_ptr_count: usize,
+    overlap_size: *mut usize,
 ) -> u32 {
     panic::catch_unwind(|| {
         if plugin_ptr.is_null() || other_plugins_ptr.is_null() || overlap_size.is_null() {

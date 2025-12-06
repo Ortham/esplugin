@@ -22,7 +22,6 @@ use error::handle_error;
 use esplugin::Plugin;
 use esplugin::PluginMetadata;
 use helpers::to_plugin_refs_slice;
-use libc::size_t;
 
 pub use self::common::*;
 pub use self::constants::*;
@@ -37,7 +36,7 @@ mod plugin;
 #[no_mangle]
 pub unsafe extern "C" fn esp_get_plugins_metadata(
     plugins: *const *const Plugin,
-    plugins_len: size_t,
+    plugins_len: usize,
     plugins_metadata: *mut *mut Vec<PluginMetadata>,
 ) -> u32 {
     panic::catch_unwind(|| {

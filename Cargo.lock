@@ -228,7 +228,6 @@ name = "esplugin-ffi"
 version = "6.1.4"
 dependencies = [
  "esplugin",
- "libc",
 ]
 
 [[package]]

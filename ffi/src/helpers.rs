@@ -1,7 +1,5 @@
 use std::ffi::{c_char, CStr, CString};
 
-use libc::size_t;
-
 use esplugin::{GameId, Plugin};
 
 use crate::{
@@ -35,7 +33,7 @@ pub(crate) fn to_c_string(string: &str) -> Result<*mut c_char, u32> {
     })
 }
 
-pub(crate) fn to_c_string_array(strings: &[String]) -> Result<(*mut *mut c_char, size_t), u32> {
+pub(crate) fn to_c_string_array(strings: &[String]) -> Result<(*mut *mut c_char, usize), u32> {
     let c_strings = strings
         .iter()
         .map(|s| to_c_string(s))
