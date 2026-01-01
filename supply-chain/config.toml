@@ -23,10 +23,6 @@ audit-as-crates-io = false
 version = "0.7.0"
 criteria = "safe-to-run"
 
-[[exemptions.criterion-plot]]
-version = "0.6.0"
-criteria = "safe-to-run"
-
 [[exemptions.errno]]
 version = "0.3.14"
 criteria = "safe-to-run"
@@ -52,10 +48,6 @@ criteria = "safe-to-deploy"
 [[exemptions.nom]]
 version = "8.0.0"
 criteria = "safe-to-deploy"
-
-[[exemptions.oorandom]]
-version = "11.1.5"
-criteria = "safe-to-run"
 
 [[exemptions.plotters]]
 version = "0.3.7"
@@ -116,3 +108,15 @@ version = "0.3.77"
 criteria = "safe-to-run"
 suggest = false
 notes = "At time of review this was only built if targeting WASM, which is not an intended target."
+
+[[exemptions.winapi-i686-pc-windows-gnu]]
+version = "0.4.0"
+criteria = "safe-to-run"
+suggest = false
+notes = "It's a collection of static library binaries and a build script that configures Cargo to use them, so it's not really reviewable."
+
+[[exemptions.winapi-x86_64-pc-windows-gnu]]
+version = "0.4.0"
+criteria = "safe-to-run"
+suggest = false
+notes = "It's a collection of static library binaries and a build script that configures Cargo to use them, so it's not really reviewable."
