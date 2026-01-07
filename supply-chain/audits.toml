@@ -63,6 +63,11 @@ criteria = "safe-to-deploy"
 delta = "3.21.0 -> 3.22.0"
 notes = "The only significant change is updating its maximum accepted version of the windows-sys dependency to allow v0.61.x."
 
+[[audits.unicase]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "2.8.1 -> 2.9.0"
+
 [[audits.winapi-util]]
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"
