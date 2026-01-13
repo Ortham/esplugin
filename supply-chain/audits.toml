@@ -52,10 +52,35 @@ criteria = "safe-to-deploy"
 delta = "1.0.94 -> 1.0.95"
 notes = "The only changes were to reflect changes in semver-exempt APIs to support nightly Rust changes."
 
+[[audits.proc-macro2]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "1.0.101 -> 1.0.105"
+
+[[audits.quote]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "1.0.40 -> 1.0.43"
+
 [[audits.syn]]
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"
 delta = "2.0.98 -> 2.0.100"
+
+[[audits.syn]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "2.0.106 -> 2.0.112"
+
+[[audits.syn]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "2.0.112 -> 2.0.113"
+
+[[audits.syn]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "2.0.113 -> 2.0.114"
 
 [[audits.tempfile]]
 who = "Oliver Hamlet <git@ortham.net>"
