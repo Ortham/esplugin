@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     env:
-      CARGO_VET_REV: c178261c96c9f820f67817e9c5458db655ddc21f # 0.10.1
+      CARGO_VET_REV: 28f617ea97392d527799649db588a6dbb695da8d # 0.10.2
 
     steps:
     - uses: actions/checkout@v6
