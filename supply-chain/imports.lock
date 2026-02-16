@@ -16,8 +16,8 @@ user-login = "hsivonen"
 user-name = "Henri Sivonen"
 
 [[publisher.libc]]
-version = "0.2.176"
-when = "2025-09-23"
+version = "0.2.182"
+when = "2026-02-13"
 user-id = 55123
 user-login = "rust-lang-owner"
 
@@ -207,6 +207,12 @@ who = "Alex Crichton <alex@alexcrichton.com>"
 criteria = "safe-to-deploy"
 delta = "3.20.0 -> 3.21.0"
 notes = "Only minor manifest/CI changes."
+
+[[audits.bytecode-alliance.audits.tempfile]]
+who = "Alex Crichton <alex@alexcrichton.com>"
+criteria = "safe-to-deploy"
+delta = "3.21.0 -> 3.23.0"
+notes = "Doc/test/platform updates, nothing out of the ordinary."
 
 [[audits.bytecode-alliance.audits.unicase]]
 who = "Alex Crichton <alex@alexcrichton.com>"
