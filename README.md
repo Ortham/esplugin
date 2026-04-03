@@ -8,10 +8,11 @@ esplugin
 A free software library for reading Elder Scrolls Plugin (`.esp`), Elder Scrolls Master (`.esm`) and Elder Scrolls Light (`.esl`) files. It can currently parse plugins for the following games:
 
 * TES III: Morrowind
-* TES IV: Oblivion
-* TES V: Skyrim (including Special Edition)
+* TES IV: Oblivion (including Remastered)
+* TES V: Skyrim (including Special Edition, Anniversary Edition and VR)
 * Fallout 3
 * Fallout: New Vegas
-* Fallout 4
+* Fallout 4 (including VR)
+* Starfield
 
 esplugin is a rewrite of [libespm](https://github.com/Ortham/libespm) and focuses on providing a useful API to [libloadorder](https://github.com/Ortham/libloadorder) and [LOOT](https://github.com/loot/loot), rather than a general-purpose plugin parser.
