@@ -16,3 +16,7 @@ A free software library for reading Elder Scrolls Plugin (`.esp`), Elder Scrolls
 * Starfield
 
 esplugin is a rewrite of [libespm](https://github.com/Ortham/libespm) and focuses on providing a useful API to [libloadorder](https://github.com/Ortham/libloadorder) and [LOOT](https://github.com/loot/loot), rather than a general-purpose plugin parser.
+
+## Minimum supported Rust version
+
+The minimum supported Rust version is `1.81`. This may change at any time, but there is a CI job to check that it does not change unexpectedly.

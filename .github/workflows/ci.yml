@@ -57,6 +57,38 @@ jobs:
         cargo vet --version
         cargo vet --locked
 
+  msrv:
+    strategy:
+      matrix:
+        os:
+          - windows-2025
+          - ubuntu-24.04
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      EXPECTED_MSRV: "1.81"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/cache@v5
+        id: cache-cargo
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-msrv-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Rust v${{ env.EXPECTED_MSRV }}
+        run: rustup install ${{ env.EXPECTED_MSRV }}
+
+      - name: Run cargo build using Rust v${{ env.EXPECTED_MSRV }}
+        run: cargo +${{ env.EXPECTED_MSRV }} build --workspace --all-features
+
   build:
     strategy:
       matrix:

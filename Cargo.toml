@@ -7,6 +7,7 @@ repository.workspace = true
 categories.workspace = true
 license.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 encoding_rs = ">= 0.4.0, < 0.9"
@@ -40,6 +41,7 @@ repository = "https://github.com/Ortham/esplugin.git"
 categories = ["games", "parsing"]
 license = "GPL-3.0"
 edition = "2021"
+rust-version = "1.81"
 
 # Deny some rustc lints that are allow-by-default.
 [workspace.lints.rust]
