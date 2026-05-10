@@ -62,6 +62,11 @@ who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"
 delta = "1.0.40 -> 1.0.43"
 
+[[audits.quote]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "1.0.43 -> 1.0.45"
+
 [[audits.rustix]]
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-run"
