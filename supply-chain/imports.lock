@@ -1525,10 +1525,24 @@ who = "Brandon Pitman <bran@bran.land>"
 criteria = "safe-to-deploy"
 delta = "1.9.0 -> 1.10.0"
 
+[[audits.isrg.audits.rayon]]
+who = "David Cook <dcook@divviup.org>"
+criteria = "safe-to-deploy"
+delta = "1.10.0 -> 1.11.0"
+notes = """
+I compared src/slice/sort.rs against the file library/core/src/slice/sort.rs
+from the standard library, as of commit e501add.
+"""
+
 [[audits.isrg.audits.rayon-core]]
 who = "Ameer Ghani <inahga@divviup.org>"
 criteria = "safe-to-deploy"
 version = "1.12.1"
+
+[[audits.isrg.audits.rayon-core]]
+who = "David Cook <dcook@divviup.org>"
+criteria = "safe-to-deploy"
+delta = "1.12.1 -> 1.13.0"
 
 [[audits.mozilla.wildcard-audits.encoding_rs]]
 who = "Henri Sivonen <hsivonen@hsivonen.fi>"
