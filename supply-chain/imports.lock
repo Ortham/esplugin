@@ -1456,6 +1456,11 @@ who = "J.C. Jones <jc@divviup.org>"
 criteria = "safe-to-run"
 version = "0.8.1"
 
+[[audits.isrg.audits.criterion-plot]]
+who = "J.C. Jones <jc@divviup.org>"
+criteria = "safe-to-run"
+delta = "0.8.1 -> 0.8.2"
+
 [[audits.isrg.audits.getrandom]]
 who = "David Cook <dcook@divviup.org>"
 criteria = "safe-to-deploy"
