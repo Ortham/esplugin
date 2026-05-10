@@ -29,8 +29,8 @@ user-login = "alexcrichton"
 user-name = "Alex Crichton"
 
 [[publisher.windows-link]]
-version = "0.2.0"
-when = "2025-09-04"
+version = "0.2.1"
+when = "2025-10-06"
 user-id = 64539
 user-login = "kennykerr"
 user-name = "Kenny Kerr"
