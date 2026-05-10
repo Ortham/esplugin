@@ -80,6 +80,11 @@ delta = "2.0.98 -> 2.0.100"
 [[audits.syn]]
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"
+delta = "2.0.100 -> 2.0.106"
+
+[[audits.syn]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
 delta = "2.0.106 -> 2.0.112"
 
 [[audits.syn]]
@@ -91,6 +96,11 @@ delta = "2.0.112 -> 2.0.113"
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"
 delta = "2.0.113 -> 2.0.114"
+
+[[audits.syn]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "2.0.114 -> 2.0.117"
 
 [[audits.tempfile]]
 who = "Oliver Hamlet <git@ortham.net>"
