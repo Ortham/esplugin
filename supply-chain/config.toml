@@ -16,18 +16,15 @@ url = "https://raw.githubusercontent.com/divviup/libprio-rs/main/supply-chain/au
 [imports.mozilla]
 url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
 
+[imports.ortham]
+url = "https://raw.githubusercontent.com/Ortham/supply-chain/refs/heads/main/audits.toml"
+
 [policy.esplugin]
 audit-as-crates-io = false
 
 [[exemptions.criterion]]
 version = "0.7.0"
 criteria = "safe-to-run"
-
-[[exemptions.errno]]
-version = "0.3.14"
-criteria = "safe-to-run"
-suggest = false
-notes = "At time of review this was only built if targeting WASI, which is not an intended target."
 
 [[exemptions.js-sys]]
 version = "0.3.77"

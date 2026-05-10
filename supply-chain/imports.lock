@@ -1679,3 +1679,15 @@ criteria = "safe-to-deploy"
 delta = "2.6.0 -> 2.8.1"
 notes = "Update to Unicode 15.0.0"
 aggregated-from = "https://raw.githubusercontent.com/mozilla/glean/main/supply-chain/audits.toml"
+
+[[audits.ortham.audits.errno]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+version = "0.3.14"
+aggregated-from = "https://raw.githubusercontent.com/Ortham/svg_to_ico/refs/heads/master/supply-chain/audits.toml"
+
+[[audits.ortham.audits.memchr]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "2.7.5 -> 2.8.0"
+aggregated-from = "https://raw.githubusercontent.com/Ortham/svg_to_ico/refs/heads/master/supply-chain/audits.toml"
