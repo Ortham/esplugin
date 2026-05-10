@@ -1451,6 +1451,11 @@ who = "J.C. Jones <jc@divviup.org>"
 criteria = "safe-to-run"
 delta = "0.8.0 -> 0.8.1"
 
+[[audits.isrg.audits.criterion]]
+who = "J.C. Jones <jc@divviup.org>"
+criteria = "safe-to-run"
+delta = "0.8.1 -> 0.8.2"
+
 [[audits.isrg.audits.criterion-plot]]
 who = "J.C. Jones <jc@divviup.org>"
 criteria = "safe-to-run"
