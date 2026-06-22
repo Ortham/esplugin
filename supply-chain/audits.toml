@@ -46,6 +46,11 @@ criteria = "safe-to-deploy"
 delta = "2.5.0 -> 2.6.0"
 notes = "The only changes are to derive additional zerocopy traits and to fix some dependency minimum versions."
 
+[[audits.memchr]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "2.8.0 -> 2.8.2"
+
 [[audits.proc-macro2]]
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"
