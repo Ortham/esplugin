@@ -193,7 +193,7 @@ impl Plugin {
         self.path
             .file_name()
             .and_then(std::ffi::OsStr::to_str)
-            .map(std::string::ToString::to_string)
+            .map(str::to_owned)
     }
 
     pub fn masters(&self) -> Result<Vec<String>, Error> {
@@ -267,7 +267,7 @@ impl Plugin {
         self.is_update_flag_set()
             && !self.is_light_flag_set()
             && !self.is_medium_flag_set()
-            && self.masters().map(|m| !m.is_empty()).unwrap_or(false)
+            && self.masters().is_ok_and(|m| !m.is_empty())
     }
 
     pub fn is_blueprint_plugin(&self) -> bool {
