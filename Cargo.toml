@@ -41,7 +41,7 @@ repository = "https://github.com/Ortham/esplugin.git"
 categories = ["games", "parsing"]
 license = "GPL-3.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.88"
 
 # Deny some rustc lints that are allow-by-default.
 [workspace.lints.rust]

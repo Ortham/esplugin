@@ -67,7 +67,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     env:
-      EXPECTED_MSRV: "1.85"
+      EXPECTED_MSRV: "1.88"
 
     steps:
       - uses: actions/checkout@v7
