@@ -133,6 +133,11 @@ who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"
 delta = "2.8.1 -> 2.9.0"
 
+[[audits.unicase]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "2.9.0 -> 2.10.0"
+
 [[audits.winapi-util]]
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"
