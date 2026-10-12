@@ -955,7 +955,6 @@ mod tests {
             assert_eq!("v5.0", plugin.description().unwrap().unwrap());
         }
 
-        #[expect(clippy::float_cmp, reason = "float values should be exactly equal")]
         #[test]
         fn header_version_should_return_plugin_header_hedr_subrecord_field() {
             let mut plugin = Plugin::new(
@@ -965,7 +964,10 @@ mod tests {
 
             assert!(plugin.parse_file(ParseOptions::header_only()).is_ok());
 
-            assert_eq!(1.2, plugin.header_version().unwrap());
+            assert_eq!(
+                1.2_f32.to_le_bytes(),
+                plugin.header_version().unwrap().to_le_bytes()
+            );
         }
 
         #[test]
@@ -1176,7 +1178,6 @@ mod tests {
             assert!(!plugin.is_medium_plugin());
         }
 
-        #[expect(clippy::float_cmp, reason = "float values should be exactly equal")]
         #[test]
         fn header_version_should_return_plugin_header_hedr_subrecord_field() {
             let mut plugin = Plugin::new(
@@ -1186,7 +1187,10 @@ mod tests {
 
             assert!(plugin.parse_file(ParseOptions::header_only()).is_ok());
 
-            assert_eq!(0.8, plugin.header_version().unwrap());
+            assert_eq!(
+                0.8_f32.to_le_bytes(),
+                plugin.header_version().unwrap().to_le_bytes()
+            );
         }
 
         #[test]
@@ -1344,7 +1348,6 @@ mod tests {
             assert_eq!("v5", plugin.description().unwrap().unwrap());
         }
 
-        #[expect(clippy::float_cmp, reason = "float values should be exactly equal")]
         #[test]
         fn header_version_should_return_plugin_header_hedr_subrecord_field() {
             let mut plugin = Plugin::new(
@@ -1354,7 +1357,10 @@ mod tests {
 
             assert!(plugin.parse_file(ParseOptions::header_only()).is_ok());
 
-            assert_eq!(0.94, plugin.header_version().unwrap());
+            assert_eq!(
+                0.94_f32.to_le_bytes(),
+                plugin.header_version().unwrap().to_le_bytes()
+            );
         }
 
         #[test]
@@ -1596,7 +1602,6 @@ mod tests {
             assert!(!plugin.is_medium_plugin());
         }
 
-        #[expect(clippy::float_cmp, reason = "float values should be exactly equal")]
         #[test]
         fn header_version_should_return_plugin_header_hedr_subrecord_field() {
             let mut plugin = Plugin::new(
@@ -1606,7 +1611,10 @@ mod tests {
 
             assert!(plugin.parse_file(ParseOptions::header_only()).is_ok());
 
-            assert_eq!(0.94, plugin.header_version().unwrap());
+            assert_eq!(
+                0.94_f32.to_le_bytes(),
+                plugin.header_version().unwrap().to_le_bytes()
+            );
         }
 
         #[test]

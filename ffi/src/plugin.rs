@@ -1,6 +1,6 @@
 use std::ffi::{c_char, c_float};
 use std::path::Path;
-use std::{f32, panic, ptr};
+use std::{panic, ptr};
 
 use esplugin::{ParseOptions, Plugin, PluginMetadata};
 

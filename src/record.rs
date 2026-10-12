@@ -373,6 +373,13 @@ mod tests {
     mod morrowind {
         use super::*;
 
+        macro_rules! is_empty_slice_of_slices {
+            ($cond:expr) => {{
+                let empty: [&[u8; 4]; 0] = [];
+                assert_eq!($cond, empty);
+            }};
+        }
+
         #[test]
         fn header_length_should_be_16() {
             assert_eq!(16, header_length(GameId::Morrowind));
@@ -491,13 +498,13 @@ mod tests {
         #[test]
         fn get_record_id_subrecord_mappers_should_return_an_empty_vec_for_the_tes3_record() {
             let types = record_id_subrecord_types(*b"TES3");
-            assert!(types.is_empty());
+            is_empty_slice_of_slices!(types);
         }
 
         #[test]
         fn get_record_id_subrecord_mappers_should_return_an_empty_vec_for_unrecognised_types() {
             let types = record_id_subrecord_types(*b"DUMY");
-            assert!(types.is_empty());
+            is_empty_slice_of_slices!(types);
         }
 
         #[test]
