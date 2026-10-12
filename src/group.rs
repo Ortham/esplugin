@@ -24,11 +24,11 @@ use nom::number::complete::le_u32;
 use nom::sequence::delimited;
 use nom::{IResult, Parser};
 
+use crate::ParsingErrorKind;
 use crate::error::Error;
 use crate::game_id::GameId;
 use crate::record::Record;
 use crate::record_id::RecordId;
-use crate::ParsingErrorKind;
 
 const GROUP_TYPE: &[u8] = b"GRUP";
 

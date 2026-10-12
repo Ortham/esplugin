@@ -29,7 +29,7 @@ use encoding_rs::WINDOWS_1252;
 use crate::error::{Error, ParsingErrorKind};
 use crate::game_id::GameId;
 use crate::group::Group;
-use crate::record::{Record, MAX_RECORD_HEADER_LENGTH};
+use crate::record::{MAX_RECORD_HEADER_LENGTH, Record};
 use crate::record_id::{NamespacedId, ObjectIndexMask, RecordId, ResolvedRecordId, SourcePlugin};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -375,7 +375,7 @@ impl Plugin {
                     for other in others {
                         match &other.data.record_ids {
                             FormIds(_) => {
-                                return Err(Error::UnresolvedRecordIds(other.path.clone()))
+                                return Err(Error::UnresolvedRecordIds(other.path.clone()));
                             }
                             Resolved(master_ids) if master_ids.binary_search(id).is_ok() => {
                                 count += 1;
@@ -1341,9 +1341,11 @@ mod tests {
             assert_eq!(0x2E, bytes[0x39]);
             bytes[0x39] = 0;
 
-            assert!(plugin
-                .parse_reader(Cursor::new(bytes), ParseOptions::whole_plugin())
-                .is_ok());
+            assert!(
+                plugin
+                    .parse_reader(Cursor::new(bytes), ParseOptions::whole_plugin())
+                    .is_ok()
+            );
 
             assert_eq!("v5", plugin.description().unwrap().unwrap());
         }
@@ -1647,9 +1649,11 @@ mod tests {
             bytes[0x20] = 0xDA;
             bytes[0x21] = 0x3F;
 
-            assert!(plugin
-                .parse_reader(Cursor::new(bytes), ParseOptions::whole_plugin())
-                .is_ok());
+            assert!(
+                plugin
+                    .parse_reader(Cursor::new(bytes), ParseOptions::whole_plugin())
+                    .is_ok()
+            );
 
             let range = plugin.valid_light_form_id_range();
             assert_eq!(&0, range.start());
@@ -1657,8 +1661,8 @@ mod tests {
         }
 
         #[test]
-        fn is_valid_as_light_plugin_should_be_true_if_the_plugin_has_no_form_ids_outside_the_valid_range(
-        ) {
+        fn is_valid_as_light_plugin_should_be_true_if_the_plugin_has_no_form_ids_outside_the_valid_range()
+         {
             let mut plugin = Plugin::new(
                 GameId::SkyrimSE,
                 Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
@@ -1669,8 +1673,8 @@ mod tests {
         }
 
         #[test]
-        fn is_valid_as_light_plugin_should_be_true_if_the_plugin_has_an_override_form_id_outside_the_valid_range(
-        ) {
+        fn is_valid_as_light_plugin_should_be_true_if_the_plugin_has_an_override_form_id_outside_the_valid_range()
+         {
             let mut plugin = Plugin::new(
                 GameId::SkyrimSE,
                 Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
@@ -1682,16 +1686,18 @@ mod tests {
             bytes[0x7A] = 0xFF;
             bytes[0x7B] = 0x07;
 
-            assert!(plugin
-                .parse_reader(Cursor::new(bytes), ParseOptions::whole_plugin())
-                .is_ok());
+            assert!(
+                plugin
+                    .parse_reader(Cursor::new(bytes), ParseOptions::whole_plugin())
+                    .is_ok()
+            );
 
             assert!(plugin.is_valid_as_light_plugin().unwrap());
         }
 
         #[test]
-        fn is_valid_as_light_plugin_should_be_false_if_the_plugin_has_a_new_form_id_greater_than_0xfff(
-        ) {
+        fn is_valid_as_light_plugin_should_be_false_if_the_plugin_has_a_new_form_id_greater_than_0xfff()
+         {
             let mut plugin = Plugin::new(
                 GameId::SkyrimSE,
                 Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
@@ -1703,9 +1709,11 @@ mod tests {
             bytes[0x386] = 0x00;
             bytes[0x387] = 0x10;
 
-            assert!(plugin
-                .parse_reader(Cursor::new(bytes), ParseOptions::whole_plugin())
-                .is_ok());
+            assert!(
+                plugin
+                    .parse_reader(Cursor::new(bytes), ParseOptions::whole_plugin())
+                    .is_ok()
+            );
 
             assert!(!plugin.is_valid_as_light_plugin().unwrap());
         }
@@ -1896,9 +1904,11 @@ mod tests {
             bytes[0x20] = 0x80;
             bytes[0x21] = 0x3F;
 
-            assert!(plugin
-                .parse_reader(Cursor::new(bytes), ParseOptions::whole_plugin())
-                .is_ok());
+            assert!(
+                plugin
+                    .parse_reader(Cursor::new(bytes), ParseOptions::whole_plugin())
+                    .is_ok()
+            );
 
             let range = plugin.valid_light_form_id_range();
             assert_eq!(&1, range.start());
@@ -1906,8 +1916,8 @@ mod tests {
         }
 
         #[test]
-        fn is_valid_as_light_plugin_should_be_true_if_the_plugin_has_no_form_ids_outside_the_valid_range(
-        ) {
+        fn is_valid_as_light_plugin_should_be_true_if_the_plugin_has_no_form_ids_outside_the_valid_range()
+         {
             let mut plugin = Plugin::new(
                 GameId::Fallout4,
                 Path::new("testing-plugins/SkyrimSE/Data/Blank - Master Dependent.esm"),
@@ -2045,8 +2055,8 @@ mod tests {
         }
 
         #[test]
-        fn is_light_plugin_should_be_true_for_plugins_with_an_esl_file_extension_if_the_update_flag_is_not_set(
-        ) {
+        fn is_light_plugin_should_be_true_for_plugins_with_an_esl_file_extension_if_the_update_flag_is_not_set()
+         {
             // The flag won't be set because no data is loaded.
             let plugin = Plugin::new(GameId::Starfield, Path::new("Blank.esp"));
             assert!(!plugin.is_light_plugin());
@@ -2057,8 +2067,8 @@ mod tests {
         }
 
         #[test]
-        fn is_light_plugin_should_be_false_for_a_plugin_with_the_update_flag_set_and_an_esl_extension(
-        ) {
+        fn is_light_plugin_should_be_false_for_a_plugin_with_the_update_flag_set_and_an_esl_extension()
+         {
             let tmp_dir = tempdir().unwrap();
             let esl_path = tmp_dir.path().join("Blank.esl");
             copy(
@@ -2136,8 +2146,8 @@ mod tests {
         }
 
         #[test]
-        fn is_update_plugin_should_be_true_for_a_plugin_with_the_update_flag_set_and_at_least_one_master_and_no_light_flag(
-        ) {
+        fn is_update_plugin_should_be_true_for_a_plugin_with_the_update_flag_set_and_at_least_one_master_and_no_light_flag()
+         {
             let mut plugin = Plugin::new(
                 GameId::Starfield,
                 Path::new("testing-plugins/Starfield/Data/Blank - Override.full.esm"),
@@ -2205,9 +2215,11 @@ mod tests {
             assert_eq!(0, bytes[0x09]);
             bytes[0x09] = 8;
 
-            assert!(plugin
-                .parse_reader(Cursor::new(bytes), ParseOptions::header_only())
-                .is_ok());
+            assert!(
+                plugin
+                    .parse_reader(Cursor::new(bytes), ParseOptions::header_only())
+                    .is_ok()
+            );
 
             assert!(plugin.is_blueprint_plugin());
         }
@@ -2420,8 +2432,8 @@ mod tests {
         }
 
         #[test]
-        fn is_valid_as_light_plugin_should_be_true_if_the_plugin_has_no_form_ids_outside_the_valid_range(
-        ) {
+        fn is_valid_as_light_plugin_should_be_true_if_the_plugin_has_no_form_ids_outside_the_valid_range()
+         {
             let mut plugin = Plugin::new(
                 GameId::Starfield,
                 Path::new("testing-plugins/Starfield/Data/Blank.full.esm"),
@@ -2447,8 +2459,8 @@ mod tests {
         }
 
         #[test]
-        fn is_valid_as_medium_plugin_should_be_true_if_the_plugin_has_no_form_ids_outside_the_valid_range(
-        ) {
+        fn is_valid_as_medium_plugin_should_be_true_if_the_plugin_has_no_form_ids_outside_the_valid_range()
+         {
             let mut plugin = Plugin::new(
                 GameId::Starfield,
                 Path::new("testing-plugins/Starfield/Data/Blank.medium.esm"),
@@ -2676,8 +2688,8 @@ mod tests {
         }
 
         #[test]
-        fn hashed_masters_for_starfield_should_count_mod_indexes_separately_for_different_plugin_scales(
-        ) {
+        fn hashed_masters_for_starfield_should_count_mod_indexes_separately_for_different_plugin_scales()
+         {
             let masters: Vec<_> = (0u8..7u8).map(|i| i.to_string()).collect();
             let metadata = &[
                 PluginMetadata {
@@ -2758,9 +2770,9 @@ mod tests {
         let result = plugin.parse_file(ParseOptions::whole_plugin());
         assert!(result.is_err());
         assert_eq!(
-             "An error was encountered while parsing the plugin content \"BSA\\x00g\\x00\\x00\\x00$\\x00\\x00\\x00\\x07\\x07\\x00\\x00\": Expected record type \"TES4\"",
-             result.unwrap_err().to_string()
-         );
+            "An error was encountered while parsing the plugin content \"BSA\\x00g\\x00\\x00\\x00$\\x00\\x00\\x00\\x07\\x07\\x00\\x00\": Expected record type \"TES4\"",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[test]
@@ -2774,7 +2786,10 @@ mod tests {
 
         let result = plugin.parse_file(ParseOptions::header_only());
         assert!(result.is_err());
-        assert_eq!("An error was encountered while parsing the plugin content \"\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\": Expected record type \"TES4\"", result.unwrap_err().to_string());
+        assert_eq!(
+            "An error was encountered while parsing the plugin content \"\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\": Expected record type \"TES4\"",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[test]
@@ -2788,7 +2803,10 @@ mod tests {
 
         let result = plugin.parse_file(ParseOptions::whole_plugin());
         assert!(result.is_err());
-        assert_eq!("An error was encountered while parsing the plugin content \"\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\": Expected record type \"TES4\"", result.unwrap_err().to_string());
+        assert_eq!(
+            "An error was encountered while parsing the plugin content \"\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\": Expected record type \"TES4\"",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[test]
@@ -2879,9 +2897,11 @@ mod tests {
         assert_eq!(0x2E, bytes[0x43]);
         bytes[0x43] = 0;
 
-        assert!(plugin
-            .parse_reader(Cursor::new(bytes), ParseOptions::whole_plugin())
-            .is_ok());
+        assert!(
+            plugin
+                .parse_reader(Cursor::new(bytes), ParseOptions::whole_plugin())
+                .is_ok()
+        );
 
         assert_eq!("Blank", plugin.masters().unwrap()[0]);
     }
@@ -2899,13 +2919,18 @@ mod tests {
         data[0x14] = 8;
         data[0x15] = 0;
 
-        assert!(plugin
-            .parse_reader(Cursor::new(data), ParseOptions::header_only())
-            .is_ok());
+        assert!(
+            plugin
+                .parse_reader(Cursor::new(data), ParseOptions::header_only())
+                .is_ok()
+        );
 
         let result = plugin.description();
         assert!(result.is_err());
-        assert_eq!("An error was encountered while parsing the plugin content \"\\x9a\\x99\\x99?\\x01\\x00\\x00\\x00\": Subrecord data field too short, expected at least 40 bytes", result.unwrap_err().to_string());
+        assert_eq!(
+            "An error was encountered while parsing the plugin content \"\\x9a\\x99\\x99?\\x01\\x00\\x00\\x00\": Subrecord data field too short, expected at least 40 bytes",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[test]
@@ -2921,9 +2946,11 @@ mod tests {
         data[0x14] = 3;
         data[0x15] = 0;
 
-        assert!(plugin
-            .parse_reader(Cursor::new(data), ParseOptions::header_only())
-            .is_ok());
+        assert!(
+            plugin
+                .parse_reader(Cursor::new(data), ParseOptions::header_only())
+                .is_ok()
+        );
         assert!(plugin.header_version().is_none());
     }
 
@@ -2938,9 +2965,11 @@ mod tests {
         data[0x04] = 0x30;
         data[0x14] = 0x28;
 
-        assert!(plugin
-            .parse_reader(Cursor::new(data), ParseOptions::header_only())
-            .is_ok());
+        assert!(
+            plugin
+                .parse_reader(Cursor::new(data), ParseOptions::header_only())
+                .is_ok()
+        );
         assert!(plugin.record_and_group_count().is_none());
     }
 

@@ -67,7 +67,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     env:
-      EXPECTED_MSRV: "1.81"
+      EXPECTED_MSRV: "1.85"
 
     steps:
       - uses: actions/checkout@v7
@@ -119,7 +119,7 @@ jobs:
 
       - name: Install cbindgen
         run: |
-          cargo install --locked --git https://github.com/mozilla/cbindgen --rev 58c6156b0d91e82abb03c26187b8d18fa4345ce0 cbindgen
+          cargo install --locked --git https://github.com/mozilla/cbindgen --rev b826cb8911488fe8a209d2b693492c0c673e8cca cbindgen
         if: steps.cache-cargo.outputs.cache-hit != 'true'
 
       - name: Install cargo-llvm-cov

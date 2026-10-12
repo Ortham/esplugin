@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::ffi::{c_char, c_uint, CString};
+use std::ffi::{CString, c_char, c_uint};
 use std::panic::catch_unwind;
 
 use esplugin::Error;
@@ -20,7 +20,7 @@ thread_local!(static ERROR_MESSAGE: RefCell<CString> = RefCell::new(CString::def
 /// stored at any one time.
 ///
 /// Returns `ESP_OK` if successful, otherwise a `ESP_ERROR_*` code is returned.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn esp_get_error_message(message: *mut *const c_char) -> c_uint {
     catch_unwind(|| {
         if message.is_null() {
@@ -28,9 +28,9 @@ pub(crate) unsafe extern "C" fn esp_get_error_message(message: *mut *const c_cha
         } else {
             ERROR_MESSAGE.with(|f| {
                 if f.borrow().as_bytes().is_empty() {
-                    *message = std::ptr::null();
+                    unsafe { *message = std::ptr::null() };
                 } else {
-                    *message = f.borrow().as_ptr();
+                    unsafe { *message = f.borrow().as_ptr() };
                 }
             });
 

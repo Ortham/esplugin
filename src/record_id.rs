@@ -17,8 +17,8 @@ use std::cmp::Ordering;
  * You should have received a copy of the GNU General Public License
  * along with esplugin. If not, see <http://www.gnu.org/licenses/>.
  */
-use std::collections::hash_map::DefaultHasher;
 use std::collections::HashSet;
+use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::ops::RangeInclusive;
 

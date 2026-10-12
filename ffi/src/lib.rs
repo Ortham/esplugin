@@ -1,5 +1,9 @@
-#![allow(unsafe_code, clippy::missing_safety_doc)]
-#![cfg_attr(test, allow(clippy::undocumented_unsafe_blocks, clippy::unwrap_used))]
+#![allow(
+    unsafe_code,
+    clippy::missing_safety_doc,
+    clippy::undocumented_unsafe_blocks
+)]
+#![cfg_attr(test, allow(clippy::unwrap_used))]
 
 //! ## Thread Safety
 //!
@@ -33,7 +37,7 @@ mod error;
 mod helpers;
 mod plugin;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn esp_get_plugins_metadata(
     plugins: *const *const Plugin,
     plugins_len: usize,
@@ -43,7 +47,8 @@ pub unsafe extern "C" fn esp_get_plugins_metadata(
         if plugins.is_null() || plugins_metadata.is_null() {
             error(ESP_ERROR_NULL_POINTER, "Null pointer passed")
         } else {
-            let Some(plugins) = to_plugin_refs_slice(plugins, plugins_len) else {
+            let plugins = unsafe { to_plugin_refs_slice(plugins, plugins_len) };
+            let Some(plugins) = plugins else {
                 return error(
                     ESP_ERROR_NULL_POINTER,
                     "Null pointer passed in plugins array",
@@ -52,7 +57,7 @@ pub unsafe extern "C" fn esp_get_plugins_metadata(
 
             match esplugin::plugins_metadata(&plugins) {
                 Ok(m) => {
-                    *plugins_metadata = Box::into_raw(Box::new(m));
+                    unsafe { *plugins_metadata = Box::into_raw(Box::new(m)) };
                     ESP_OK
                 }
                 Err(e) => handle_error(&e),
@@ -62,9 +67,11 @@ pub unsafe extern "C" fn esp_get_plugins_metadata(
     .unwrap_or(ESP_ERROR_PANICKED)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn esp_plugins_metadata_free(plugins_metadata: *mut Vec<PluginMetadata>) {
-    if !plugins_metadata.is_null() {
-        drop(Box::from_raw(plugins_metadata));
+    unsafe {
+        if !plugins_metadata.is_null() {
+            drop(Box::from_raw(plugins_metadata));
+        }
     }
 }

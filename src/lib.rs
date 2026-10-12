@@ -36,7 +36,7 @@
 
 pub use crate::error::{Error, MoreDataNeeded, ParsingErrorKind};
 pub use crate::game_id::GameId;
-pub use crate::plugin::{plugins_metadata, ParseOptions, Plugin, PluginMetadata};
+pub use crate::plugin::{ParseOptions, Plugin, PluginMetadata, plugins_metadata};
 
 mod error;
 mod game_id;

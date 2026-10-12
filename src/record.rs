@@ -27,7 +27,7 @@ use nom::{IResult, Parser};
 use crate::error::{Error, ParsingErrorKind};
 use crate::game_id::GameId;
 use crate::record_id::{NamespacedId, RecordId};
-use crate::subrecord::{parse_subrecord_data_as_u32, Subrecord, SubrecordRef, SubrecordType};
+use crate::subrecord::{Subrecord, SubrecordRef, SubrecordType, parse_subrecord_data_as_u32};
 use crate::u32_to_usize;
 
 pub(crate) const MAX_RECORD_HEADER_LENGTH: usize = 24;
@@ -210,10 +210,10 @@ fn map_cell_id_data<'a>(subrecords: &[SubrecordRef<'a>]) -> Option<&'a [u8]> {
     let name = sub1.data();
     let data = sub2.data();
 
-    if let Ok(data) = <&[u8; 12]>::try_from(data) {
-        if data[0] & 0x01 == 0 {
-            return Some(&data[4..]);
-        }
+    if let Ok(data) = <&[u8; 12]>::try_from(data)
+        && data[0] & 0x01 == 0
+    {
+        return Some(&data[4..]);
     }
 
     (name.len() > 1).then_some(name)
@@ -520,8 +520,8 @@ mod tests {
         }
 
         #[test]
-        fn record_id_subrecord_mapper_should_get_first_32_bytes_of_first_subrecords_data_for_scpt_records(
-        ) {
+        fn record_id_subrecord_mapper_should_get_first_32_bytes_of_first_subrecords_data_for_scpt_records()
+         {
             let input = &[
                 0x53, 0x43, 0x48, 0x44, 0x21, 0x00, 0x00, 0x00, 0x41, 0x62, 0x65, 0x62, 0x61, 0x61,
                 0x6C, 0x41, 0x74, 0x74, 0x61, 0x63, 0x6B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -739,7 +739,10 @@ mod tests {
 
             let result = Record::read(&mut Cursor::new(data), GameId::Skyrim, b"TES3");
             assert!(result.is_err());
-            assert_eq!("An error was encountered while parsing the plugin content \"TES4>\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x00\": Expected record type \"TES3\"", result.unwrap_err().to_string());
+            assert_eq!(
+                "An error was encountered while parsing the plugin content \"TES4>\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x00\": Expected record type \"TES3\"",
+                result.unwrap_err().to_string()
+            );
         }
 
         #[test]

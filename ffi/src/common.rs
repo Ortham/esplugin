@@ -1,4 +1,4 @@
-use std::ffi::{c_char, CString};
+use std::ffi::{CString, c_char};
 
 /// Free the memory allocated for the given string.
 ///
@@ -10,10 +10,12 @@ use std::ffi::{c_char, CString};
 /// This function must not be called twice for the same `string` value.
 ///
 /// This function is thread-safe.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn esp_string_free(string: *mut c_char) {
-    if !string.is_null() {
-        drop(CString::from_raw(string));
+    unsafe {
+        if !string.is_null() {
+            drop(CString::from_raw(string));
+        }
     }
 }
 
@@ -30,15 +32,15 @@ pub unsafe extern "C" fn esp_string_free(string: *mut c_char) {
 /// This function must not be called twice for the same `array` value.
 ///
 /// This function is thread-safe.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn esp_string_array_free(array: *mut *mut c_char, size: usize) {
     if array.is_null() || size == 0 {
         return;
     }
 
-    let strings = Box::from_raw(std::ptr::slice_from_raw_parts_mut(array, size));
+    let strings = unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(array, size)) };
     for string in &strings {
-        esp_string_free(*string);
+        unsafe { esp_string_free(*string) };
     }
 
     drop(strings);

@@ -1,4 +1,4 @@
-use std::ffi::{c_char, CStr, CString};
+use std::ffi::{CStr, CString, c_char};
 
 use esplugin::{GameId, Plugin};
 
@@ -17,7 +17,7 @@ pub(crate) unsafe fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32>
         return Err(error(ESP_ERROR_NULL_POINTER, "Null pointer passed"));
     }
 
-    let rust_c_string = CStr::from_ptr(c_string);
+    let rust_c_string = unsafe { CStr::from_ptr(c_string) };
 
     rust_c_string
         .to_str()
@@ -53,9 +53,9 @@ pub(crate) unsafe fn to_plugin_refs_slice<'a>(
     array: *const *const Plugin,
     array_size: usize,
 ) -> Option<Box<[&'a Plugin]>> {
-    std::slice::from_raw_parts(array, array_size)
+    unsafe { std::slice::from_raw_parts(array, array_size) }
         .iter()
-        .map(|pointer| pointer.as_ref())
+        .map(|pointer| unsafe { pointer.as_ref() })
         .collect()
 }
 

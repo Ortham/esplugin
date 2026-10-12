@@ -19,4 +19,4 @@ esplugin is a rewrite of [libespm](https://github.com/Ortham/libespm) and focuse
 
 ## Minimum supported Rust version
 
-The minimum supported Rust version is `1.81`. This may change at any time, but there is a CI job to check that it does not change unexpectedly.
+The minimum supported Rust version is `1.85`. This may change at any time, but there is a CI job to check that it does not change unexpectedly.
